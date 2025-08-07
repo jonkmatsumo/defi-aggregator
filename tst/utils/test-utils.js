@@ -11,6 +11,7 @@ jest.mock('wagmi', () => ({
   http: jest.fn(),
   useAccount: jest.fn(),
   useChainId: jest.fn(),
+  useDisconnect: jest.fn(() => ({ disconnect: jest.fn() })),
 }));
 
 jest.mock('@tanstack/react-query', () => ({

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAccount, useChainId } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import ConnectWalletButton from './ConnectWalletButton';
 
 const WalletConnection = () => {
   const { address, isConnected } = useAccount();
@@ -23,7 +23,7 @@ const WalletConnection = () => {
 
   return (
     <div style={{ padding: '20px', textAlign: 'center' }}>
-      <ConnectButton />
+      <ConnectWalletButton />
       
       {isConnected && (
         <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
