@@ -414,9 +414,10 @@ const styles = {
     borderRadius: '16px',
     padding: '24px',
     border: '1px solid #4a5568',
-    maxWidth: '500px',
-    margin: '0 auto',
-    color: '#e2e8f0'
+    width: '100%',
+    maxWidth: '100%',
+    color: '#e2e8f0',
+    height: 'fit-content'
   },
   title: {
     margin: '0 0 20px 0',

@@ -2,6 +2,10 @@
 
 A modern React application for DeFi protocol aggregation with comprehensive wallet integration, real-time gas prices, token swapping, and transaction monitoring.
 
+![DeFi Aggregator Interface](screenshot.png)
+
+*DeFiHub - A comprehensive DeFi aggregator with token swapping, lending/borrowing, and portfolio tracking*
+
 ## Features
 
 - 🔗 **Wallet Connection**: Connect with MetaMask and other popular wallets via RainbowKit
@@ -12,8 +16,27 @@ A modern React application for DeFi protocol aggregation with comprehensive wall
 - 📈 **Transaction History**: Recent activity tracking with blockchain data
 - 🏦 **Lending Section**: DeFi lending protocol integration
 - 🎨 **Modern UI**: Beautiful interface with gradient designs and responsive layout
+- 📱 **Fully Responsive**: Adaptive layout that scales perfectly across all screen sizes
 - ⚡ **Fast & Responsive**: Built with React and optimized for performance
 - 🧪 **Comprehensive Testing**: Full unit test coverage for all components
+
+## Recent Updates
+
+### 🎯 **Single-Page Application Focus**
+- Removed navigation links (Swap, Lending, Derivatives, Portfolio) to focus on core functionality
+- Streamlined interface for better user experience
+- All features accessible from the main dashboard
+
+### 📱 **Enhanced Responsive Design**
+- **Fully Responsive Layout**: Components now scale proportionally with screen size
+- **Flexible Grid System**: Three-column layout that adapts to different screen sizes
+- **Mobile Optimized**: Perfect experience on desktop, tablet, and mobile devices
+- **Proportional Scaling**: Components expand to fill available horizontal space
+
+### 🎨 **UI Improvements**
+- Removed dashboard cards (Total Balance, 24H Change, Lending APY, Active Positions) for cleaner interface
+- Maintained DashboardCard component for future use
+- Enhanced visual hierarchy and spacing
 
 ## Tech Stack
 
@@ -27,23 +50,43 @@ A modern React application for DeFi protocol aggregation with comprehensive wall
 
 ## Core Components
 
-### Dashboard Components
+### Main Dashboard Components
+- **TokenSwap** - DEX aggregator for token swapping with real-time quotes
+- **LendingSection** - DeFi lending protocol interface (Compound, Aave)
 - **NetworkStatus** - Real-time gas price monitoring across networks
 - **YourAssets** - Portfolio tracking with token balances
 - **RecentActivity** - Transaction history with blockchain integration
-- **TokenSwap** - DEX aggregator for token swapping
-- **LendingSection** - DeFi lending protocol interface
 
 ### Infrastructure
 - **WalletProvider** - Wagmi and RainbowKit configuration
 - **ConnectWalletButton** - Wallet connection UI
-- **Header** - Application navigation and branding
-- **DashboardCard** - Reusable card component
+- **Header** - Application branding and wallet status
+- **DashboardCard** - Reusable card component (available for future use)
+
+## Responsive Layout
+
+The application features a sophisticated responsive design that adapts to any screen size:
+
+### Desktop (1400px+)
+- **Three-column layout**: TokenSwap | LendingSection | Sidebar (NetworkStatus, YourAssets, RecentActivity)
+- **Equal column widths**: All components scale proportionally
+- **Full width utilization**: Components expand to fill available space
+
+### Tablet (768px - 1400px)
+- **Two-column layout**: Main content | Sidebar
+- **Adaptive sidebar**: Sidebar components arrange horizontally when space allows
+- **Optimized spacing**: Reduced gaps for better tablet experience
+
+### Mobile (768px and below)
+- **Single-column layout**: All components stack vertically
+- **Touch-friendly**: Optimized for mobile interaction
+- **Compact design**: Reduced padding and spacing for mobile screens
 
 ## Services
 
 - **GasPriceService** - Real-time gas price fetching with exponential backoff
 - **TokenBalanceService** - ERC-20 token balance monitoring
+- **LendingService** - DeFi lending protocol integration
 
 ## Getting Started
 
@@ -117,6 +160,7 @@ npm test -- --coverage --watchAll=false
 - **LendingSection** - DeFi lending interface tests
 - **ConnectWalletButton** - Wallet connection UI tests
 - **DashboardCard** - Reusable component tests
+- **Header** - Navigation and branding tests
 
 ### Test Structure
 
@@ -149,14 +193,15 @@ src/
 │   ├── LendingSection.jsx          # DeFi lending interface
 │   ├── ConnectWalletButton.jsx     # Wallet connection UI
 │   ├── DashboardCard.jsx           # Reusable card component
-│   ├── Header.jsx                  # Application navigation
+│   ├── Header.jsx                  # Application branding
 │   ├── WalletProvider.jsx          # Wagmi and RainbowKit setup
 │   └── WalletConnection.jsx        # Wallet connection logic
 ├── services/
 │   ├── gasPriceService.js          # Gas price fetching service
-│   └── tokenBalanceService.js      # Token balance monitoring
+│   ├── tokenBalanceService.js      # Token balance monitoring
+│   └── lendingService.js           # DeFi lending protocol integration
 ├── App.js                          # Main application component
-├── App.css                         # Application styles
+├── App.css                         # Application styles with responsive design
 ├── index.js                        # Application entry point
 ├── index.css                       # Global styles
 └── setupTests.js                   # Jest setup configuration
@@ -195,6 +240,12 @@ tst/
 - Transaction history fetching
 - Block data parsing
 - Contract interaction
+
+### DeFi Lending Protocols
+- Compound protocol integration
+- Aave protocol integration
+- Supply and borrow functionality
+- Interest rate monitoring
 
 ## Environment Variables Required
 - `REACT_APP_1INCH_API_KEY` - 1inch API key for token swaps

@@ -20,6 +20,7 @@ body {
 .App {
   min-height: 100vh;
   background: linear-gradient(135deg, #0f1419 0%, #1a1a2e 100%);
+  width: 100%;
 }
 
 /* Spinner animation for connecting state */
@@ -62,19 +63,50 @@ body {
   animation: fadeIn 0.5s ease-out;
 }
 
-/* Responsive design helpers */
+/* Responsive design for main content grid */
+@media (max-width: 1400px) {
+  .App > div:nth-child(2) > div:nth-child(2) {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+}
+
 @media (max-width: 1200px) {
   .App > div:nth-child(2) > div:nth-child(2) {
-    grid-template-columns: 1fr 300px !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(3) {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
   }
 }
 
 @media (max-width: 768px) {
   .App > div:nth-child(2) > div:nth-child(2) {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
   
   .App > div:nth-child(2) {
-    padding: 16px !important;
+    padding: 16px;
+  }
+  
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(3) {
+    grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 480px) {
+  .App > div:nth-child(2) {
+    padding: 12px;
+  }
+  
+  .App > div:nth-child(2) > div:nth-child(2) {
+    gap: 12px;
+  }
+}
+

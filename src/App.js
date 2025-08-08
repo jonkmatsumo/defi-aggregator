@@ -18,26 +18,35 @@ function App() {
           background: 'linear-gradient(135deg, #0f1419 0%, #1a1a2e 100%)',
           minHeight: 'calc(100vh - 80px)',
           padding: '24px',
-          color: 'white'
+          color: 'white',
+          width: '100%',
+          boxSizing: 'border-box'
         }}>
           {/* Main Content Grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 300px',
+            gridTemplateColumns: '1fr 1fr 1fr',
             gap: '24px',
-            alignItems: 'start'
+            alignItems: 'start',
+            maxWidth: '100%',
+            width: '100%'
           }}>
             {/* Left Column - Token Swap */}
-            <TokenSwap />
+            <div style={{ minWidth: 0 }}>
+              <TokenSwap />
+            </div>
 
             {/* Middle Column - Lending */}
-            <LendingSection />
+            <div style={{ minWidth: 0 }}>
+              <LendingSection />
+            </div>
 
             {/* Right Column - Sidebar */}
             <div style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '20px'
+              gap: '20px',
+              minWidth: 0
             }}>
               <NetworkStatus />
               <YourAssets />
