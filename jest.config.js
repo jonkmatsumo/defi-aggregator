@@ -25,6 +25,11 @@ module.exports = {
     '^.+\\.(js|jsx)$': 'babel-jest',
   },
   
+  // Transform ignore patterns to handle ES modules
+  transformIgnorePatterns: [
+    'node_modules/(?!(wagmi|@wagmi|@rainbow-me|viem|@viem|cuer|@cuer)/)'
+  ],
+  
   // Coverage configuration
   collectCoverageFrom: [
     'src/**/*.{js,jsx}',

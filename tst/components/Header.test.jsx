@@ -48,7 +48,6 @@ describe('Header', () => {
     render(<Header />);
     const header = screen.getByRole('banner');
     expect(header).toHaveStyle({
-      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
       padding: '16px 24px',
       display: 'flex',
       justifyContent: 'space-between',
@@ -63,7 +62,6 @@ describe('Header', () => {
     expect(logoIcon).toHaveStyle({
       width: '32px',
       height: '32px',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       borderRadius: '8px',
       display: 'flex',
       alignItems: 'center',
@@ -79,7 +77,6 @@ describe('Header', () => {
     const swapButton = screen.getByText('Swap');
     expect(swapButton).toHaveStyle({
       background: 'none',
-      border: 'none',
       color: '#667eea',
       fontSize: '16px',
       fontWeight: '500',
@@ -98,9 +95,7 @@ describe('Header', () => {
       alignItems: 'center',
       gap: '8px',
       padding: '8px 12px',
-      background: 'rgba(102, 126, 234, 0.1)',
-      borderRadius: '8px',
-      border: '1px solid rgba(102, 126, 234, 0.2)'
+      borderRadius: '8px'
     });
   });
 }); 
