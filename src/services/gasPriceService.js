@@ -6,7 +6,8 @@ import { mainnet, polygon, bsc, arbitrum, optimism } from 'viem/chains';
 class GasPriceService {
   constructor() {
     this.cache = new Map();
-    this.cacheTimeout = 30000; // 30 seconds
+    this.cacheTimeout = 1800000; // 30 minutes (increased from 10 minutes)
+    this.retryDelays = new Map(); // Track retry delays for exponential backoff
     
     // Create public clients for each supported network
     this.clients = {
@@ -102,19 +103,45 @@ class GasPriceService {
     });
   }
 
-  // Fetch gas price for a specific network using viem
+  // Exponential backoff delay
+  async delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // Get retry delay for a network (exponential backoff)
+  getRetryDelay(networkKey) {
+    const currentDelay = this.retryDelays.get(networkKey) || 10000; // Start with 10 seconds
+    const maxDelay = 600000; // Max 10 minutes
+    const nextDelay = Math.min(currentDelay * 2, maxDelay);
+    this.retryDelays.set(networkKey, nextDelay);
+    return currentDelay;
+  }
+
+  // Reset retry delay on successful request
+  resetRetryDelay(networkKey) {
+    this.retryDelays.delete(networkKey);
+  }
+
+  // Fetch gas price for a specific network using viem with exponential backoff
   async fetchGasPrice(networkKey) {
     // Check cache first
     if (this.isCacheValid(networkKey)) {
       return this.getCachedData(networkKey);
     }
 
-    try {
-      const client = this.clients[networkKey];
-      if (!client) {
-        throw new Error(`No client available for ${networkKey}`);
-      }
+    const client = this.clients[networkKey];
+    if (!client) {
+      throw new Error(`No client available for ${networkKey}`);
+    }
 
+    // Check if we should wait due to rate limiting
+    const retryDelay = this.getRetryDelay(networkKey);
+    if (retryDelay > 5000) { // Wait if delay is more than 5 seconds
+      console.log(`Rate limited for ${networkKey}, waiting ${retryDelay}ms before retry`);
+      await this.delay(retryDelay);
+    }
+
+    try {
       // Get current gas price
       const gasPrice = await client.getGasPrice();
       const gasPriceGwei = formatGwei(gasPrice);
@@ -141,13 +168,21 @@ class GasPriceService {
       };
 
       this.setCachedData(networkKey, gasData);
+      this.resetRetryDelay(networkKey); // Reset delay on success
       return gasData;
 
     } catch (error) {
       console.warn(`Failed to fetch gas price for ${networkKey}:`, error);
       
-             // Return fallback data on error
-       const fallbackData = GasPriceService.getFallbackGasPrices()[networkKey];
+      // Check if it's a rate limit error (429)
+      if (error.message && (error.message.includes('429') || error.message.includes('rate limit'))) {
+        console.warn(`Rate limited for ${networkKey}, will retry with exponential backoff`);
+        // Don't cache rate limit errors, let them retry
+        throw error;
+      }
+      
+      // Return fallback data on other errors
+      const fallbackData = GasPriceService.getFallbackGasPrices()[networkKey];
       this.setCachedData(networkKey, fallbackData);
       return fallbackData;
     }
@@ -157,6 +192,15 @@ class GasPriceService {
   static async fetchConnectedWalletGasPrice(client) {
     if (!client) {
       throw new Error('No client available');
+    }
+
+    // Check if client has the required methods
+    if (typeof client.getGasPrice !== 'function') {
+      throw new Error('Client does not have getGasPrice method');
+    }
+
+    if (typeof client.getFeeHistory !== 'function') {
+      throw new Error('Client does not have getFeeHistory method');
     }
 
     try {
@@ -191,10 +235,19 @@ class GasPriceService {
     }
   }
 
-  // Fetch gas prices for multiple networks
+  // Fetch gas prices for multiple networks with retry logic
   async fetchMultipleGasPrices(networkKeys) {
-    const gasPricePromises = networkKeys.map(networkKey => {
-      return this.fetchGasPrice(networkKey);
+    const gasPricePromises = networkKeys.map(async (networkKey) => {
+      try {
+        return await this.fetchGasPrice(networkKey);
+      } catch (error) {
+        // If it's a rate limit error, return fallback data
+        if (error.message && error.message.includes('429')) {
+          console.warn(`Rate limited for ${networkKey}, using fallback data`);
+          return GasPriceService.getFallbackGasPrices()[networkKey];
+        }
+        throw error;
+      }
     });
 
     const results = await Promise.allSettled(gasPricePromises);
@@ -204,8 +257,8 @@ class GasPriceService {
       if (results[index].status === 'fulfilled' && results[index].value) {
         gasPrices[networkKey] = results[index].value;
       } else {
-                 // Use fallback if API call failed
-         gasPrices[networkKey] = GasPriceService.getFallbackGasPrices()[networkKey];
+        // Use fallback if API call failed
+        gasPrices[networkKey] = GasPriceService.getFallbackGasPrices()[networkKey];
       }
     });
 
@@ -229,7 +282,7 @@ class GasPriceService {
 
   // Get network information using wagmi hooks (to be used in components)
   static getNetworkInfo(chainId) {
-         const networks = GasPriceService.getSupportedNetworks();
+    const networks = GasPriceService.getSupportedNetworks();
     
     // Find network by chainId
     const network = Object.values(networks).find(net => net.chainId === chainId);
@@ -250,11 +303,13 @@ class GasPriceService {
   // Clear cache
   clearCache() {
     this.cache.clear();
+    this.retryDelays.clear(); // Also clear retry delays
   }
 
   // Clear cache for specific network
   clearCacheForNetwork(networkKey) {
     this.cache.delete(networkKey);
+    this.retryDelays.delete(networkKey);
   }
 }
 

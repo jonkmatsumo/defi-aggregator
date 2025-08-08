@@ -12,6 +12,7 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
   
   const gasPriceService = useRef(new GasPriceService());
   const intervalRef = useRef(null);
+  const isInitializedRef = useRef(false);
 
   // Wagmi hooks for network information
   const chainId = useChainId();
@@ -33,9 +34,9 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
       const prices = await gasPriceService.current.fetchMultipleGasPrices(networkKeys);
       
       // Also fetch gas price for the currently connected network if available
-      if (client && chainId) {
+      if (client && chainId && typeof client.getGasPrice === 'function') {
         try {
-                     const connectedNetworkGasPrice = await GasPriceService.fetchConnectedWalletGasPrice(client);
+          const connectedNetworkGasPrice = await GasPriceService.fetchConnectedWalletGasPrice(client);
           const connectedNetworkKey = Object.keys(supportedNetworks).find(
             key => supportedNetworks[key].chainId === chainId
           );
@@ -48,7 +49,7 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
         }
       }
       
-            setGasPrices(prices);
+      setGasPrices(prices);
       setLastUpdated(new Date()); // Only update timestamp on successful fetch
       setHasInitialData(true);
     } catch (error) {
@@ -65,7 +66,7 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
     } finally {
       setLoading(false);
     }
-  }, [networkKeys, client, chainId, supportedNetworks, hasInitialData]);
+  }, [networkKeys, hasInitialData]); // Removed client and chainId from dependencies
 
   // Update current network info when chain changes
   useEffect(() => {
@@ -75,19 +76,22 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
     }
   }, [chainId]);
 
-  // Fetch gas prices on component mount and set up refresh interval
+  // Initialize component and set up refresh interval
   useEffect(() => {
-    fetchAllGasPrices();
-    
-    // Refresh gas prices every 30 seconds
-    intervalRef.current = setInterval(fetchAllGasPrices, 30000);
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
+      fetchAllGasPrices();
+      
+      // Refresh gas prices every 30 minutes to reduce API calls and avoid 429 errors
+      intervalRef.current = setInterval(fetchAllGasPrices, 1800000);
+    }
     
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [fetchAllGasPrices]);
+  }, []); // Empty dependency array for initialization
 
   // Manual refresh function
   const handleRefresh = () => {
@@ -196,8 +200,8 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
         {networkKeys.map((networkKey) => {
           const network = supportedNetworks[networkKey];
           const gasData = gasPrices[networkKey];
-                     const status = GasPriceService.getNetworkStatus(gasData);
-           const gasPrice = GasPriceService.getDisplayGasPrice(gasData);
+          const status = GasPriceService.getNetworkStatus(gasData);
+          const gasPrice = GasPriceService.getDisplayGasPrice(gasData);
           const isCurrentNetwork = currentNetworkInfo && currentNetworkInfo.chainId === network.chainId;
 
           return (
@@ -248,10 +252,6 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
           );
         })}
       </div>
-
-      
-
-
     </div>
   );
 };
