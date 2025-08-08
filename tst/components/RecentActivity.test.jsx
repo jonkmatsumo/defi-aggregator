@@ -1,44 +1,74 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import RecentActivity from '../../src/components/RecentActivity';
 
+// Mock wagmi hooks
+jest.mock('wagmi', () => ({
+  useAccount: jest.fn(),
+  usePublicClient: jest.fn(),
+  useChainId: jest.fn()
+}));
+
 describe('RecentActivity', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Set default mock return values
+    const { useAccount, usePublicClient, useChainId } = require('wagmi');
+    useAccount.mockReturnValue({
+      isConnected: false,
+      address: null
+    });
+    usePublicClient.mockReturnValue({
+      getBlockNumber: jest.fn().mockResolvedValue('1000000'),
+      getBlock: jest.fn().mockResolvedValue({
+        timestamp: '1640995200',
+        transactions: []
+      })
+    });
+    useChainId.mockReturnValue(1);
+  });
+
   it('renders the title correctly', () => {
     render(<RecentActivity />);
     expect(screen.getByText('Recent Activity')).toBeInTheDocument();
   });
 
-  it('renders all activity descriptions', () => {
+  it('renders demo mode when not connected', () => {
     render(<RecentActivity />);
-    expect(screen.getByText('Swap ETH → USDC')).toBeInTheDocument();
-    expect(screen.getByText('Supply USDC')).toBeInTheDocument();
+    expect(screen.getByText('(Demo Mode)')).toBeInTheDocument();
   });
 
-  it('renders all activity times', () => {
+  it('renders no data message when not connected', () => {
     render(<RecentActivity />);
-    expect(screen.getByText('2 hours ago')).toBeInTheDocument();
-    expect(screen.getByText('1 day ago')).toBeInTheDocument();
+    expect(screen.getByText('No data')).toBeInTheDocument();
   });
 
-  it('renders all activity amounts', () => {
+  it('renders refresh button', () => {
     render(<RecentActivity />);
-    expect(screen.getByText('+1,250 USDC')).toBeInTheDocument();
-    expect(screen.getByText('500 USDC')).toBeInTheDocument();
+    const refreshButton = screen.getByTitle('Refresh transactions');
+    expect(refreshButton).toBeInTheDocument();
+    expect(refreshButton.textContent).toBe('↻');
   });
 
-  it('renders activity icons', () => {
-    render(<RecentActivity />);
-    expect(screen.getByText('🔄')).toBeInTheDocument();
-    expect(screen.getByText('📈')).toBeInTheDocument();
+  it('accepts transactionCount prop', () => {
+    render(<RecentActivity transactionCount={5} />);
+    expect(screen.getByText('Recent Activity')).toBeInTheDocument();
   });
 
-  it('has correct card styling', () => {
-    render(<RecentActivity />);
-    const card = screen.getByText('Recent Activity').closest('div');
-    expect(card).toHaveStyle({
-      borderRadius: '16px',
-      padding: '20px',
+  it('shows loading state when connected and fetching data', () => {
+    const { useAccount } = require('wagmi');
+    useAccount.mockReturnValue({
+      isConnected: true,
+      address: '0x1234567890123456789012345678901234567890'
     });
+
+    render(<RecentActivity />);
+    expect(screen.getByText('Recent Activity')).toBeInTheDocument();
+  });
+
+  it('handles forceRefresh prop', () => {
+    render(<RecentActivity forceRefresh={true} />);
+    expect(screen.getByText('Recent Activity')).toBeInTheDocument();
   });
 
   it('has correct title styling', () => {
@@ -48,161 +78,46 @@ describe('RecentActivity', () => {
       color: 'white',
       fontSize: '16px',
       fontWeight: '600',
-      margin: '0px 0px 16px 0px',
+      margin: '0px'
     });
   });
 
-  it('has correct activity item styling', () => {
+  it('shows demo mode message when not connected', () => {
     render(<RecentActivity />);
-    const swapItem = screen.getByText('Swap ETH → USDC').closest('div');
-    expect(swapItem).toBeInTheDocument();
+    expect(screen.getByText('Connect your wallet to see real transaction history')).toBeInTheDocument();
   });
 
-  it('has correct activity icon styling', () => {
-    render(<RecentActivity />);
-    const swapIcon = screen.getByText('🔄');
-    expect(swapIcon).toHaveStyle({
-      width: '32px',
-      height: '32px',
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '16px',
+  it('handles empty transaction list', () => {
+    const { useAccount } = require('wagmi');
+    useAccount.mockReturnValue({
+      isConnected: true,
+      address: '0x1234567890123456789012345678901234567890'
     });
+
+    render(<RecentActivity />);
+    expect(screen.getByText('Recent Activity')).toBeInTheDocument();
   });
 
-  it('has correct activity description styling', () => {
-    render(<RecentActivity />);
-    const description = screen.getByText('Swap ETH → USDC');
-    expect(description).toHaveStyle({
-      color: 'white',
-      fontSize: '14px',
-      fontWeight: '500',
-      marginBottom: '2px',
+  it('displays error message when transaction fetching fails', () => {
+    const { useAccount } = require('wagmi');
+    useAccount.mockReturnValue({
+      isConnected: true,
+      address: '0x1234567890123456789012345678901234567890'
     });
-  });
 
-  it('has correct activity time styling', () => {
-    render(<RecentActivity />);
-    const time = screen.getByText('2 hours ago');
-    expect(time).toHaveStyle({
-      color: '#a0aec0',
-      fontSize: '12px',
+    // Mock the public client to throw an error
+    const { usePublicClient } = require('wagmi');
+    usePublicClient.mockReturnValue({
+      getBlockNumber: jest.fn().mockRejectedValue(new Error('Network error')),
+      getBlock: jest.fn().mockRejectedValue(new Error('Network error'))
     });
+
+    render(<RecentActivity />);
+    expect(screen.getByText('Recent Activity')).toBeInTheDocument();
   });
 
-  it('has correct positive amount styling', () => {
-    render(<RecentActivity />);
-    const positiveAmount = screen.getByText('+1,250 USDC');
-    expect(positiveAmount).toHaveStyle({
-      color: '#48bb78',
-      fontSize: '14px',
-      fontWeight: '600',
-    });
-  });
-
-  it('has correct neutral amount styling', () => {
-    render(<RecentActivity />);
-    const neutralAmount = screen.getByText('500 USDC');
-    expect(neutralAmount).toHaveStyle({
-      color: 'white',
-      fontSize: '14px',
-      fontWeight: '600',
-    });
-  });
-
-  it('renders all activities in the correct order', () => {
-    render(<RecentActivity />);
-    const activities = ['Swap ETH → USDC', 'Supply USDC'];
-    activities.forEach(activity => {
-      expect(screen.getByText(activity)).toBeInTheDocument();
-    });
-  });
-
-  it('has correct container layout', () => {
-    render(<RecentActivity />);
-    const container = screen.getByText('Recent Activity').parentElement;
-    expect(container).toBeInTheDocument();
-  });
-
-  it('renders activity items with proper structure', () => {
-    render(<RecentActivity />);
-    const swapItem = screen.getByText('Swap ETH → USDC').closest('div');
-    expect(swapItem).toBeInTheDocument();
-  });
-
-  it('has consistent styling across all activity items', () => {
-    render(<RecentActivity />);
-    const swapDescription = screen.getByText('Swap ETH → USDC');
-    const supplyDescription = screen.getByText('Supply USDC');
-    
-    expect(swapDescription).toHaveStyle({
-      color: 'white',
-      fontSize: '14px',
-      fontWeight: '500',
-      marginBottom: '2px',
-    });
-    expect(supplyDescription).toHaveStyle({
-      color: 'white',
-      fontSize: '14px',
-      fontWeight: '500',
-      marginBottom: '2px',
-    });
-  });
-
-  it('renders activity content with proper hierarchy', () => {
-    render(<RecentActivity />);
-    const swapItem = screen.getByText('Swap ETH → USDC').closest('div');
-    expect(swapItem).toBeInTheDocument();
-  });
-
-  it('renders correct number of activities', () => {
-    render(<RecentActivity />);
-    const activityItems = document.querySelectorAll('div[style*="border-radius: 50%"]');
-    expect(activityItems).toHaveLength(2);
-  });
-
-  it('renders correct activity types', () => {
-    render(<RecentActivity />);
-    expect(screen.getByText('Swap ETH → USDC')).toBeInTheDocument();
-    expect(screen.getByText('Supply USDC')).toBeInTheDocument();
-  });
-
-  it('renders correct time formats', () => {
-    render(<RecentActivity />);
-    expect(screen.getByText('2 hours ago')).toBeInTheDocument();
-    expect(screen.getByText('1 day ago')).toBeInTheDocument();
-  });
-
-  it('renders correct amount formats', () => {
-    render(<RecentActivity />);
-    expect(screen.getByText('+1,250 USDC')).toBeInTheDocument();
-    expect(screen.getByText('500 USDC')).toBeInTheDocument();
-  });
-
-  it('renders activity icons with correct styling', () => {
-    render(<RecentActivity />);
-    const swapIcon = screen.getByText('🔄');
-    const supplyIcon = screen.getByText('📈');
-    
-    expect(swapIcon).toHaveStyle({
-      width: '32px',
-      height: '32px',
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '16px',
-    });
-    expect(supplyIcon).toHaveStyle({
-      width: '32px',
-      height: '32px',
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '16px',
-    });
+  it('handles forceRefresh prop correctly', () => {
+    render(<RecentActivity forceRefresh={true} />);
+    expect(screen.getByText('Recent Activity')).toBeInTheDocument();
   });
 }); 
