@@ -108,8 +108,13 @@ const RecentActivity = ({ transactionCount = 3, forceRefresh = false }) => {
       const searchBlocks = Math.min(100, count * 10); // Search more blocks than needed
       
       for (let i = 0; i < searchBlocks && transactions.length < count; i++) {
-        const blockNumber = currentBlock - i;
-        if (blockNumber < 0) break;
+        // Ensure we don't go below 0 when subtracting from currentBlock
+        // eslint-disable-next-line no-undef
+        const iBigInt = BigInt(i);
+        // eslint-disable-next-line no-undef
+        const currentBlockBigInt = typeof currentBlock === 'bigint' ? currentBlock : BigInt(currentBlock);
+        if (currentBlockBigInt < iBigInt) break;
+        const blockNumber = currentBlockBigInt - iBigInt;
         
         try {
           const block = await client.getBlock({
@@ -197,7 +202,7 @@ const RecentActivity = ({ transactionCount = 3, forceRefresh = false }) => {
         to: tx.to,
         amount,
         tokenInfo,
-        timestamp: new Date(Number(block.timestamp) * 1000),
+        timestamp: new Date((typeof block.timestamp === 'bigint' ? Number(block.timestamp) : block.timestamp) * 1000),
         isIncoming,
         isOutgoing,
         status: 'confirmed'

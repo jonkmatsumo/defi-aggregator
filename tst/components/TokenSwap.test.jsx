@@ -55,7 +55,7 @@ describe('TokenSwap', () => {
     // Clear fetch mock
     global.fetch.mockClear();
     
-    // Setup default fetch response
+    // Setup default fetch response for new 1inch API
     global.fetch.mockResolvedValue({
       ok: true,
       json: jest.fn().mockResolvedValue({
@@ -155,7 +155,15 @@ describe('TokenSwap', () => {
     // Wait for debounced quote fetch
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('https://api.1inch.io/v4.0/1/quote')
+        expect.stringMatching(/\/swap\/v5\.2\/1\/quote\?.*/),
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer demo',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          })
+        })
       );
     });
   });
@@ -179,7 +187,8 @@ describe('TokenSwap', () => {
   test('handles API errors gracefully', async () => {
     global.fetch.mockResolvedValue({
       ok: false,
-      status: 400
+      status: 400,
+      statusText: 'Bad Request'
     });
 
     render(<TokenSwap />);
@@ -190,7 +199,7 @@ describe('TokenSwap', () => {
     
     // Wait for error to be displayed
     await waitFor(() => {
-      expect(screen.getByText('API Error: 400')).toBeInTheDocument();
+      expect(screen.getByText('API Error: 400 - Bad Request')).toBeInTheDocument();
     });
   });
 

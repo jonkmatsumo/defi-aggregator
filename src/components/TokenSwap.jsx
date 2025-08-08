@@ -66,7 +66,7 @@ const TokenSwap = () => {
   // Get available tokens for current chain
   const availableTokens = COMMON_TOKENS[chainId] || COMMON_TOKENS[1] || {};
 
-  // Fetch quote from 1inch API
+  // Fetch quote from 1inch API using direct API call
   const fetchQuote = useCallback(async () => {
     if (!amount || !fromToken.address || !toToken.address || !chainId) {
       setQuote(null);
@@ -88,18 +88,28 @@ const TokenSwap = () => {
         amountInWei = (parseFloat(amount) * Math.pow(10, decimals)).toString();
       }
 
-      // 1inch API endpoint
-      const apiUrl = `https://api.1inch.io/v4.0/${chainId}/quote`;
+      // Use proxy for 1inch API call
+      const apiKey = process.env.REACT_APP_1INCH_API_KEY || 'demo'; // Use demo for testing
+      const apiUrl = `/swap/v5.2/${chainId}/quote`;
+      
       const params = new URLSearchParams({
-        fromTokenAddress: fromToken.address,
-        toTokenAddress: toToken.address,
+        src: fromToken.address,
+        dst: toToken.address,
         amount: amountInWei,
         slippage: slippage
       });
 
-      const response = await fetch(`${apiUrl}?${params}`);
+      const response = await fetch(`${apiUrl}?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
+        throw new Error(`API Error: ${response.status} - ${response.statusText}`);
       }
 
       const data = await response.json();

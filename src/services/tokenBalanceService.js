@@ -114,17 +114,53 @@ class TokenBalanceService {
   // Fetch token metadata from blockchain
   async fetchTokenMetadata(client, tokenAddress) {
     try {
+      // Validate inputs
+      if (!client || !tokenAddress) {
+        console.warn('TokenBalanceService - Missing required parameters for metadata fetch');
+        return this.getTokenMetadata(tokenAddress, client?.chain?.id || 1);
+      }
+
+      // Check if client has required methods
+      if (typeof client.getContract !== 'function') {
+        console.warn('TokenBalanceService - Client does not have getContract method');
+        return this.getTokenMetadata(tokenAddress, client?.chain?.id || 1);
+      }
+
       const contract = getContract({
         address: tokenAddress,
         abi: erc20Abi,
         client
       });
 
-      const [symbol, name, decimals] = await Promise.all([
-        contract.read.symbol(),
-        contract.read.name(),
-        contract.read.decimals()
-      ]);
+      // Check if contract has required methods
+      if (!contract || !contract.read) {
+        console.warn('TokenBalanceService - Contract does not have read methods for token:', tokenAddress);
+        return this.getTokenMetadata(tokenAddress, client?.chain?.id || 1);
+      }
+
+      // Fetch metadata with individual error handling for each call
+      let symbol, name, decimals;
+      
+      try {
+        symbol = await contract.read.symbol();
+      } catch (error) {
+        console.warn('TokenBalanceService - Failed to fetch symbol for token:', tokenAddress, error);
+        symbol = 'UNKNOWN';
+      }
+
+      try {
+        name = await contract.read.name();
+      } catch (error) {
+        console.warn('TokenBalanceService - Failed to fetch name for token:', tokenAddress, error);
+        name = 'Unknown Token';
+      }
+
+      try {
+        decimals = await contract.read.decimals();
+      } catch (error) {
+        console.warn('TokenBalanceService - Failed to fetch decimals for token:', tokenAddress, error);
+        decimals = 18;
+      }
 
       return {
         symbol: symbol || 'UNKNOWN',
@@ -133,13 +169,8 @@ class TokenBalanceService {
         color: this.getRandomColor()
       };
     } catch (error) {
-      console.warn('Failed to fetch token metadata for', tokenAddress, error);
-      return {
-        symbol: tokenAddress.slice(0, 6).toUpperCase(),
-        name: 'Unknown Token',
-        decimals: 18,
-        color: this.getRandomColor()
-      };
+      console.warn('TokenBalanceService - Failed to fetch token metadata for', tokenAddress, error);
+      return this.getTokenMetadata(tokenAddress, client?.chain?.id || 1);
     }
   }
 
@@ -158,6 +189,12 @@ class TokenBalanceService {
     try {
       console.log('TokenBalanceService - Fetching native balance for address:', address?.slice(0, 10) + '...');
       
+      // Validate inputs
+      if (!client || !address) {
+        console.warn('TokenBalanceService - Missing required parameters for native balance fetch');
+        return null;
+      }
+      
       // Check if client has the getBalance method
       if (!client || typeof client.getBalance !== 'function') {
         console.warn('TokenBalanceService - Client does not have getBalance method, returning null');
@@ -170,7 +207,7 @@ class TokenBalanceService {
       console.log('TokenBalanceService - Native balance:', balance.toString(), 'for chain:', chainId);
       
       // If balance is 0, return null (don't show empty balances)
-      if (balance === 0n) {
+      if (balance === 0n || balance === 0) {
         console.log('TokenBalanceService - Native balance is 0, returning null');
         return null;
       }
@@ -198,7 +235,9 @@ class TokenBalanceService {
           color = '#4a5568';
       }
 
-      const formattedBalance = formatUnits(balance, 18);
+      // Convert balance to string if it's BigInt
+      const balanceValue = typeof balance === 'bigint' ? balance.toString() : balance.toString();
+      const formattedBalance = formatUnits(balanceValue, 18);
       console.log('TokenBalanceService - Formatted native balance:', formattedBalance, symbol);
 
       return {
@@ -222,25 +261,64 @@ class TokenBalanceService {
     try {
       console.log('TokenBalanceService - Fetching ERC-20 balance for token:', tokenAddress, 'user:', userAddress?.slice(0, 10) + '...');
       
+      // Validate inputs
+      if (!client || !tokenAddress || !userAddress) {
+        console.warn('TokenBalanceService - Missing required parameters for token balance fetch');
+        return null;
+      }
+
+      // Check if client has required methods
+      if (typeof client.getContract !== 'function') {
+        console.warn('TokenBalanceService - Client does not have getContract method');
+        return null;
+      }
+
       const contract = getContract({
         address: tokenAddress,
         abi: erc20Abi,
         client
       });
 
-      // Fetch balance
-      const balance = await contract.read.balanceOf([userAddress]);
+      // Check if contract has the balanceOf method
+      if (!contract || !contract.read || !contract.read.balanceOf) {
+        console.warn('TokenBalanceService - Contract does not have balanceOf method for token:', tokenAddress);
+        return null;
+      }
+
+      // Fetch balance with proper error handling
+      let balance;
+      try {
+        balance = await contract.read.balanceOf([userAddress]);
+      } catch (balanceError) {
+        console.warn('TokenBalanceService - Failed to fetch balance for token:', tokenAddress, balanceError);
+        return null;
+      }
       
       // If balance is 0, return null (don't show empty balances)
-      if (balance === 0n) {
+      if (balance === 0n || balance === 0) {
         console.log('TokenBalanceService - ERC-20 balance is 0, returning null');
         return null;
       }
 
-      // Fetch metadata
-      const metadata = await this.fetchTokenMetadata(client, tokenAddress);
+      // Fetch metadata with proper error handling
+      let metadata;
+      try {
+        metadata = await this.fetchTokenMetadata(client, tokenAddress);
+      } catch (metadataError) {
+        console.warn('TokenBalanceService - Failed to fetch metadata for token:', tokenAddress, metadataError);
+        // Use fallback metadata
+        metadata = {
+          symbol: tokenAddress.slice(0, 6).toUpperCase(),
+          name: 'Unknown Token',
+          decimals: 18,
+          color: this.getRandomColor()
+        };
+      }
       
-      const formattedBalance = formatUnits(balance, metadata.decimals);
+      // Convert balance to string if it's BigInt
+      const balanceValue = typeof balance === 'bigint' ? balance.toString() : balance.toString();
+      const formattedBalance = formatUnits(balanceValue, metadata.decimals);
+      
       const result = {
         symbol: metadata.symbol,
         name: metadata.name,

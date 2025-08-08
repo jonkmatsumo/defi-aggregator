@@ -44,6 +44,7 @@
       "last 1 safari version"
     ]
   },
+  "proxy": "https://api.1inch.dev",
   "devDependencies": {
     "@babel/preset-env": "^7.28.0",
     "@babel/preset-react": "^7.27.1",
