@@ -196,11 +196,7 @@ tst/
 - Block data parsing
 - Contract interaction
 
-## Environment Variables
-
-See [Environment-Setup.md](./docs/Environment-Setup.md) for detailed setup instructions.
-
-### Required (Optional for demo mode)
+## Environment Variables Required
 - `REACT_APP_1INCH_API_KEY` - 1inch API key for token swaps
 - `REACT_APP_ALCHEMY_API_KEY` - Alchemy API key for blockchain data
 
