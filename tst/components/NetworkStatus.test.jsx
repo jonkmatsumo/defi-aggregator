@@ -2,6 +2,14 @@ import React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import NetworkStatus from '../../src/components/NetworkStatus';
 
+// Mock wagmi hooks
+jest.mock('wagmi', () => ({
+  useChainId: () => 1,
+  useClient: () => ({
+    chain: { id: 1, name: 'Ethereum' }
+  })
+}));
+
 // Mock the GasPriceService
 jest.mock('../../src/services/gasPriceService', () => {
   const mockFetchMultipleGasPrices = jest.fn();
@@ -16,11 +24,11 @@ jest.mock('../../src/services/gasPriceService', () => {
   
   // Add static methods
   MockedGasPriceService.getSupportedNetworks = jest.fn(() => ({
-    ethereum: { name: 'Ethereum', color: '#627eea', apiKey: 'demo' },
-    polygon: { name: 'Polygon', color: '#8247e5', apiKey: 'demo' },
-    arbitrum: { name: 'Arbitrum', color: '#ff6b35', apiKey: 'demo' },
-    bsc: { name: 'BSC', color: '#f3ba2f', apiKey: 'demo' },
-    optimism: { name: 'Optimism', color: '#ff0420', apiKey: 'demo' }
+    ethereum: { name: 'Ethereum', color: '#627eea', chainId: 1, nativeCurrency: { symbol: 'ETH', decimals: 18 } },
+    polygon: { name: 'Polygon', color: '#8247e5', chainId: 137, nativeCurrency: { symbol: 'MATIC', decimals: 18 } },
+    arbitrum: { name: 'Arbitrum', color: '#ff6b35', chainId: 42161, nativeCurrency: { symbol: 'ETH', decimals: 18 } },
+    bsc: { name: 'BSC', color: '#f3ba2f', chainId: 56, nativeCurrency: { symbol: 'BNB', decimals: 18 } },
+    optimism: { name: 'Optimism', color: '#ff0420', chainId: 10, nativeCurrency: { symbol: 'ETH', decimals: 18 } }
   }));
 
   MockedGasPriceService.getFallbackGasPrices = jest.fn(() => ({
@@ -41,6 +49,20 @@ jest.mock('../../src/services/gasPriceService', () => {
     if (!gasData || !gasData.SafeGasPrice) return 'offline';
     return 'online';
   });
+
+  MockedGasPriceService.getNetworkInfo = jest.fn((chainId) => ({
+    name: 'Ethereum',
+    color: '#627eea',
+    chainId: chainId,
+    nativeCurrency: { symbol: 'ETH', decimals: 18 }
+  }));
+
+  MockedGasPriceService.fetchConnectedWalletGasPrice = jest.fn(async (client) => ({
+    SafeGasPrice: '15',
+    ProposeGasPrice: '18',
+    FastGasPrice: '22',
+    currentGasPrice: '15'
+  }));
 
   // Set up default mock responses
   mockFetchMultipleGasPrices.mockResolvedValue({
@@ -242,21 +264,9 @@ describe('NetworkStatus', () => {
     expect(screen.getByTitle('Refresh gas prices')).toBeInTheDocument();
   });
 
-  it('renders demo mode indicator when no API keys', async () => {
-    render(<NetworkStatus />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Demo mode - using cached data')).toBeInTheDocument();
-    });
-  });
 
-  it('renders update frequency information', async () => {
-    render(<NetworkStatus />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Gas prices update every 30 seconds')).toBeInTheDocument();
-    });
-  });
+
+
 
   it('accepts maxNetworks prop', async () => {
     render(<NetworkStatus maxNetworks={2} />);
