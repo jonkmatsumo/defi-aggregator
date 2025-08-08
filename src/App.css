@@ -1,20 +1,80 @@
-.App {
-  text-align: center;
+/* Reset default styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #0f1419 0%, #1a1a2e 100%);
   color: white;
+  overflow-x: hidden;
+}
+
+.App {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f1419 0%, #1a1a2e 100%);
 }
 
 /* Spinner animation for connecting state */
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a202c;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #667eea;
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Responsive design helpers */
+@media (max-width: 1200px) {
+  .App > div:nth-child(2) > div:nth-child(2) {
+    grid-template-columns: 1fr 300px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .App > div:nth-child(2) > div:nth-child(2) {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .App > div:nth-child(2) {
+    padding: 16px !important;
+  }
 }
