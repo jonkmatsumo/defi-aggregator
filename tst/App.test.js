@@ -38,11 +38,6 @@ jest.mock('../src/components/Header', () => ({
   default: () => <div data-testid="header">Header Component</div>,
 }));
 
-jest.mock('../src/components/DashboardCard', () => ({
-  __esModule: true,
-  default: ({ title, value }) => <div data-testid={`dashboard-card-${title}`}>{title}: {value}</div>,
-}));
-
 jest.mock('../src/components/TokenSwap', () => ({
   __esModule: true,
   default: () => <div data-testid="token-swap">Token Swap Component</div>,
@@ -82,15 +77,6 @@ describe('App', () => {
     expect(screen.getByTestId('header')).toBeInTheDocument();
   });
 
-  it('displays dashboard cards', () => {
-    render(<App />);
-    
-    expect(screen.getByTestId('dashboard-card-Total Balance')).toBeInTheDocument();
-    expect(screen.getByTestId('dashboard-card-24h Change')).toBeInTheDocument();
-    expect(screen.getByTestId('dashboard-card-Lending APY')).toBeInTheDocument();
-    expect(screen.getByTestId('dashboard-card-Active Positions')).toBeInTheDocument();
-  });
-
   it('displays main content components', () => {
     render(<App />);
     
@@ -114,14 +100,5 @@ describe('App', () => {
     const walletProvider = screen.getByTestId('wallet-provider');
     expect(walletProvider).toContainElement(screen.getByTestId('header'));
     expect(walletProvider).toContainElement(screen.getByTestId('token-swap'));
-  });
-
-  it('renders all dashboard cards with correct content', () => {
-    render(<App />);
-    
-    expect(screen.getByText('Total Balance: $24,567.89')).toBeInTheDocument();
-    expect(screen.getByText('24h Change: +$1,234')).toBeInTheDocument();
-    expect(screen.getByText('Lending APY: 8.45%')).toBeInTheDocument();
-    expect(screen.getByText('Active Positions: 7')).toBeInTheDocument();
   });
 }); 

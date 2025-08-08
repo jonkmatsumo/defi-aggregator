@@ -20,20 +20,6 @@ describe('Header', () => {
     expect(screen.getByText('D')).toBeInTheDocument();
   });
 
-  it('renders all navigation items', () => {
-    render(<Header />);
-    expect(screen.getByText('Swap')).toBeInTheDocument();
-    expect(screen.getByText('Lending')).toBeInTheDocument();
-    expect(screen.getByText('Derivatives')).toBeInTheDocument();
-    expect(screen.getByText('Portfolio')).toBeInTheDocument();
-  });
-
-  it('highlights the first navigation item (Swap)', () => {
-    render(<Header />);
-    const swapButton = screen.getByText('Swap');
-    expect(swapButton).toHaveStyle({ color: '#667eea' });
-  });
-
   it('renders the network indicator', () => {
     render(<Header />);
     expect(screen.getByText('Ethereum')).toBeInTheDocument();
@@ -69,21 +55,6 @@ describe('Header', () => {
       color: 'white',
       fontWeight: 'bold',
       fontSize: '16px'
-    });
-  });
-
-  it('has correct navigation button styling for active item', () => {
-    render(<Header />);
-    const swapButton = screen.getByText('Swap');
-    expect(swapButton).toHaveStyle({
-      background: 'none',
-      color: '#667eea',
-      fontSize: '16px',
-      fontWeight: '500',
-      cursor: 'pointer',
-      padding: '8px 0',
-      borderBottom: '2px solid #667eea',
-      transition: 'all 0.2s ease'
     });
   });
 

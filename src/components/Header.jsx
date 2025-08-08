@@ -11,65 +11,30 @@ const Header = () => {
       alignItems: 'center',
       borderBottom: '1px solid #2d3748'
     }}>
-      {/* Logo and Navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 'bold',
-            fontSize: '16px'
-          }}>
-            D
-          </div>
-          <span style={{ 
-            color: 'white', 
-            fontSize: '20px', 
-            fontWeight: '600',
-            fontFamily: 'system-ui, -apple-system, sans-serif'
-          }}>
-            DeFiHub
-          </span>
+      {/* Logo */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{
+          width: '32px',
+          height: '32px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          fontWeight: 'bold',
+          fontSize: '16px'
+        }}>
+          D
         </div>
-
-        {/* Navigation */}
-        <nav style={{ display: 'flex', gap: '24px' }}>
-          {['Swap', 'Lending', 'Derivatives', 'Portfolio'].map((item, index) => (
-            <button
-              key={item}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: index === 0 ? '#667eea' : '#a0aec0',
-                fontSize: '16px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                padding: '8px 0',
-                borderBottom: index === 0 ? '2px solid #667eea' : '2px solid transparent',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                if (index !== 0) {
-                  e.target.style.color = '#e2e8f0';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (index !== 0) {
-                  e.target.style.color = '#a0aec0';
-                }
-              }}
-            >
-              {item}
-            </button>
-          ))}
-        </nav>
+        <span style={{ 
+          color: 'white', 
+          fontSize: '20px', 
+          fontWeight: '600',
+          fontFamily: 'system-ui, -apple-system, sans-serif'
+        }}>
+          DeFiHub
+        </span>
       </div>
 
       {/* Right side - Network and Wallet */}

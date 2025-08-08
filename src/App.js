@@ -1,7 +1,6 @@
 import React from 'react';
 import WalletProvider from './components/WalletProvider';
 import Header from './components/Header';
-import DashboardCard from './components/DashboardCard';
 import TokenSwap from './components/TokenSwap';
 import NetworkStatus from './components/NetworkStatus';
 import YourAssets from './components/YourAssets';
@@ -21,43 +20,6 @@ function App() {
           padding: '24px',
           color: 'white'
         }}>
-          {/* Dashboard Cards */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '20px',
-            marginBottom: '32px'
-          }}>
-            <DashboardCard
-              title="Total Balance"
-              value="$24,567.89"
-              subtitle="+8.2%"
-              trend="+$1,234"
-              trendColor="#48bb78"
-              icon="💰"
-            />
-            <DashboardCard
-              title="24h Change"
-              value="+$1,234"
-              subtitle="+5.3%"
-              trend="+5.3%"
-              trendColor="#48bb78"
-              icon="📈"
-            />
-            <DashboardCard
-              title="Lending APY"
-              value="8.45%"
-              subtitle="Average"
-              icon="🏦"
-            />
-            <DashboardCard
-              title="Active Positions"
-              value="7"
-              subtitle="Positions"
-              icon="📊"
-            />
-          </div>
-
           {/* Main Content Grid */}
           <div style={{
             display: 'grid',
