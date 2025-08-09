@@ -18,6 +18,17 @@ jest.mock('wagmi', () => ({
   useDisconnect: () => ({
     disconnect: jest.fn(),
   }),
+  usePublicClient: () => ({
+    getChainId: jest.fn().mockResolvedValue(1),
+    getBalance: jest.fn(),
+    getBlockNumber: jest.fn(),
+  }),
+  useWalletClient: () => ({
+    data: {
+      request: jest.fn(),
+    },
+  }),
+  useChainId: () => 1,
 }));
 
 jest.mock('@rainbow-me/rainbowkit', () => ({

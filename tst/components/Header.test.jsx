@@ -34,7 +34,7 @@ describe('Header', () => {
     render(<Header />);
     const header = screen.getByRole('banner');
     expect(header).toHaveStyle({
-      padding: '16px 24px',
+      padding: 'clamp(12px, 2vw, 20px) clamp(16px, 3vw, 32px)',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
@@ -46,15 +46,15 @@ describe('Header', () => {
     render(<Header />);
     const logoIcon = screen.getByText('D').closest('div');
     expect(logoIcon).toHaveStyle({
-      width: '32px',
-      height: '32px',
-      borderRadius: '8px',
+      width: 'clamp(28px, 4vw, 40px)',
+      height: 'clamp(28px, 4vw, 40px)',
+      borderRadius: 'clamp(6px, 1vw, 12px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       color: 'white',
       fontWeight: 'bold',
-      fontSize: '16px'
+      fontSize: 'clamp(14px, 2vw, 20px)'
     });
   });
 
@@ -64,9 +64,9 @@ describe('Header', () => {
     expect(networkIndicator).toHaveStyle({
       display: 'flex',
       alignItems: 'center',
-      gap: '8px',
-      padding: '8px 12px',
-      borderRadius: '8px'
+      gap: 'clamp(6px, 1vw, 12px)',
+      padding: 'clamp(6px, 1vw, 12px) clamp(10px, 1.5vw, 16px)',
+      borderRadius: 'clamp(6px, 1vw, 12px)'
     });
   });
 }); 

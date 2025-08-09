@@ -31,7 +31,7 @@ body {
 
 /* Scrollbar styling for dark theme */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: clamp(6px, 0.5vw, 12px);
 }
 
 ::-webkit-scrollbar-track {
@@ -40,7 +40,7 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: #4a5568;
-  border-radius: 4px;
+  border-radius: clamp(2px, 0.2vw, 6px);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -66,47 +66,98 @@ body {
 /* Responsive design for main content grid */
 @media (max-width: 1400px) {
   .App > div:nth-child(2) > div:nth-child(2) {
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: 1fr minmax(250px, 30%);
+    gap: clamp(12px, 1.5vw, 24px);
   }
 }
 
 @media (max-width: 1200px) {
   .App > div:nth-child(2) > div:nth-child(2) {
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-  }
-  
-  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(3) {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    grid-template-columns: 1fr minmax(220px, 35%);
+    gap: clamp(12px, 1.5vw, 24px);
   }
 }
 
 @media (max-width: 768px) {
   .App > div:nth-child(2) > div:nth-child(2) {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: clamp(12px, 2vw, 20px);
   }
   
   .App > div:nth-child(2) {
-    padding: 16px;
+    padding: clamp(12px, 2.5vw, 20px);
   }
   
-  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(3) {
-    grid-template-columns: 1fr;
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(2) {
+    order: -1;
   }
 }
 
 @media (max-width: 480px) {
   .App > div:nth-child(2) {
-    padding: 12px;
+    padding: clamp(8px, 2vw, 16px);
   }
   
   .App > div:nth-child(2) > div:nth-child(2) {
-    gap: 12px;
+    gap: clamp(8px, 1.5vw, 16px);
+  }
+}
+
+/* Container queries for better component-level responsiveness */
+@container (max-width: 600px) {
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) {
+    gap: clamp(12px, 1.5vw, 20px);
+  }
+}
+
+@container (max-width: 400px) {
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) {
+    gap: clamp(8px, 1vw, 16px);
+  }
+}
+
+/* Perpetuals section specific responsive adjustments */
+@media (max-width: 1024px) {
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Make chart smaller on medium screens */
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) {
+    height: clamp(250px, 40vh, 400px);
+  }
+}
+
+@media (max-width: 768px) {
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) {
+    grid-template-columns: 1fr;
+    gap: clamp(12px, 1.5vw, 20px);
+  }
+  
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) {
+    order: -1;
+  }
+  
+  /* Make chart even smaller on mobile */
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) {
+    height: clamp(200px, 35vh, 300px);
+  }
+  
+  /* Adjust market stats grid for mobile */
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  /* Make chart smaller on very small screens */
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) {
+    height: clamp(180px, 30vh, 250px);
+  }
+  
+  /* Stack market stats in single column on very small screens */
+  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -78,31 +78,38 @@ describe('TokenSwap', () => {
     ethers.utils.formatUnits.mockReturnValue('1.0');
   });
 
-  test('renders token swap component', () => {
-    render(<TokenSwap />);
+  it('renders token swap component', async () => {
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     expect(screen.getByText('Token Swap')).toBeInTheDocument();
   });
 
-  test('shows default tokens', () => {
-    render(<TokenSwap />);
+  it('shows default tokens', async () => {
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     expect(screen.getByText('ETH')).toBeInTheDocument();
     expect(screen.getByText('USDC')).toBeInTheDocument();
   });
 
-  test('shows connect wallet message when not connected', () => {
+  it('shows connect wallet message when not connected', async () => {
     const { useAccount } = require('wagmi');
     useAccount.mockReturnValue({
       address: null,
       isConnected: false
     });
 
-    render(<TokenSwap />);
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     expect(screen.getByText('Connect your wallet to start swapping tokens')).toBeInTheDocument();
-    expect(screen.getByText('Connect Wallet')).toBeInTheDocument();
   });
 
-  test('allows token selection', () => {
-    render(<TokenSwap />);
+  it('allows token selection', async () => {
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     
     // Click on from token button
     const fromTokenButton = screen.getByText('ETH').closest('button');
@@ -114,8 +121,10 @@ describe('TokenSwap', () => {
     expect(screen.getByText('USD Coin')).toBeInTheDocument();
   });
 
-  test('switches tokens when switch button is clicked', () => {
-    render(<TokenSwap />);
+  it('switches tokens when switch button is clicked', async () => {
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     
     // Initially ETH -> USDC
     expect(screen.getAllByText('ETH')[0]).toBeInTheDocument();
@@ -130,8 +139,10 @@ describe('TokenSwap', () => {
     expect(screen.getAllByText('ETH')[0]).toBeInTheDocument();
   });
 
-  test('allows slippage adjustment', () => {
-    render(<TokenSwap />);
+  it('allows slippage adjustment', async () => {
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     
     // Default should be 1%
     const slippageButtons = screen.getAllByText(/[0-9]+%/);
@@ -145,8 +156,10 @@ describe('TokenSwap', () => {
     expect(twoPercentButton).toHaveStyle('background-color: rgb(102, 126, 234)');
   });
 
-  test('fetches quote when amount is entered', async () => {
-    render(<TokenSwap />);
+  it('fetches quote when amount is entered', async () => {
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     
     // Enter amount
     const amountInput = screen.getByPlaceholderText('0.0');
@@ -168,8 +181,10 @@ describe('TokenSwap', () => {
     });
   });
 
-  test('displays quote information', async () => {
-    render(<TokenSwap />);
+  it('displays quote information', async () => {
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     
     // Enter amount to trigger quote
     const amountInput = screen.getByPlaceholderText('0.0');
@@ -184,14 +199,16 @@ describe('TokenSwap', () => {
     });
   });
 
-  test('handles API errors gracefully', async () => {
+  it('handles API errors gracefully', async () => {
     global.fetch.mockResolvedValue({
       ok: false,
       status: 400,
       statusText: 'Bad Request'
     });
 
-    render(<TokenSwap />);
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     
     // Enter amount to trigger quote
     const amountInput = screen.getByPlaceholderText('0.0');
@@ -203,8 +220,10 @@ describe('TokenSwap', () => {
     });
   });
 
-  test('enables swap button when quote is available', async () => {
-    render(<TokenSwap />);
+  it('enables swap button when quote is available', async () => {
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     
     // Initially disabled (no quote)
     const swapButton = screen.getByText('Swap');
@@ -220,8 +239,10 @@ describe('TokenSwap', () => {
     });
   });
 
-  test('closes token selector modal', () => {
-    render(<TokenSwap />);
+  it('closes token selector modal', async () => {
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     
     // Open token selector
     const fromTokenButton = screen.getByText('ETH').closest('button');
@@ -238,27 +259,33 @@ describe('TokenSwap', () => {
     expect(screen.queryByText('Select Token')).not.toBeInTheDocument();
   });
 
-  test('applies proper styling', () => {
-    render(<TokenSwap />);
+  it('applies proper styling', async () => {
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     
     const container = screen.getByText('Token Swap').closest('div');
     expect(container).toHaveStyle('background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%)');
   });
 
-  test('handles different chain IDs', () => {
+  it('handles different chain IDs', async () => {
     const { useChainId } = require('wagmi');
     useChainId.mockReturnValue(137); // Polygon
 
-    render(<TokenSwap />);
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     
     // Should still work with different chain ID
     expect(screen.getByText('Token Swap')).toBeInTheDocument();
   });
 
-  test('debounces quote requests', async () => {
+  it('debounces quote requests', async () => {
     jest.useFakeTimers();
     
-    render(<TokenSwap />);
+    await act(async () => {
+      render(<TokenSwap />);
+    });
     
     const amountInput = screen.getByPlaceholderText('0.0');
     

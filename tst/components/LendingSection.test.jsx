@@ -146,25 +146,31 @@ describe('LendingSection', () => {
     mockLendingService.mockImplementation(() => mockServiceInstance);
   });
 
-  test('renders lending section component', () => {
-    render(<LendingSection />);
+  it('renders lending section component', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     expect(screen.getByText('Lending & Borrowing')).toBeInTheDocument();
   });
 
-  test('shows demo mode when not connected', () => {
+  it('shows demo mode when not connected', async () => {
     const { useAccount } = require('wagmi');
     useAccount.mockReturnValue({
       address: null,
       isConnected: false
     });
 
-    render(<LendingSection />);
+    await act(async () => {
+      render(<LendingSection />);
+    });
     expect(screen.getByText('(Demo Mode)')).toBeInTheDocument();
     expect(screen.getByText('Connect your wallet to start lending and borrowing')).toBeInTheDocument();
   });
 
-  test('displays user positions when connected', async () => {
-    render(<LendingSection />);
+  it('displays user positions when connected', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Your Positions')).toBeInTheDocument();
@@ -173,8 +179,10 @@ describe('LendingSection', () => {
     });
   });
 
-  test('renders action buttons', () => {
-    render(<LendingSection />);
+  it('renders action buttons', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     expect(screen.getByText('supply')).toBeInTheDocument();
     expect(screen.getByText('withdraw')).toBeInTheDocument();
@@ -182,8 +190,10 @@ describe('LendingSection', () => {
     expect(screen.getByText('repay')).toBeInTheDocument();
   });
 
-  test('allows action selection', () => {
-    render(<LendingSection />);
+  it('allows action selection', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     const borrowButton = screen.getByText('borrow');
     fireEvent.click(borrowButton);
@@ -192,17 +202,21 @@ describe('LendingSection', () => {
     expect(borrowButton).toBeInTheDocument();
   });
 
-  test('renders platform selection', () => {
-    render(<LendingSection />);
+  it('renders platform selection', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     expect(screen.getByText('🏦')).toBeInTheDocument(); // Compound logo
-    expect(screen.getByText('Compound')).toBeInTheDocument();
+    expect(screen.getAllByText('Compound')).toHaveLength(3); // Button + 2 asset entries
     expect(screen.getByText('🦇')).toBeInTheDocument(); // Aave logo
     expect(screen.getByText('Aave')).toBeInTheDocument();
   });
 
-  test('allows platform selection', () => {
-    render(<LendingSection />);
+  it('allows platform selection', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     const aaveButton = screen.getByText('Aave');
     fireEvent.click(aaveButton);
@@ -210,14 +224,18 @@ describe('LendingSection', () => {
     expect(aaveButton).toBeInTheDocument();
   });
 
-  test('shows token selection button', () => {
-    render(<LendingSection />);
+  it('shows token selection button', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     expect(screen.getByText('Choose a token')).toBeInTheDocument();
   });
 
-  test('opens token selector modal', () => {
-    render(<LendingSection />);
+  it('opens token selector modal', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
@@ -225,8 +243,10 @@ describe('LendingSection', () => {
     expect(screen.getAllByText('Select Token')).toHaveLength(2);
   });
 
-  test('displays available tokens in modal', async () => {
-    render(<LendingSection />);
+  it('displays available tokens in modal', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
@@ -237,8 +257,10 @@ describe('LendingSection', () => {
     });
   });
 
-  test('allows token selection', async () => {
-    render(<LendingSection />);
+  it('allows token selection', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
@@ -253,15 +275,19 @@ describe('LendingSection', () => {
     expect(screen.queryByText('Select Token')).toBeInTheDocument(); // The label remains visible
   });
 
-  test('shows amount input field', () => {
-    render(<LendingSection />);
+  it('shows amount input field', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     const amountInput = screen.getByPlaceholderText('0.0');
     expect(amountInput).toBeInTheDocument();
   });
 
-  test('allows amount input', () => {
-    render(<LendingSection />);
+  it('allows amount input', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     const amountInput = screen.getByPlaceholderText('0.0');
     fireEvent.change(amountInput, { target: { value: '100' } });
@@ -269,8 +295,10 @@ describe('LendingSection', () => {
     expect(amountInput.value).toBe('100');
   });
 
-  test('displays token info when token is selected', async () => {
-    render(<LendingSection />);
+  it('displays token info when token is selected', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
@@ -289,16 +317,20 @@ describe('LendingSection', () => {
     });
   });
 
-  test('shows execute button with correct text', async () => {
-    render(<LendingSection />);
+  it('shows execute button with correct text', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Supply')).toBeInTheDocument();
     });
   });
 
-  test('execute button is disabled when no token selected', async () => {
-    render(<LendingSection />);
+  it('execute button is disabled when no token selected', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     await waitFor(() => {
       const executeButton = screen.getByText('Supply');
@@ -306,8 +338,10 @@ describe('LendingSection', () => {
     });
   });
 
-  test('execute button is disabled when no amount entered', async () => {
-    render(<LendingSection />);
+  it('execute button is disabled when no amount entered', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
@@ -323,8 +357,10 @@ describe('LendingSection', () => {
     expect(executeButton).toBeDisabled();
   });
 
-  test('execute button is enabled when token and amount are provided', async () => {
-    render(<LendingSection />);
+  it('execute button is enabled when token and amount are provided', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
@@ -344,8 +380,10 @@ describe('LendingSection', () => {
     expect(executeButton).not.toBeDisabled();
   });
 
-  test('executes supply transaction successfully', async () => {
-    render(<LendingSection />);
+  it('executes supply transaction successfully', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
@@ -370,8 +408,10 @@ describe('LendingSection', () => {
     });
   });
 
-  test('executes withdraw transaction successfully', async () => {
-    render(<LendingSection />);
+  it('executes withdraw transaction successfully', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Select withdraw action
     const withdrawButton = screen.getByText('withdraw');
@@ -400,8 +440,10 @@ describe('LendingSection', () => {
     });
   });
 
-  test('executes borrow transaction successfully', async () => {
-    render(<LendingSection />);
+  it('executes borrow transaction successfully', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Select borrow action
     const borrowButton = screen.getByText('borrow');
@@ -430,8 +472,10 @@ describe('LendingSection', () => {
     });
   });
 
-  test('executes repay transaction successfully', async () => {
-    render(<LendingSection />);
+  it('executes repay transaction successfully', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Select repay action
     const repayButton = screen.getByText('repay');
@@ -460,11 +504,13 @@ describe('LendingSection', () => {
     });
   });
 
-  test('handles transaction failure', async () => {
+  it('handles transaction failure', async () => {
     const mockServiceInstance = mockLendingService();
     mockServiceInstance.supplyTokens.mockRejectedValue(new Error('Transaction failed'));
     
-    render(<LendingSection />);
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
@@ -489,8 +535,10 @@ describe('LendingSection', () => {
     });
   });
 
-  test('displays available assets list', async () => {
-    render(<LendingSection />);
+  it('displays available assets list', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Available Assets')).toBeInTheDocument();
@@ -499,8 +547,10 @@ describe('LendingSection', () => {
     });
   });
 
-  test('shows APY rates for available assets', async () => {
-    render(<LendingSection />);
+  it('shows APY rates for available assets', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Supply: 2.50%')).toBeInTheDocument();
@@ -508,17 +558,21 @@ describe('LendingSection', () => {
     });
   });
 
-  test('shows refresh button', () => {
-    render(<LendingSection />);
+  it('shows refresh button', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     expect(screen.getByText('↻ Refresh')).toBeInTheDocument();
   });
 
-  test('handles refresh action', async () => {
+  it('handles refresh action', async () => {
     const mockServiceInstance = mockLendingService();
     const mockFetchAllLendingAssets = mockServiceInstance.fetchAllLendingAssets;
     
-    render(<LendingSection />);
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     const refreshButton = screen.getByText('↻ Refresh');
     fireEvent.click(refreshButton);
@@ -528,8 +582,10 @@ describe('LendingSection', () => {
     });
   });
 
-  test('displays transaction hash when transaction succeeds', async () => {
-    render(<LendingSection />);
+  it('displays transaction hash when transaction succeeds', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
@@ -555,8 +611,10 @@ describe('LendingSection', () => {
     });
   });
 
-  test('clears form after successful transaction', async () => {
-    render(<LendingSection />);
+  it('clears form after successful transaction', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
@@ -583,7 +641,7 @@ describe('LendingSection', () => {
     });
   });
 
-  test('shows loading state during transaction', async () => {
+  it('shows loading state during transaction', async () => {
     const mockServiceInstance = mockLendingService();
     mockServiceInstance.supplyTokens.mockImplementation(() => 
       new Promise(resolve => setTimeout(() => resolve({
@@ -592,7 +650,9 @@ describe('LendingSection', () => {
       }), 100))
     );
     
-    render(<LendingSection />);
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
@@ -616,19 +676,23 @@ describe('LendingSection', () => {
     expect(screen.getByText('Processing...')).toBeInTheDocument();
   });
 
-  test('handles error when fetching lending data fails', async () => {
+  it('handles error when fetching lending data fails', async () => {
     const mockServiceInstance = mockLendingService();
     mockServiceInstance.fetchAllLendingAssets.mockRejectedValue(new Error('API Error'));
     
-    render(<LendingSection />);
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Failed to fetch lending data')).toBeInTheDocument();
     });
   });
 
-  test('shows correct action button text for different actions', async () => {
-    render(<LendingSection />);
+  it('shows correct action button text for different actions', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Wait for component to load
     await waitFor(() => {
@@ -652,8 +716,10 @@ describe('LendingSection', () => {
     expect(screen.getByText('Repay')).toBeInTheDocument();
   });
 
-  test('filters tokens by selected platform', async () => {
-    render(<LendingSection />);
+  it('filters tokens by selected platform', async () => {
+    await act(async () => {
+      render(<LendingSection />);
+    });
     
     // Default platform is Compound
     await waitFor(() => {
