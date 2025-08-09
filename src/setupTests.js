@@ -47,5 +47,12 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
   disconnect: jest.fn(),
 }));
 
+// Add BigInt serializer for Jest
+if (typeof BigInt !== 'undefined') {
+  BigInt.prototype.toJSON = function() {
+    return this.toString();
+  };
+}
+
 // Import additional test setup from tst directory
 import '../tst/setup/setupTests.js'; 

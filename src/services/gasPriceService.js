@@ -73,11 +73,11 @@ class GasPriceService {
   // Fallback gas prices for demo/error cases
   static getFallbackGasPrices() {
     return {
-      ethereum: { SafeGasPrice: '15', ProposeGasPrice: '18', FastGasPrice: '22' },
-      polygon: { SafeGasPrice: '2', ProposeGasPrice: '3', FastGasPrice: '4' },
-      bsc: { SafeGasPrice: '5', ProposeGasPrice: '6', FastGasPrice: '8' },
-      arbitrum: { SafeGasPrice: '0.5', ProposeGasPrice: '0.6', FastGasPrice: '0.8' },
-      optimism: { SafeGasPrice: '0.1', ProposeGasPrice: '0.15', FastGasPrice: '0.2' }
+      ethereum: { SafeGasPrice: '15 gwei', ProposeGasPrice: '18 gwei', FastGasPrice: '22 gwei' },
+      polygon: { SafeGasPrice: '2 gwei', ProposeGasPrice: '3 gwei', FastGasPrice: '4 gwei' },
+      bsc: { SafeGasPrice: '5 gwei', ProposeGasPrice: '6 gwei', FastGasPrice: '8 gwei' },
+      arbitrum: { SafeGasPrice: '0.5 gwei', ProposeGasPrice: '0.6 gwei', FastGasPrice: '0.8 gwei' },
+      optimism: { SafeGasPrice: '0.1 gwei', ProposeGasPrice: '0.15 gwei', FastGasPrice: '0.2 gwei' }
     };
   }
 

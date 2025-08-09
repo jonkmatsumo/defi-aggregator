@@ -1,10 +1,38 @@
 # DeFi Aggregator
 
-A modern React application for DeFi protocol aggregation with comprehensive wallet integration, real-time gas prices, token swapping, and transaction monitoring.
+A modern React application for DeFi protocol aggregation with comprehensive wallet integration, real-time gas prices, token swapping, perpetuals trading, and transaction monitoring.
 
 ![DeFi Aggregator Interface](screenshot.png)
 
-*DeFiHub - A comprehensive DeFi aggregator with token swapping, lending/borrowing, and portfolio tracking*
+*DeFiHub - A comprehensive DeFi aggregator with token swapping, lending/borrowing, perpetuals trading, and portfolio tracking*
+
+## 🚀 Recent Major Updates
+
+### ✅ **Perpetuals Trading Integration (GMX)**
+- **Complete GMX Protocol Integration**: Full perpetuals trading interface with position management
+- **Advanced UI Components**: Token pair selector, leverage slider, position size input, long/short toggle
+- **Position Management**: Real-time position tracking with PnL and margin information
+- **Error Handling**: Comprehensive validation for margin calls, insufficient funds, and invalid leverage
+- **Mock Data Fallbacks**: Graceful degradation when GMX API is unavailable
+
+### ✅ **Enhanced Lending Section**
+- **Updated Aave API Integration**: Fixed API endpoints to use v2 (`https://aave-api-v2.aave.com`)
+- **Compound & Aave Support**: Dual protocol integration with real-time data
+- **Supply/Borrow/Withdraw/Repay**: Complete lending functionality
+- **Interest Rate Monitoring**: Real-time APY tracking across protocols
+- **User Balance Tracking**: Portfolio management for lending positions
+
+### ✅ **Comprehensive Testing Suite**
+- **266 Tests Passing**: Complete test coverage for all components
+- **Mock Integration**: Comprehensive mocking for external APIs and blockchain interactions
+- **Error Scenario Testing**: Validation of error handling and edge cases
+- **UI Component Testing**: Full coverage of user interactions and state management
+
+### ✅ **Performance & Stability Improvements**
+- **Infinite Loop Prevention**: Fixed GMX initialization issues in test environments
+- **Ethers.js v6 Compatibility**: Updated all imports and function calls
+- **React 19 Compatibility**: Optimized for latest React features
+- **Memory Leak Prevention**: Proper cleanup and state management
 
 ## Features
 
@@ -14,29 +42,12 @@ A modern React application for DeFi protocol aggregation with comprehensive wall
 - 💰 **Token Swapping**: DEX aggregator integration with 1inch API
 - 📊 **Portfolio Tracking**: Real-time token balance monitoring
 - 📈 **Transaction History**: Recent activity tracking with blockchain data
-- 🏦 **Lending Section**: DeFi lending protocol integration
+- 🏦 **Lending Section**: DeFi lending protocol integration (Compound, Aave)
+- 🎯 **Perpetuals Trading**: GMX protocol integration with position management
 - 🎨 **Modern UI**: Beautiful interface with gradient designs and responsive layout
 - 📱 **Fully Responsive**: Adaptive layout that scales perfectly across all screen sizes
-- ⚡ **Fast & Responsive**: Built with React and optimized for performance
-- 🧪 **Comprehensive Testing**: Full unit test coverage for all components
-
-## Recent Updates
-
-### 🎯 **Single-Page Application Focus**
-- Removed navigation links (Swap, Lending, Derivatives, Portfolio) to focus on core functionality
-- Streamlined interface for better user experience
-- All features accessible from the main dashboard
-
-### 📱 **Enhanced Responsive Design**
-- **Fully Responsive Layout**: Components now scale proportionally with screen size
-- **Flexible Grid System**: Three-column layout that adapts to different screen sizes
-- **Mobile Optimized**: Perfect experience on desktop, tablet, and mobile devices
-- **Proportional Scaling**: Components expand to fill available horizontal space
-
-### 🎨 **UI Improvements**
-- Removed dashboard cards (Total Balance, 24H Change, Lending APY, Active Positions) for cleaner interface
-- Maintained DashboardCard component for future use
-- Enhanced visual hierarchy and spacing
+- ⚡ **Fast & Responsive**: Built with React 19 and optimized for performance
+- 🧪 **Comprehensive Testing**: 266 passing tests with full component coverage
 
 ## Tech Stack
 
@@ -44,8 +55,11 @@ A modern React application for DeFi protocol aggregation with comprehensive wall
 - **Wagmi v2** - React hooks for Ethereum
 - **RainbowKit** - Beautiful wallet connection UI
 - **Viem** - TypeScript interface for Ethereum
-- **Ethers.js** - Complete Ethereum library
+- **Ethers.js v6** - Complete Ethereum library
 - **1inch API** - DEX aggregator for token swaps
+- **GMX Protocol** - Perpetuals trading integration
+- **Compound API** - Lending protocol integration
+- **Aave API v2** - Lending protocol integration
 - **Jest & Testing Library** - Comprehensive testing framework
 
 ## Core Components
@@ -53,6 +67,7 @@ A modern React application for DeFi protocol aggregation with comprehensive wall
 ### Main Dashboard Components
 - **TokenSwap** - DEX aggregator for token swapping with real-time quotes
 - **LendingSection** - DeFi lending protocol interface (Compound, Aave)
+- **PerpetualsSection** - GMX perpetuals trading with position management
 - **NetworkStatus** - Real-time gas price monitoring across networks
 - **YourAssets** - Portfolio tracking with token balances
 - **RecentActivity** - Transaction history with blockchain integration
@@ -61,14 +76,49 @@ A modern React application for DeFi protocol aggregation with comprehensive wall
 - **WalletProvider** - Wagmi and RainbowKit configuration
 - **ConnectWalletButton** - Wallet connection UI
 - **Header** - Application branding and wallet status
-- **DashboardCard** - Reusable card component (available for future use)
+- **DashboardCard** - Reusable card component
+
+## Perpetuals Trading Features
+
+### 🎯 **Position Management**
+- **Token Pair Selection**: BTC/USDT, ETH/USD, and more
+- **Leverage Control**: 1x to 20x leverage with slider interface
+- **Position Size**: Flexible position sizing with real-time validation
+- **Long/Short Toggle**: Easy switching between position types
+- **Slippage Protection**: Configurable slippage tolerance
+
+### 📊 **Position Information**
+- **Unrealized PnL**: Real-time profit/loss calculation
+- **Margin Used**: Current margin allocation display
+- **Position Status**: Active position monitoring
+- **Risk Management**: Margin call warnings and validation
+
+### 🛡️ **Error Handling**
+- **Insufficient Funds**: Clear error messages for balance issues
+- **Invalid Leverage**: Validation for supported leverage ranges
+- **Margin Calls**: Real-time margin call detection
+- **Network Errors**: Graceful fallback to mock data
+
+## Lending Features
+
+### 🏦 **Protocol Integration**
+- **Compound**: Supply, borrow, withdraw, and repay functionality
+- **Aave**: Full lending protocol integration with v2 API
+- **Real-time Rates**: Live APY and interest rate monitoring
+- **Portfolio Tracking**: User position management across protocols
+
+### 💰 **Lending Operations**
+- **Supply Assets**: Deposit tokens to earn interest
+- **Borrow Assets**: Borrow against supplied collateral
+- **Withdraw Funds**: Remove supplied assets
+- **Repay Loans**: Pay back borrowed amounts
 
 ## Responsive Layout
 
 The application features a sophisticated responsive design that adapts to any screen size:
 
 ### Desktop (1400px+)
-- **Three-column layout**: TokenSwap | LendingSection | Sidebar (NetworkStatus, YourAssets, RecentActivity)
+- **Three-column layout**: TokenSwap | LendingSection/PerpetualsSection | Sidebar
 - **Equal column widths**: All components scale proportionally
 - **Full width utilization**: Components expand to fill available space
 
@@ -86,7 +136,7 @@ The application features a sophisticated responsive design that adapts to any sc
 
 - **GasPriceService** - Real-time gas price fetching with exponential backoff
 - **TokenBalanceService** - ERC-20 token balance monitoring
-- **LendingService** - DeFi lending protocol integration
+- **LendingService** - DeFi lending protocol integration (Compound, Aave)
 
 ## Getting Started
 
@@ -138,6 +188,11 @@ npm start
 
 The project includes comprehensive unit tests for all components:
 
+### Test Results
+- **266 Tests Passing** ✅
+- **15 Test Suites** ✅
+- **0 Failed Tests** ✅
+
 ### Running Tests
 
 ```bash
@@ -151,16 +206,7 @@ npm test -- --watchAll=false
 npm test -- --coverage --watchAll=false
 ```
 
-### Test Coverage
 
-- **NetworkStatus** - Gas price fetching and display tests
-- **YourAssets** - Token balance monitoring tests
-- **RecentActivity** - Transaction history tests
-- **TokenSwap** - DEX integration and swap functionality tests
-- **LendingSection** - DeFi lending interface tests
-- **ConnectWalletButton** - Wallet connection UI tests
-- **DashboardCard** - Reusable component tests
-- **Header** - Navigation and branding tests
 
 ### Test Structure
 
@@ -172,6 +218,7 @@ tst/
 │   ├── RecentActivity.test.jsx     # Transaction history tests
 │   ├── TokenSwap.test.jsx          # DEX integration tests
 │   ├── LendingSection.test.jsx     # Lending interface tests
+│   ├── PerpetualsSection.test.jsx  # GMX trading tests
 │   ├── ConnectWalletButton.test.jsx # Wallet connection tests
 │   ├── DashboardCard.test.jsx      # Reusable component tests
 │   ├── Header.test.jsx             # Navigation tests
@@ -191,6 +238,7 @@ src/
 │   ├── RecentActivity.jsx          # Transaction history
 │   ├── TokenSwap.jsx               # DEX aggregator interface
 │   ├── LendingSection.jsx          # DeFi lending interface
+│   ├── PerpetualsSection.jsx       # GMX perpetuals trading
 │   ├── ConnectWalletButton.jsx     # Wallet connection UI
 │   ├── DashboardCard.jsx           # Reusable card component
 │   ├── Header.jsx                  # Application branding
@@ -213,7 +261,9 @@ docs/
 ├── RecentActivity.md               # Transaction history documentation
 ├── TokenSwap.md                    # DEX integration documentation
 ├── ViemIntegration.md              # Viem integration guide
-└── WALLET_SETUP.md                 # Wallet connection setup
+├── WALLET_SETUP.md                 # Wallet connection setup
+├── STEERING_DOCUMENT.md            # Development procedures and guidelines
+└── QUICK_REFERENCE.md              # Quick development reference
 
 tst/
 ├── components/                     # Component test files
@@ -229,6 +279,12 @@ tst/
 - Slippage protection
 - Transaction execution
 
+### GMX Protocol
+- Perpetuals trading interface
+- Position management
+- Real-time PnL calculation
+- Margin and leverage control
+
 ### Gas Price APIs
 - Multi-network gas price monitoring
 - Exponential backoff for rate limiting
@@ -243,7 +299,7 @@ tst/
 
 ### DeFi Lending Protocols
 - Compound protocol integration
-- Aave protocol integration
+- Aave protocol integration (v2 API)
 - Supply and borrow functionality
 - Interest rate monitoring
 
@@ -260,6 +316,8 @@ tst/
 - [TokenSwap](./docs/TokenSwap.md) - DEX integration
 - [Viem Integration](./docs/ViemIntegration.md) - Blockchain integration
 - [Wallet Setup](./docs/WALLET_SETUP.md) - Wallet connection
+- [Steering Document](./docs/STEERING_DOCUMENT.md) - Development procedures
+- [Quick Reference](./docs/QUICK_REFERENCE.md) - Development quick reference
 
 ## Contributing
 

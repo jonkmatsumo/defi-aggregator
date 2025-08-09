@@ -95,6 +95,30 @@ class TokenBalanceService {
     };
   }
 
+  // Cache management methods
+  isCacheValid(cacheKey) {
+    const cached = this.cache.get(cacheKey);
+    if (!cached) return false;
+    
+    return Date.now() - cached.timestamp < this.cacheTimeout;
+  }
+
+  getCachedData(cacheKey) {
+    const cached = this.cache.get(cacheKey);
+    return cached ? cached.data : null;
+  }
+
+  setCachedData(cacheKey, data) {
+    this.cache.set(cacheKey, {
+      data,
+      timestamp: Date.now()
+    });
+  }
+
+  clearCache() {
+    this.cache.clear();
+  }
+
   // Get token metadata for a given address and chain
   getTokenMetadata(tokenAddress, chainId) {
     const chainTokens = this.commonTokens[chainId];
