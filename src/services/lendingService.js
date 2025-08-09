@@ -4,7 +4,7 @@ class LendingService {
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
     this.compoundApiBase = 'https://api.compound.finance/api/v2';
-    this.aaveApiBase = 'https://api.aave.com/v1';
+    this.aaveApiBase = 'https://aave-api-v2.aave.com';
   }
 
   // Cache management
@@ -97,7 +97,7 @@ class LendingService {
     if (cached) return cached;
 
     try {
-      const response = await fetch(`${this.aaveApiBase}/reserves`);
+      const response = await fetch(`${this.aaveApiBase}/data/reserves`);
       if (!response.ok) {
         throw new Error(`Aave API error: ${response.status}`);
       }
