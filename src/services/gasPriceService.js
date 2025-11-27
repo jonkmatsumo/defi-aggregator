@@ -8,12 +8,17 @@ class GasPriceService {
     this.cache = new Map();
     this.cacheTimeout = 1800000; // 30 minutes (increased from 10 minutes)
     this.retryDelays = new Map(); // Track retry delays for exponential backoff
-    
+
+    const alchemyKey = process.env.REACT_APP_ALCHEMY_API_KEY;
+    if (!alchemyKey) {
+      throw new Error('REACT_APP_ALCHEMY_API_KEY is missing. Please add it to your .env file.');
+    }
+
     // Create public clients for each supported network
     this.clients = {
       ethereum: createPublicClient({
         chain: mainnet,
-        transport: http('https://eth-mainnet.g.alchemy.com/v2/demo')
+        transport: http(`https://eth-mainnet.g.alchemy.com/v2/${alchemyKey}`)
       }),
       polygon: createPublicClient({
         chain: polygon,
@@ -85,7 +90,7 @@ class GasPriceService {
   isCacheValid(networkKey) {
     const cached = this.cache.get(networkKey);
     if (!cached) return false;
-    
+
     return Date.now() - cached.timestamp < this.cacheTimeout;
   }
 
@@ -155,7 +160,7 @@ class GasPriceService {
       // Calculate gas price estimates
       const recentFees = feeHistory.reward;
       const sortedFees = recentFees.flat().sort((a, b) => Number(a) - Number(b));
-      
+
       const safeGasPrice = formatGwei(sortedFees[Math.floor(sortedFees.length * 0.25)]);
       const proposeGasPrice = formatGwei(sortedFees[Math.floor(sortedFees.length * 0.5)]);
       const fastGasPrice = formatGwei(sortedFees[Math.floor(sortedFees.length * 0.75)]);
@@ -173,14 +178,14 @@ class GasPriceService {
 
     } catch (error) {
       console.warn(`Failed to fetch gas price for ${networkKey}:`, error);
-      
+
       // Check if it's a rate limit error (429)
       if (error.message && (error.message.includes('429') || error.message.includes('rate limit'))) {
         console.warn(`Rate limited for ${networkKey}, will retry with exponential backoff`);
         // Don't cache rate limit errors, let them retry
         throw error;
       }
-      
+
       // Return fallback data on other errors
       const fallbackData = GasPriceService.getFallbackGasPrices()[networkKey];
       this.setCachedData(networkKey, fallbackData);
@@ -217,7 +222,7 @@ class GasPriceService {
       // Calculate gas price estimates
       const recentFees = feeHistory.reward;
       const sortedFees = recentFees.flat().sort((a, b) => Number(a) - Number(b));
-      
+
       const safeGasPrice = formatGwei(sortedFees[Math.floor(sortedFees.length * 0.25)]);
       const proposeGasPrice = formatGwei(sortedFees[Math.floor(sortedFees.length * 0.5)]);
       const fastGasPrice = formatGwei(sortedFees[Math.floor(sortedFees.length * 0.75)]);
@@ -251,7 +256,7 @@ class GasPriceService {
     });
 
     const results = await Promise.allSettled(gasPricePromises);
-    
+
     const gasPrices = {};
     networkKeys.forEach((networkKey, index) => {
       if (results[index].status === 'fulfilled' && results[index].value) {
@@ -268,7 +273,7 @@ class GasPriceService {
   // Get display gas price (use SafeGasPrice as default)
   static getDisplayGasPrice(gasData) {
     if (!gasData) return 'N/A';
-    
+
     // Prefer SafeGasPrice, fallback to ProposeGasPrice, then FastGasPrice
     const price = gasData.SafeGasPrice || gasData.ProposeGasPrice || gasData.FastGasPrice;
     return price ? `${price} gwei` : 'N/A';
@@ -283,14 +288,14 @@ class GasPriceService {
   // Get network information using wagmi hooks (to be used in components)
   static getNetworkInfo(chainId) {
     const networks = GasPriceService.getSupportedNetworks();
-    
+
     // Find network by chainId
     const network = Object.values(networks).find(net => net.chainId === chainId);
-    
+
     if (network) {
       return network;
     }
-    
+
     // Return default network info
     return {
       name: 'Unknown',
