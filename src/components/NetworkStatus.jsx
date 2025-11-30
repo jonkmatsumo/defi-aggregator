@@ -6,7 +6,6 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
   const [gasPrices, setGasPrices] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [currentNetworkInfo, setCurrentNetworkInfo] = useState(null);
   const [hasInitialData, setHasInitialData] = useState(false);
   
@@ -50,7 +49,6 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
       }
       
       setGasPrices(prices);
-      setLastUpdated(new Date()); // Only update timestamp on successful fetch
       setHasInitialData(true);
     } catch (error) {
       console.error('Error fetching gas prices:', error);
@@ -66,7 +64,7 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
     } finally {
       setLoading(false);
     }
-  }, [networkKeys, hasInitialData]); // Removed client and chainId from dependencies
+  }, [chainId, client, supportedNetworks, networkKeys, hasInitialData]);
 
   // Update current network info when chain changes
   useEffect(() => {
@@ -91,7 +89,7 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
         clearInterval(intervalRef.current);
       }
     };
-  }, []); // Empty dependency array for initialization
+  }, [fetchAllGasPrices]);
 
   // Manual refresh function
   const handleRefresh = () => {
@@ -99,15 +97,6 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
     setLoading(true); // Show loading on manual refresh
     fetchAllGasPrices();
   };
-
-  // Format last updated time
-  const formatLastUpdated = (date) => {
-    if (!date) return '';
-    return date.toLocaleTimeString();
-  };
-
-  // Check if any network is in demo mode (for viem service, we don't use API keys)
-  const isDemoMode = false; // Viem service doesn't use API keys, so always false
 
   return (
     <div style={{
@@ -211,7 +200,6 @@ const NetworkStatus = ({ maxNetworks = 3 }) => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '8px 0',
                 backgroundColor: isCurrentNetwork ? 'rgba(72, 187, 120, 0.1)' : 'transparent',
                 borderRadius: '4px',
                 padding: isCurrentNetwork ? '8px' : '8px 0'

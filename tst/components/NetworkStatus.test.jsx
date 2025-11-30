@@ -98,6 +98,16 @@ describe('NetworkStatus', () => {
     });
   });
 
+  it('renders container with correct styles including single padding property', () => {
+    const { container } = render(<NetworkStatus />);
+    const mainDiv = container.firstChild;
+    expect(mainDiv).toHaveStyle({
+      padding: '20px',
+      borderRadius: '16px',
+      border: '1px solid #4a5568'
+    });
+  });
+
   it('renders all networks in the correct order', () => {
     render(<NetworkStatus />);
     const networkNames = ['Ethereum', 'Polygon', 'BSC'];
