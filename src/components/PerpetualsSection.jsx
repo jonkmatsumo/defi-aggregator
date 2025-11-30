@@ -61,7 +61,6 @@ const PerpetualsSection = () => {
 
   // Real GMX positions state
   const [openPositions, setOpenPositions] = useState([]);
-  const [userPositions, setUserPositions] = useState([]);
   const [positionDetails, setPositionDetails] = useState({});
   const [validationErrors, setValidationErrors] = useState({});
 
@@ -133,6 +132,10 @@ const PerpetualsSection = () => {
             setChartError(data.message);
             setIsChartConnected(false);
             break;
+          
+          default:
+            console.warn('Unknown price feed data type:', data.type);
+            break;
         }
       });
     } catch (error) {
@@ -168,6 +171,88 @@ const PerpetualsSection = () => {
     
     return data;
   };
+
+  // Fetch detailed position information
+  const fetchPositionDetails = useCallback(async (positionId) => {
+    if (!gmxContract || !positionId) return;
+
+    try {
+      const position = await gmxContract.getPosition(positionId);
+      
+      // Calculate additional position details
+      const details = {
+        id: positionId.toString(),
+        symbol: position.tokenPair,
+        side: position.isLong ? 'Long' : 'Short',
+        size: formatEther(position.positionSize),
+        entryPrice: formatEther(position.entryPrice),
+        markPrice: formatEther(position.markPrice),
+        pnl: formatEther(position.pnl),
+        leverage: position.leverage.toString(),
+        marginUsed: formatEther(position.positionSize), // Simplified - in real implementation this would be calculated
+        unrealizedPnL: formatEther(position.pnl), // This is the unrealized PnL
+        liquidationPrice: '0', // Would be calculated based on leverage and margin
+        fundingRate: '0.01%', // Mock funding rate
+        timestamp: Date.now()
+      };
+
+      setPositionDetails(prev => ({
+        ...prev,
+        [positionId]: details
+      }));
+
+      return details;
+    } catch (err) {
+      console.error('Error fetching position details:', err);
+      return null;
+    }
+  }, [gmxContract]);
+
+  // Load user positions from GMX
+  const loadUserPositions = useCallback(async (contract) => {
+    if (!contract || !address) return;
+
+    try {
+      const positionIds = await contract.getPositions(address);
+      const positions = [];
+
+      for (const positionId of positionIds) {
+        const position = await contract.getPosition(positionId);
+        const positionData = {
+          id: positionId.toString(),
+          symbol: position.tokenPair,
+          side: position.isLong ? 'Long' : 'Short',
+          size: formatEther(position.positionSize),
+          entryPrice: formatEther(position.entryPrice),
+          markPrice: formatEther(position.markPrice),
+          pnl: formatEther(position.pnl),
+          leverage: position.leverage.toString()
+        };
+        
+        positions.push(positionData);
+        
+        // Fetch detailed position information
+        await fetchPositionDetails(positionId);
+      }
+
+      setOpenPositions(positions); // For demo, show real positions
+    } catch (err) {
+      console.error('Error loading positions:', err);
+      // Fallback to mock data if GMX fails
+      setOpenPositions([
+        {
+          id: '1',
+          symbol: 'BTC/USDT',
+          side: 'Long',
+          size: 0.5,
+          entryPrice: 42000.00,
+          markPrice: 42850.50,
+          pnl: 425.25,
+          leverage: '10'
+        }
+      ]);
+    }
+  }, [address, fetchPositionDetails]);
 
   // Initialize GMX Contract
   useEffect(() => {
@@ -270,90 +355,7 @@ const PerpetualsSection = () => {
 
       initializeGMX();
     }
-  }, [isConnected, walletClient, publicClient, openPositions.length]);
-
-  // Load user positions from GMX
-  const loadUserPositions = async (contract) => {
-    if (!contract || !address) return;
-
-    try {
-      const positionIds = await contract.getPositions(address);
-      const positions = [];
-
-      for (const positionId of positionIds) {
-        const position = await contract.getPosition(positionId);
-        const positionData = {
-          id: positionId.toString(),
-          symbol: position.tokenPair,
-          side: position.isLong ? 'Long' : 'Short',
-          size: formatEther(position.positionSize),
-          entryPrice: formatEther(position.entryPrice),
-          markPrice: formatEther(position.markPrice),
-          pnl: formatEther(position.pnl),
-          leverage: position.leverage.toString()
-        };
-        
-        positions.push(positionData);
-        
-        // Fetch detailed position information
-        await fetchPositionDetails(positionId);
-      }
-
-      setUserPositions(positions);
-      setOpenPositions(positions); // For demo, show real positions
-    } catch (err) {
-      console.error('Error loading positions:', err);
-      // Fallback to mock data if GMX fails
-      setOpenPositions([
-        {
-          id: '1',
-          symbol: 'BTC/USDT',
-          side: 'Long',
-          size: 0.5,
-          entryPrice: 42000.00,
-          markPrice: 42850.50,
-          pnl: 425.25,
-          leverage: '10'
-        }
-      ]);
-    }
-  };
-
-  // Fetch detailed position information
-  const fetchPositionDetails = async (positionId) => {
-    if (!gmxContract || !positionId) return;
-
-    try {
-      const position = await gmxContract.getPosition(positionId);
-      
-      // Calculate additional position details
-      const details = {
-        id: positionId.toString(),
-        symbol: position.tokenPair,
-        side: position.isLong ? 'Long' : 'Short',
-        size: formatEther(position.positionSize),
-        entryPrice: formatEther(position.entryPrice),
-        markPrice: formatEther(position.markPrice),
-        pnl: formatEther(position.pnl),
-        leverage: position.leverage.toString(),
-        marginUsed: formatEther(position.positionSize), // Simplified - in real implementation this would be calculated
-        unrealizedPnL: formatEther(position.pnl), // This is the unrealized PnL
-        liquidationPrice: '0', // Would be calculated based on leverage and margin
-        fundingRate: '0.01%', // Mock funding rate
-        timestamp: Date.now()
-      };
-
-      setPositionDetails(prev => ({
-        ...prev,
-        [positionId]: details
-      }));
-
-      return details;
-    } catch (err) {
-      console.error('Error fetching position details:', err);
-      return null;
-    }
-  };
+  }, [isConnected, walletClient, publicClient, openPositions.length, loadUserPositions]);
 
   // Validation functions
   const validatePosition = () => {
@@ -390,20 +392,28 @@ const PerpetualsSection = () => {
   const handleError = (error) => {
     let errorMessage = 'An unexpected error occurred';
     
-    if (error.message.includes('Insufficient funds') || error.message.includes('insufficient balance')) {
-      errorMessage = 'Insufficient balance to open the position. Please check your wallet balance.';
-    } else if (error.message.includes('Invalid leverage') || error.message.includes('leverage')) {
-      errorMessage = 'Invalid leverage value. Please select a leverage between 1x and 100x.';
-    } else if (error.message.includes('Margin call') || error.message.includes('liquidation')) {
-      errorMessage = 'Position is close to liquidation. Please add more margin or close the position.';
-    } else if (error.message.includes('Slippage') || error.message.includes('price impact')) {
-      errorMessage = 'Price impact too high. Try reducing position size or increasing slippage tolerance.';
-    } else if (error.message.includes('Network') || error.message.includes('connection')) {
-      errorMessage = 'Network error. Please check your connection and try again.';
-    } else if (error.message.includes('User rejected') || error.message.includes('cancelled')) {
-      errorMessage = 'Transaction was cancelled by user.';
-    } else {
-      errorMessage = error.message || 'Failed to open position. Please try again.';
+    switch (true) {
+      case error.message.includes('Insufficient funds') || error.message.includes('insufficient balance'):
+        errorMessage = 'Insufficient balance to open the position. Please check your wallet balance.';
+        break;
+      case error.message.includes('Invalid leverage') || error.message.includes('leverage'):
+        errorMessage = 'Invalid leverage value. Please select a leverage between 1x and 100x.';
+        break;
+      case error.message.includes('Margin call') || error.message.includes('liquidation'):
+        errorMessage = 'Position is close to liquidation. Please add more margin or close the position.';
+        break;
+      case error.message.includes('Slippage') || error.message.includes('price impact'):
+        errorMessage = 'Price impact too high. Try reducing position size or increasing slippage tolerance.';
+        break;
+      case error.message.includes('Network') || error.message.includes('connection'):
+        errorMessage = 'Network error. Please check your connection and try again.';
+        break;
+      case error.message.includes('User rejected') || error.message.includes('cancelled'):
+        errorMessage = 'Transaction was cancelled by user.';
+        break;
+      default:
+        errorMessage = error.message || 'Failed to open position. Please try again.';
+        break;
     }
     
     setError(errorMessage);

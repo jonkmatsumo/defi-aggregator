@@ -230,4 +230,36 @@ describe('PerpetualsSection', () => {
     fireEvent.change(slippageInput, { target: { value: '1.0' } });
     expect(slippageInput.value).toBe('1.0');
   });
+
+  it('handles unknown error types with default case', async () => {
+    // Mock console.error to suppress error output during test
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    // Mock the contract to throw an unknown error
+    mockContractInstance.openPosition.mockRejectedValue(
+      new Error('Unknown error type that does not match any case')
+    );
+
+    await act(async () => {
+      render(<PerpetualsSection />);
+    });
+
+    // Fill in required fields
+    const positionSizeInput = screen.getByPlaceholderText('0.00 BTC');
+    fireEvent.change(positionSizeInput, { target: { value: '1' } });
+
+    // Click the open position button
+    const openButton = screen.getByText('Open Long Position');
+    await act(async () => {
+      fireEvent.click(openButton);
+    });
+
+    // Wait for error to be displayed
+    await waitFor(() => {
+      expect(screen.getByText(/Unknown error type that does not match any case/i)).toBeInTheDocument();
+    });
+
+    // Restore console.error
+    consoleErrorSpy.mockRestore();
+  });
 }); 
