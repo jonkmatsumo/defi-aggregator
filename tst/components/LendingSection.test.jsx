@@ -5,8 +5,7 @@ import LendingSection from '../../src/components/LendingSection';
 // Mock wagmi hooks
 jest.mock('wagmi', () => ({
   useAccount: jest.fn(),
-  usePublicClient: jest.fn(),
-  useChainId: jest.fn()
+  usePublicClient: jest.fn()
 }));
 
 // Mock LendingService
@@ -104,7 +103,7 @@ describe('LendingSection', () => {
     jest.clearAllMocks();
     
     // Default mock return values
-    const { useAccount, usePublicClient, useChainId } = require('wagmi');
+    const { useAccount, usePublicClient } = require('wagmi');
     useAccount.mockReturnValue({
       address: '0x1234567890123456789012345678901234567890',
       isConnected: true
@@ -113,7 +112,6 @@ describe('LendingSection', () => {
       getBalance: jest.fn(),
       getBlockNumber: jest.fn()
     });
-    useChainId.mockReturnValue(1);
 
     // Mock LendingService methods
     const mockServiceInstance = {

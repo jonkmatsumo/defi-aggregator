@@ -14,7 +14,6 @@ const LendingSection = () => {
   const [transactionStatus, setTransactionStatus] = useState(null);
   const [transactionHash, setTransactionHash] = useState(null);
   const [showTokenSelector, setShowTokenSelector] = useState(false);
-  const [showActionModal, setShowActionModal] = useState(false);
   
   const isInitializedRef = useRef(false);
   const lendingService = useRef(new LendingService());
@@ -22,15 +21,6 @@ const LendingSection = () => {
   // Wagmi hooks
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
-  const chainId = useChainId();
-
-  // Initialize component
-  useEffect(() => {
-    if (!isInitializedRef.current) {
-      isInitializedRef.current = true;
-      fetchLendingData();
-    }
-  }, []);
 
   // Fetch lending data
   const fetchLendingData = useCallback(async () => {
@@ -63,8 +53,11 @@ const LendingSection = () => {
     }
   }, [isConnected, address, publicClient]);
 
-  // Handle wallet connection changes
+  // Initialize component and handle wallet connection changes
   useEffect(() => {
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
+    }
     fetchLendingData();
   }, [fetchLendingData]);
 
@@ -154,16 +147,6 @@ const LendingSection = () => {
       return lendingAssets.compound;
     } else if (selectedPlatform === 'aave') {
       return lendingAssets.aave;
-    }
-    return [];
-  };
-
-  // Get user balances for selected platform
-  const getUserBalancesForPlatform = () => {
-    if (selectedPlatform === 'compound') {
-      return userBalances.compound;
-    } else if (selectedPlatform === 'aave') {
-      return userBalances.aave;
     }
     return [];
   };
