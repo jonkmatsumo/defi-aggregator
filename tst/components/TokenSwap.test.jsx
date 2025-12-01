@@ -309,4 +309,23 @@ describe('TokenSwap', () => {
     
     jest.useRealTimers();
   });
+
+  it('disables swap button with correct boolean expression evaluation', async () => {
+    await act(async () => {
+      render(<TokenSwap />);
+    });
+    
+    // Initially disabled (no quote) - tests: loading || !quote || transactionStatus === 'pending'
+    const swapButton = screen.getByRole('button', { name: 'Swap' });
+    expect(swapButton).toBeDisabled();
+    
+    // Enter amount to get quote
+    const amountInput = screen.getByPlaceholderText('0.0');
+    fireEvent.change(amountInput, { target: { value: '1.0' } });
+    
+    // Wait for quote - button should be enabled (has quote, not loading, no pending transaction)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Swap' })).not.toBeDisabled();
+    });
+  });
 });

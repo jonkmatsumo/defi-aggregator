@@ -46,7 +46,7 @@ const COMMON_TOKENS = {
 
 const TokenSwap = () => {
   // Wagmi hooks
-  const { address, isConnected } = useAccount(); // Get wallet address and connection status
+  const { isConnected } = useAccount(); // Get wallet connection status
   const client = useClient(); // Get full client (provider, signer, etc.)
   const chainId = useChainId(); // Get current chain ID
 
@@ -125,7 +125,7 @@ const TokenSwap = () => {
     } finally {
       setLoading(false);
     }
-  }, [amount, fromToken, toToken, chainId, slippage]);
+  }, [amount, fromToken.address, toToken.address, chainId, slippage]);
 
   // Fetch quote when dependencies change
   useEffect(() => {
@@ -196,22 +196,6 @@ const TokenSwap = () => {
     }
     setShowTokenSelector(false);
     setSelectedTokenType(null);
-  };
-
-  // Format amount for display
-  const formatAmount = (amount, decimals = 18) => {
-    if (!amount) return '0';
-    try {
-      // Use utils.formatUnits properly
-      return utils.formatUnits(amount, decimals);
-    } catch (error) {
-      // Fallback for testing or when ethers is not available
-      try {
-        return (parseFloat(amount) / Math.pow(10, decimals)).toFixed(6);
-      } catch {
-        return '0';
-      }
-    }
   };
 
   // Get transaction status color
@@ -363,7 +347,7 @@ const TokenSwap = () => {
           <button
             style={{
               ...styles.swapButton,
-              ...(loading || !quote || transactionStatus === 'pending' && styles.swapButtonDisabled)
+              ...((loading || !quote || transactionStatus === 'pending') && styles.swapButtonDisabled)
             }}
             onClick={executeSwap}
             disabled={loading || !quote || transactionStatus === 'pending'}
