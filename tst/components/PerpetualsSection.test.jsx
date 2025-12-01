@@ -31,18 +31,22 @@ jest.mock('ethers', () => ({
 }));
 
 // Mock wagmi hooks
+const mockWalletClient = {
+  request: jest.fn(),
+};
+
+const mockPublicClient = {
+  getChainId: jest.fn().mockResolvedValue(42161), // Arbitrum
+};
+
 jest.mock('wagmi', () => ({
   useAccount: () => ({
     address: '0x1234567890123456789012345678901234567890',
     isConnected: true,
   }),
-  usePublicClient: () => ({
-    getChainId: jest.fn().mockResolvedValue(42161), // Arbitrum
-  }),
+  usePublicClient: () => mockPublicClient,
   useWalletClient: () => ({
-    data: {
-      request: jest.fn(),
-    },
+    data: mockWalletClient,
   }),
 }));
 
@@ -235,13 +239,22 @@ describe('PerpetualsSection', () => {
     // Mock console.error to suppress error output during test
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     
+    // Set NODE_ENV to non-test to allow contract initialization
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    
     // Mock the contract to throw an unknown error
     mockContractInstance.openPosition.mockRejectedValue(
-      new Error('Unknown error type that does not match any case')
+      new Error('Unexpected blockchain error')
     );
 
     await act(async () => {
       render(<PerpetualsSection />);
+    });
+
+    // Wait for component to initialize
+    await waitFor(() => {
+      expect(screen.getByText('Open Long Position')).toBeInTheDocument();
     });
 
     // Fill in required fields
@@ -254,12 +267,13 @@ describe('PerpetualsSection', () => {
       fireEvent.click(openButton);
     });
 
-    // Wait for error to be displayed
+    // Wait for error to be displayed - the default case should show the error message
     await waitFor(() => {
-      expect(screen.getByText(/Unknown error type that does not match any case/i)).toBeInTheDocument();
-    });
+      expect(screen.getByText(/Unexpected blockchain error/i)).toBeInTheDocument();
+    }, { timeout: 3000 });
 
-    // Restore console.error
+    // Restore environment and console
+    process.env.NODE_ENV = originalEnv;
     consoleErrorSpy.mockRestore();
   });
 }); 

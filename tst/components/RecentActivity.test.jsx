@@ -5,15 +5,14 @@ import RecentActivity from '../../src/components/RecentActivity';
 // Mock wagmi hooks
 jest.mock('wagmi', () => ({
   useAccount: jest.fn(),
-  usePublicClient: jest.fn(),
-  useChainId: jest.fn()
+  usePublicClient: jest.fn()
 }));
 
 describe('RecentActivity', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Set default mock return values
-    const { useAccount, usePublicClient, useChainId } = require('wagmi');
+    const { useAccount, usePublicClient } = require('wagmi');
     useAccount.mockReturnValue({
       isConnected: false,
       address: null
@@ -25,7 +24,6 @@ describe('RecentActivity', () => {
         transactions: []
       })
     });
-    useChainId.mockReturnValue(1);
   });
 
   it('renders the title correctly', async () => {
@@ -147,5 +145,128 @@ describe('RecentActivity', () => {
       render(<RecentActivity forceRefresh={true} />);
     });
     expect(screen.getByText('Recent Activity')).toBeInTheDocument();
+  });
+
+  it('verifies fetchTransactions is called when wallet connects', async () => {
+    const { useAccount, usePublicClient } = require('wagmi');
+    const mockGetBlockNumber = jest.fn().mockResolvedValue(BigInt(1000000));
+    const mockGetBlock = jest.fn().mockResolvedValue({
+      timestamp: BigInt(1640995200),
+      transactions: []
+    });
+
+    usePublicClient.mockReturnValue({
+      getBlockNumber: mockGetBlockNumber,
+      getBlock: mockGetBlock
+    });
+
+    // Initially not connected
+    useAccount.mockReturnValue({
+      isConnected: false,
+      address: null
+    });
+
+    const { rerender } = await act(async () => {
+      return render(<RecentActivity />);
+    });
+
+    // Verify no fetch happened when not connected
+    expect(mockGetBlockNumber).not.toHaveBeenCalled();
+
+    // Now connect the wallet
+    useAccount.mockReturnValue({
+      isConnected: true,
+      address: '0x1234567890123456789012345678901234567890'
+    });
+
+    await act(async () => {
+      rerender(<RecentActivity />);
+    });
+
+    // Wait for the fetch to be triggered
+    await waitFor(() => {
+      expect(mockGetBlockNumber).toHaveBeenCalled();
+    });
+  });
+
+  it('verifies fetchTransactions is called when forceRefresh changes', async () => {
+    const { useAccount, usePublicClient } = require('wagmi');
+    const mockGetBlockNumber = jest.fn().mockResolvedValue(BigInt(1000000));
+    const mockGetBlock = jest.fn().mockResolvedValue({
+      timestamp: BigInt(1640995200),
+      transactions: []
+    });
+
+    usePublicClient.mockReturnValue({
+      getBlockNumber: mockGetBlockNumber,
+      getBlock: mockGetBlock
+    });
+
+    useAccount.mockReturnValue({
+      isConnected: true,
+      address: '0x1234567890123456789012345678901234567890'
+    });
+
+    const { rerender } = await act(async () => {
+      return render(<RecentActivity forceRefresh={false} />);
+    });
+
+    // Wait for initial fetch
+    await waitFor(() => {
+      expect(mockGetBlockNumber).toHaveBeenCalled();
+    });
+
+    const initialCallCount = mockGetBlockNumber.mock.calls.length;
+
+    // Change forceRefresh to true
+    await act(async () => {
+      rerender(<RecentActivity forceRefresh={true} />);
+    });
+
+    // Wait for the force refresh to trigger another fetch
+    await waitFor(() => {
+      expect(mockGetBlockNumber.mock.calls.length).toBeGreaterThan(initialCallCount);
+    });
+  });
+
+  it('verifies getTransactionHistory is properly memoized', async () => {
+    const { useAccount, usePublicClient } = require('wagmi');
+    const mockGetBlockNumber = jest.fn().mockResolvedValue(BigInt(1000000));
+    const mockGetBlock = jest.fn().mockResolvedValue({
+      timestamp: BigInt(1640995200),
+      transactions: []
+    });
+
+    usePublicClient.mockReturnValue({
+      getBlockNumber: mockGetBlockNumber,
+      getBlock: mockGetBlock
+    });
+
+    useAccount.mockReturnValue({
+      isConnected: true,
+      address: '0x1234567890123456789012345678901234567890'
+    });
+
+    const { rerender } = await act(async () => {
+      return render(<RecentActivity transactionCount={3} />);
+    });
+
+    // Wait for initial fetch
+    await waitFor(() => {
+      expect(mockGetBlockNumber).toHaveBeenCalled();
+    });
+
+    const initialCallCount = mockGetBlockNumber.mock.calls.length;
+
+    // Rerender with same props - should not trigger new fetch
+    await act(async () => {
+      rerender(<RecentActivity transactionCount={3} />);
+    });
+
+    // Give it a moment to potentially trigger (it shouldn't)
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Call count should remain the same since dependencies haven't changed
+    expect(mockGetBlockNumber.mock.calls.length).toBe(initialCallCount);
   });
 }); 

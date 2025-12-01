@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAccount, usePublicClient, useChainId } from 'wagmi';
+import { useAccount, usePublicClient } from 'wagmi';
 import { formatUnits, getContract } from 'viem';
 
 // ERC-20 ABI for token transfers
@@ -40,7 +40,6 @@ const RecentActivity = ({ transactionCount = 3, forceRefresh = false }) => {
   // Wagmi hooks
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
-  const chainId = useChainId();
 
   // Initialize component
   useEffect(() => {
@@ -49,56 +48,8 @@ const RecentActivity = ({ transactionCount = 3, forceRefresh = false }) => {
     }
   }, []);
 
-  // Handle wallet connection changes and force refresh
-  useEffect(() => {
-    if (isConnected && address && publicClient) {
-      fetchTransactions();
-    } else {
-      setTransactions(getFallbackTransactions());
-      setError(null);
-      setLoading(false);
-    }
-  }, [isConnected, address, publicClient]);
-
-  // Handle force refresh flag
-  useEffect(() => {
-    if (forceRefresh && !lastForceRefreshRef.current && isConnected && address && publicClient) {
-      lastForceRefreshRef.current = true;
-      fetchTransactions();
-    } else if (!forceRefresh) {
-      lastForceRefreshRef.current = false;
-    }
-  }, [forceRefresh, isConnected, address, publicClient, transactionCount]);
-
-  // Fetch transactions function
-  const fetchTransactions = useCallback(async () => {
-    if (!isConnected || !address || !publicClient) {
-      setTransactions(getFallbackTransactions());
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
-    console.log('RecentActivity - Fetching transactions for address:', address?.slice(0, 10) + '...');
-    setLoading(true);
-    setError(null);
-
-    try {
-      const txHistory = await getTransactionHistory(publicClient, address, transactionCount);
-      setTransactions(txHistory);
-      setHasInitialData(true);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      setError('Failed to fetch transaction history');
-      setTransactions(getFallbackTransactions());
-      setHasInitialData(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [isConnected, address, publicClient, transactionCount]);
-
   // Get transaction history from blockchain
-  const getTransactionHistory = async (client, userAddress, count) => {
+  const getTransactionHistory = useCallback(async (client, userAddress, count) => {
     try {
       // Get recent blocks to search for transactions
       const currentBlock = await client.getBlockNumber();
@@ -148,7 +99,55 @@ const RecentActivity = ({ transactionCount = 3, forceRefresh = false }) => {
       console.error('Error fetching transaction history:', error);
       throw error;
     }
-  };
+  }, [address]);
+
+  // Fetch transactions function
+  const fetchTransactions = useCallback(async () => {
+    if (!isConnected || !address || !publicClient) {
+      setTransactions(getFallbackTransactions());
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    console.log('RecentActivity - Fetching transactions for address:', address?.slice(0, 10) + '...');
+    setLoading(true);
+    setError(null);
+
+    try {
+      const txHistory = await getTransactionHistory(publicClient, address, transactionCount);
+      setTransactions(txHistory);
+      setHasInitialData(true);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      setError('Failed to fetch transaction history');
+      setTransactions(getFallbackTransactions());
+      setHasInitialData(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [isConnected, address, publicClient, transactionCount, getTransactionHistory]);
+
+  // Handle wallet connection changes and force refresh
+  useEffect(() => {
+    if (isConnected && address && publicClient) {
+      fetchTransactions();
+    } else {
+      setTransactions(getFallbackTransactions());
+      setError(null);
+      setLoading(false);
+    }
+  }, [isConnected, address, publicClient, fetchTransactions]);
+
+  // Handle force refresh flag
+  useEffect(() => {
+    if (forceRefresh && !lastForceRefreshRef.current && isConnected && address && publicClient) {
+      lastForceRefreshRef.current = true;
+      fetchTransactions();
+    } else if (!forceRefresh) {
+      lastForceRefreshRef.current = false;
+    }
+  }, [forceRefresh, isConnected, address, publicClient, transactionCount, fetchTransactions]);
 
   // Format transaction data
   const formatTransaction = async (client, tx, block) => {
