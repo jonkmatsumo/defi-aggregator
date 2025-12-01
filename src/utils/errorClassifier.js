@@ -100,7 +100,7 @@ export function classifyError(error) {
  * @returns {object} The error message configuration
  */
 export function getErrorMessage(errorType) {
-  return ERROR_MESSAGES[errorType] || ERROR_MESSAGES[ERROR_TYPES.GENERIC];
+  return ERROR_MESSAGES.hasOwnProperty(errorType) ? ERROR_MESSAGES[errorType] : ERROR_MESSAGES[ERROR_TYPES.GENERIC];
 }
 
 /**

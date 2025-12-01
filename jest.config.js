@@ -27,7 +27,7 @@ module.exports = {
   
   // Transform ignore patterns to handle ES modules
   transformIgnorePatterns: [
-    'node_modules/(?!(wagmi|@wagmi|@rainbow-me|viem|@viem|cuer|@cuer)/)'
+    'node_modules/(?!(wagmi|@wagmi|@rainbow-me|viem|@viem|cuer|@cuer|fast-check)/)'
   ],
   
   // Coverage configuration
