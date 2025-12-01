@@ -1,11 +1,11 @@
+import GasPriceService from '../../src/services/gasPriceService';
+
 // Add BigInt serializer for Jest
 if (typeof BigInt !== 'undefined') {
   BigInt.prototype.toJSON = function () {
     return this.toString();
   };
 }
-
-import GasPriceService from '../../src/services/gasPriceService';
 
 // Mock viem modules
 jest.mock('viem', () => ({

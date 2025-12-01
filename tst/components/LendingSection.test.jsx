@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import LendingSection from '../../src/components/LendingSection';
 
 // Mock wagmi hooks
@@ -145,9 +145,7 @@ describe('LendingSection', () => {
   });
 
   it('renders lending section component', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     expect(screen.getByText('Lending & Borrowing')).toBeInTheDocument();
   });
 
@@ -158,29 +156,27 @@ describe('LendingSection', () => {
       isConnected: false
     });
 
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     expect(screen.getByText('(Demo Mode)')).toBeInTheDocument();
     expect(screen.getByText('Connect your wallet to start lending and borrowing')).toBeInTheDocument();
   });
 
   it('displays user positions when connected', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     await waitFor(() => {
       expect(screen.getByText('Your Positions')).toBeInTheDocument();
+    });
+    await waitFor(() => {
       expect(screen.getByText('$7,000')).toBeInTheDocument(); // Total supplied
+    });
+    await waitFor(() => {
       expect(screen.getByText('$0')).toBeInTheDocument(); // Total borrowed
     });
   });
 
   it('renders action buttons', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     expect(screen.getByText('supply')).toBeInTheDocument();
     expect(screen.getByText('withdraw')).toBeInTheDocument();
@@ -189,9 +185,7 @@ describe('LendingSection', () => {
   });
 
   it('allows action selection', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     const borrowButton = screen.getByText('borrow');
     fireEvent.click(borrowButton);
@@ -201,20 +195,24 @@ describe('LendingSection', () => {
   });
 
   it('renders platform selection', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
-    expect(screen.getByText('🏦')).toBeInTheDocument(); // Compound logo
-    expect(screen.getAllByText('Compound')).toHaveLength(3); // Button + 2 asset entries
-    expect(screen.getByText('🦇')).toBeInTheDocument(); // Aave logo
-    expect(screen.getByText('Aave')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('🏦')).toBeInTheDocument(); // Compound logo
+    });
+    await waitFor(() => {
+      expect(screen.getAllByText('Compound')).toHaveLength(3); // Button + 2 asset entries
+    });
+    await waitFor(() => {
+      expect(screen.getByText('🦇')).toBeInTheDocument(); // Aave logo
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Aave')).toBeInTheDocument();
+    });
   });
 
   it('allows platform selection', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     const aaveButton = screen.getByText('Aave');
     fireEvent.click(aaveButton);
@@ -223,17 +221,13 @@ describe('LendingSection', () => {
   });
 
   it('shows token selection button', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     expect(screen.getByText('Choose a token')).toBeInTheDocument();
   });
 
   it('opens token selector modal', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
@@ -242,50 +236,46 @@ describe('LendingSection', () => {
   });
 
   it('displays available tokens in modal', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
     
     await waitFor(() => {
       expect(screen.getAllByText('ETH')).toHaveLength(2);
+    });
+    await waitFor(() => {
       expect(screen.getAllByText('DAI')).toHaveLength(2);
     });
   });
 
   it('allows token selection', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
     
     await waitFor(() => {
-      const ethTokens = screen.getAllByText('ETH');
-      // Click the first ETH token in the modal (not the one in the available assets list)
-      fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+      expect(screen.getAllByText('ETH')).toHaveLength(2);
     });
     
+    const ethTokens = screen.getAllByText('ETH');
+    // Click the first ETH token in the modal (not the one in the available assets list)
+    fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+    
     // Modal should close and token should be selected
-    expect(screen.queryByText('Select Token')).toBeInTheDocument(); // The label remains visible
+    expect(screen.getByText('Select Token')).toBeInTheDocument(); // The label remains visible
   });
 
   it('shows amount input field', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     const amountInput = screen.getByPlaceholderText('0.0');
     expect(amountInput).toBeInTheDocument();
   });
 
   it('allows amount input', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     const amountInput = screen.getByPlaceholderText('0.0');
     fireEvent.change(amountInput, { target: { value: '100' } });
@@ -294,31 +284,31 @@ describe('LendingSection', () => {
   });
 
   it('displays token info when token is selected', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
     
     await waitFor(() => {
-      const ethTokens = screen.getAllByText('ETH');
-      // Click the first ETH token in the modal (not the one in the available assets list)
-      fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+      expect(screen.getAllByText('ETH')).toHaveLength(2);
     });
+    
+    const ethTokens = screen.getAllByText('ETH');
+    // Click the first ETH token in the modal (not the one in the available assets list)
+    fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
     
     // Should show APY information
     await waitFor(() => {
       expect(screen.getByText('Supply APY:')).toBeInTheDocument();
+    });
+    await waitFor(() => {
       expect(screen.getByText('Borrow APY:')).toBeInTheDocument();
     });
   });
 
   it('shows execute button with correct text', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     await waitFor(() => {
       expect(screen.getByText('Supply')).toBeInTheDocument();
@@ -326,49 +316,49 @@ describe('LendingSection', () => {
   });
 
   it('execute button is disabled when no token selected', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     await waitFor(() => {
-      const executeButton = screen.getByText('Supply');
-      expect(executeButton).toBeDisabled();
-    });
-  });
-
-  it('execute button is disabled when no amount entered', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
-    
-    // Select a token
-    const tokenButton = screen.getByText('Choose a token');
-    fireEvent.click(tokenButton);
-    
-    await waitFor(() => {
-      const ethTokens = screen.getAllByText('ETH');
-      // Click the first ETH token in the modal (not the one in the available assets list)
-      fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+      expect(screen.getByText('Supply')).toBeInTheDocument();
     });
     
     const executeButton = screen.getByText('Supply');
     expect(executeButton).toBeDisabled();
   });
 
-  it('execute button is enabled when token and amount are provided', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+  it('execute button is disabled when no amount entered', async () => {
+    render(<LendingSection />);
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
     
     await waitFor(() => {
-      const ethTokens = screen.getAllByText('ETH');
-      // Click the first ETH token in the modal (not the one in the available assets list)
-      fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+      expect(screen.getAllByText('ETH')).toHaveLength(2);
     });
+    
+    const ethTokens = screen.getAllByText('ETH');
+    // Click the first ETH token in the modal (not the one in the available assets list)
+    fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+    
+    const executeButton = screen.getByText('Supply');
+    expect(executeButton).toBeDisabled();
+  });
+
+  it('execute button is enabled when token and amount are provided', async () => {
+    render(<LendingSection />);
+    
+    // Select a token
+    const tokenButton = screen.getByText('Choose a token');
+    fireEvent.click(tokenButton);
+    
+    await waitFor(() => {
+      expect(screen.getAllByText('ETH')).toHaveLength(2);
+    });
+    
+    const ethTokens = screen.getAllByText('ETH');
+    // Click the first ETH token in the modal (not the one in the available assets list)
+    fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
     
     // Enter amount
     const amountInput = screen.getByPlaceholderText('0.0');
@@ -379,19 +369,19 @@ describe('LendingSection', () => {
   });
 
   it('executes supply transaction successfully', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
     
     await waitFor(() => {
-      const ethTokens = screen.getAllByText('ETH');
-      // Click the first ETH token in the modal (not the one in the available assets list)
-      fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+      expect(screen.getAllByText('ETH')).toHaveLength(2);
     });
+    
+    const ethTokens = screen.getAllByText('ETH');
+    // Click the first ETH token in the modal (not the one in the available assets list)
+    fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
     
     // Enter amount
     const amountInput = screen.getByPlaceholderText('0.0');
@@ -407,9 +397,7 @@ describe('LendingSection', () => {
   });
 
   it('executes withdraw transaction successfully', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     // Select withdraw action
     const withdrawButton = screen.getByText('withdraw');
@@ -420,10 +408,12 @@ describe('LendingSection', () => {
     fireEvent.click(tokenButton);
     
     await waitFor(() => {
-      const ethTokens = screen.getAllByText('ETH');
-      // Click the first ETH token in the modal (not the one in the available assets list)
-      fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+      expect(screen.getAllByText('ETH')).toHaveLength(2);
     });
+    
+    const ethTokens = screen.getAllByText('ETH');
+    // Click the first ETH token in the modal (not the one in the available assets list)
+    fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
     
     // Enter amount
     const amountInput = screen.getByPlaceholderText('0.0');
@@ -439,9 +429,7 @@ describe('LendingSection', () => {
   });
 
   it('executes borrow transaction successfully', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     // Select borrow action
     const borrowButton = screen.getByText('borrow');
@@ -452,10 +440,12 @@ describe('LendingSection', () => {
     fireEvent.click(tokenButton);
     
     await waitFor(() => {
-      const ethTokens = screen.getAllByText('ETH');
-      // Click the first ETH token in the modal (not the one in the available assets list)
-      fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+      expect(screen.getAllByText('ETH')).toHaveLength(2);
     });
+    
+    const ethTokens = screen.getAllByText('ETH');
+    // Click the first ETH token in the modal (not the one in the available assets list)
+    fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
     
     // Enter amount
     const amountInput = screen.getByPlaceholderText('0.0');
@@ -471,9 +461,7 @@ describe('LendingSection', () => {
   });
 
   it('executes repay transaction successfully', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     // Select repay action
     const repayButton = screen.getByText('repay');
@@ -484,10 +472,12 @@ describe('LendingSection', () => {
     fireEvent.click(tokenButton);
     
     await waitFor(() => {
-      const ethTokens = screen.getAllByText('ETH');
-      // Click the first ETH token in the modal (not the one in the available assets list)
-      fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+      expect(screen.getAllByText('ETH')).toHaveLength(2);
     });
+    
+    const ethTokens = screen.getAllByText('ETH');
+    // Click the first ETH token in the modal (not the one in the available assets list)
+    fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
     
     // Enter amount
     const amountInput = screen.getByPlaceholderText('0.0');
@@ -506,19 +496,19 @@ describe('LendingSection', () => {
     const mockServiceInstance = mockLendingService();
     mockServiceInstance.supplyTokens.mockRejectedValue(new Error('Transaction failed'));
     
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
     
     await waitFor(() => {
-      const ethTokens = screen.getAllByText('ETH');
-      // Click the first ETH token in the modal (not the one in the available assets list)
-      fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+      expect(screen.getAllByText('ETH')).toHaveLength(2);
     });
+    
+    const ethTokens = screen.getAllByText('ETH');
+    // Click the first ETH token in the modal (not the one in the available assets list)
+    fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
     
     // Enter amount
     const amountInput = screen.getByPlaceholderText('0.0');
@@ -534,32 +524,32 @@ describe('LendingSection', () => {
   });
 
   it('displays available assets list', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     await waitFor(() => {
       expect(screen.getByText('Available Assets')).toBeInTheDocument();
+    });
+    await waitFor(() => {
       expect(screen.getByText('ETH')).toBeInTheDocument();
+    });
+    await waitFor(() => {
       expect(screen.getByText('DAI')).toBeInTheDocument();
     });
   });
 
   it('shows APY rates for available assets', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     await waitFor(() => {
       expect(screen.getByText('Supply: 2.50%')).toBeInTheDocument();
+    });
+    await waitFor(() => {
       expect(screen.getByText('Borrow: 4.50%')).toBeInTheDocument();
     });
   });
 
   it('shows refresh button', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     expect(screen.getByText('↻ Refresh')).toBeInTheDocument();
   });
@@ -568,9 +558,7 @@ describe('LendingSection', () => {
     const mockServiceInstance = mockLendingService();
     const mockFetchAllLendingAssets = mockServiceInstance.fetchAllLendingAssets;
     
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     const refreshButton = screen.getByText('↻ Refresh');
     fireEvent.click(refreshButton);
@@ -581,19 +569,19 @@ describe('LendingSection', () => {
   });
 
   it('displays transaction hash when transaction succeeds', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
     
     await waitFor(() => {
-      const ethTokens = screen.getAllByText('ETH');
-      // Click the first ETH token in the modal (not the one in the available assets list)
-      fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+      expect(screen.getAllByText('ETH')).toHaveLength(2);
     });
+    
+    const ethTokens = screen.getAllByText('ETH');
+    // Click the first ETH token in the modal (not the one in the available assets list)
+    fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
     
     // Enter amount
     const amountInput = screen.getByPlaceholderText('0.0');
@@ -605,24 +593,26 @@ describe('LendingSection', () => {
     
     await waitFor(() => {
       expect(screen.getByText('Transaction Hash:')).toBeInTheDocument();
+    });
+    await waitFor(() => {
       expect(screen.getByText(/0xabcdef12\.\.\.34567890/)).toBeInTheDocument();
     });
   });
 
   it('clears form after successful transaction', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
     
     await waitFor(() => {
-      const ethTokens = screen.getAllByText('ETH');
-      // Click the first ETH token in the modal (not the one in the available assets list)
-      fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+      expect(screen.getAllByText('ETH')).toHaveLength(2);
     });
+    
+    const ethTokens = screen.getAllByText('ETH');
+    // Click the first ETH token in the modal (not the one in the available assets list)
+    fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
     
     // Enter amount
     const amountInput = screen.getByPlaceholderText('0.0');
@@ -635,6 +625,8 @@ describe('LendingSection', () => {
     await waitFor(() => {
       // Form should be cleared
       expect(screen.getByText('Choose a token')).toBeInTheDocument();
+    });
+    await waitFor(() => {
       expect(amountInput.value).toBe('');
     });
   });
@@ -648,19 +640,19 @@ describe('LendingSection', () => {
       }), 100))
     );
     
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     // Select a token
     const tokenButton = screen.getByText('Choose a token');
     fireEvent.click(tokenButton);
     
     await waitFor(() => {
-      const ethTokens = screen.getAllByText('ETH');
-      // Click the first ETH token in the modal (not the one in the available assets list)
-      fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
+      expect(screen.getAllByText('ETH')).toHaveLength(2);
     });
+    
+    const ethTokens = screen.getAllByText('ETH');
+    // Click the first ETH token in the modal (not the one in the available assets list)
+    fireEvent.click(ethTokens[1]); // Index 1 is the one in the modal
     
     // Enter amount
     const amountInput = screen.getByPlaceholderText('0.0');
@@ -678,9 +670,7 @@ describe('LendingSection', () => {
     const mockServiceInstance = mockLendingService();
     mockServiceInstance.fetchAllLendingAssets.mockRejectedValue(new Error('API Error'));
     
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     await waitFor(() => {
       expect(screen.getByText('Failed to fetch lending data')).toBeInTheDocument();
@@ -688,9 +678,7 @@ describe('LendingSection', () => {
   });
 
   it('shows correct action button text for different actions', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     // Wait for component to load
     await waitFor(() => {
@@ -715,13 +703,13 @@ describe('LendingSection', () => {
   });
 
   it('filters tokens by selected platform', async () => {
-    await act(async () => {
-      render(<LendingSection />);
-    });
+    render(<LendingSection />);
     
     // Default platform is Compound
     await waitFor(() => {
       expect(screen.getByText('ETH')).toBeInTheDocument();
+    });
+    await waitFor(() => {
       expect(screen.getByText('DAI')).toBeInTheDocument();
     });
     

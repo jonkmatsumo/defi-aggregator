@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useAccount, usePublicClient, useChainId } from 'wagmi';
+import { useAccount, usePublicClient } from 'wagmi';
 import LendingService from '../services/lendingService';
 
 const LendingSection = () => {

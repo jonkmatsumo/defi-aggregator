@@ -125,7 +125,7 @@ const TokenSwap = () => {
     } finally {
       setLoading(false);
     }
-  }, [amount, fromToken.address, toToken.address, chainId, slippage]);
+  }, [amount, fromToken.address, fromToken.decimals, toToken.address, chainId, slippage]);
 
   // Fetch quote when dependencies change
   useEffect(() => {
@@ -133,7 +133,7 @@ const TokenSwap = () => {
       const timeoutId = setTimeout(fetchQuote, 500); // Debounce
       return () => clearTimeout(timeoutId);
     }
-  }, [fetchQuote]);
+  }, [amount, fromToken.address, toToken.address, fetchQuote]);
 
   // Execute swap transaction
   const executeSwap = async () => {

@@ -1,6 +1,5 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { WagmiConfig } from 'wagmi';
 import WalletProvider from '../../src/components/WalletProvider';
 
 // Mock the wagmi and RainbowKit dependencies

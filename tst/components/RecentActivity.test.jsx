@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import RecentActivity from '../../src/components/RecentActivity';
 
 // Mock wagmi hooks
@@ -27,39 +27,29 @@ describe('RecentActivity', () => {
   });
 
   it('renders the title correctly', async () => {
-    await act(async () => {
-      render(<RecentActivity />);
-    });
+    render(<RecentActivity />);
     expect(screen.getByText('Recent Activity')).toBeInTheDocument();
   });
 
   it('renders demo mode when not connected', async () => {
-    await act(async () => {
-      render(<RecentActivity />);
-    });
+    render(<RecentActivity />);
     expect(screen.getByText('(Demo Mode)')).toBeInTheDocument();
   });
 
   it('renders no data message when not connected', async () => {
-    await act(async () => {
-      render(<RecentActivity />);
-    });
+    render(<RecentActivity />);
     expect(screen.getByText('No data')).toBeInTheDocument();
   });
 
   it('renders refresh button', async () => {
-    await act(async () => {
-      render(<RecentActivity />);
-    });
+    render(<RecentActivity />);
     const refreshButton = screen.getByTitle('Refresh transactions');
     expect(refreshButton).toBeInTheDocument();
     expect(refreshButton.textContent).toBe('↻');
   });
 
   it('accepts transactionCount prop', async () => {
-    await act(async () => {
-      render(<RecentActivity transactionCount={5} />);
-    });
+    render(<RecentActivity transactionCount={5} />);
     expect(screen.getByText('Recent Activity')).toBeInTheDocument();
   });
 
@@ -70,23 +60,17 @@ describe('RecentActivity', () => {
       address: '0x1234567890123456789012345678901234567890'
     });
 
-    await act(async () => {
-      render(<RecentActivity />);
-    });
+    render(<RecentActivity />);
     expect(screen.getByText('Recent Activity')).toBeInTheDocument();
   });
 
   it('handles forceRefresh prop', async () => {
-    await act(async () => {
-      render(<RecentActivity forceRefresh={true} />);
-    });
+    render(<RecentActivity forceRefresh={true} />);
     expect(screen.getByText('Recent Activity')).toBeInTheDocument();
   });
 
   it('has correct title styling', async () => {
-    await act(async () => {
-      render(<RecentActivity />);
-    });
+    render(<RecentActivity />);
     const title = screen.getByText('Recent Activity');
     expect(title).toHaveStyle({
       color: 'white',
@@ -97,9 +81,7 @@ describe('RecentActivity', () => {
   });
 
   it('shows demo mode message when not connected', async () => {
-    await act(async () => {
-      render(<RecentActivity />);
-    });
+    render(<RecentActivity />);
     expect(screen.getByText('Connect your wallet to see real transaction history')).toBeInTheDocument();
   });
 
@@ -110,9 +92,7 @@ describe('RecentActivity', () => {
       address: '0x1234567890123456789012345678901234567890'
     });
 
-    await act(async () => {
-      render(<RecentActivity />);
-    });
+    render(<RecentActivity />);
     expect(screen.getByText('Recent Activity')).toBeInTheDocument();
   });
 
@@ -130,9 +110,7 @@ describe('RecentActivity', () => {
       getBlock: jest.fn().mockRejectedValue(new Error('Network error'))
     });
 
-    await act(async () => {
-      render(<RecentActivity />);
-    });
+    render(<RecentActivity />);
     
     // Wait for the error to be handled and fallback data to be shown
     await waitFor(() => {
@@ -141,9 +119,7 @@ describe('RecentActivity', () => {
   });
 
   it('handles forceRefresh prop correctly', async () => {
-    await act(async () => {
-      render(<RecentActivity forceRefresh={true} />);
-    });
+    render(<RecentActivity forceRefresh={true} />);
     expect(screen.getByText('Recent Activity')).toBeInTheDocument();
   });
 
@@ -166,9 +142,7 @@ describe('RecentActivity', () => {
       address: null
     });
 
-    const { rerender } = await act(async () => {
-      return render(<RecentActivity />);
-    });
+    const { rerender } = render(<RecentActivity />);
 
     // Verify no fetch happened when not connected
     expect(mockGetBlockNumber).not.toHaveBeenCalled();
@@ -179,9 +153,7 @@ describe('RecentActivity', () => {
       address: '0x1234567890123456789012345678901234567890'
     });
 
-    await act(async () => {
-      rerender(<RecentActivity />);
-    });
+    rerender(<RecentActivity />);
 
     // Wait for the fetch to be triggered
     await waitFor(() => {
@@ -207,9 +179,7 @@ describe('RecentActivity', () => {
       address: '0x1234567890123456789012345678901234567890'
     });
 
-    const { rerender } = await act(async () => {
-      return render(<RecentActivity forceRefresh={false} />);
-    });
+    const { rerender } = render(<RecentActivity forceRefresh={false} />);
 
     // Wait for initial fetch
     await waitFor(() => {
@@ -219,9 +189,7 @@ describe('RecentActivity', () => {
     const initialCallCount = mockGetBlockNumber.mock.calls.length;
 
     // Change forceRefresh to true
-    await act(async () => {
-      rerender(<RecentActivity forceRefresh={true} />);
-    });
+    rerender(<RecentActivity forceRefresh={true} />);
 
     // Wait for the force refresh to trigger another fetch
     await waitFor(() => {
@@ -247,9 +215,7 @@ describe('RecentActivity', () => {
       address: '0x1234567890123456789012345678901234567890'
     });
 
-    const { rerender } = await act(async () => {
-      return render(<RecentActivity transactionCount={3} />);
-    });
+    const { rerender } = render(<RecentActivity transactionCount={3} />);
 
     // Wait for initial fetch
     await waitFor(() => {
@@ -259,9 +225,7 @@ describe('RecentActivity', () => {
     const initialCallCount = mockGetBlockNumber.mock.calls.length;
 
     // Rerender with same props - should not trigger new fetch
-    await act(async () => {
-      rerender(<RecentActivity transactionCount={3} />);
-    });
+    rerender(<RecentActivity transactionCount={3} />);
 
     // Give it a moment to potentially trigger (it shouldn't)
     await new Promise(resolve => setTimeout(resolve, 100));

@@ -48,109 +48,8 @@ const RecentActivity = ({ transactionCount = 3, forceRefresh = false }) => {
     }
   }, []);
 
-  // Get transaction history from blockchain
-  const getTransactionHistory = useCallback(async (client, userAddress, count) => {
-    try {
-      // Get recent blocks to search for transactions
-      const currentBlock = await client.getBlockNumber();
-      const transactions = [];
-      
-      // Search through recent blocks (last 100 blocks should be sufficient for recent activity)
-      const searchBlocks = Math.min(100, count * 10); // Search more blocks than needed
-      
-      for (let i = 0; i < searchBlocks && transactions.length < count; i++) {
-        // Ensure we don't go below 0 when subtracting from currentBlock
-        // eslint-disable-next-line no-undef
-        const iBigInt = BigInt(i);
-        // eslint-disable-next-line no-undef
-        const currentBlockBigInt = typeof currentBlock === 'bigint' ? currentBlock : BigInt(currentBlock);
-        if (currentBlockBigInt < iBigInt) break;
-        const blockNumber = currentBlockBigInt - iBigInt;
-        
-        try {
-          const block = await client.getBlock({
-            blockNumber,
-            includeTransactions: true
-          });
-          
-          if (block && block.transactions) {
-            for (const tx of block.transactions) {
-              if (transactions.length >= count) break;
-              
-              // Check if transaction involves the user
-              if (tx.from?.toLowerCase() === userAddress.toLowerCase() || 
-                  tx.to?.toLowerCase() === userAddress.toLowerCase()) {
-                
-                const transaction = await formatTransaction(client, tx, block);
-                if (transaction) {
-                  transactions.push(transaction);
-                }
-              }
-            }
-          }
-        } catch (blockError) {
-          console.warn('Failed to fetch block', blockNumber, blockError);
-          continue;
-        }
-      }
-      
-      return transactions;
-    } catch (error) {
-      console.error('Error fetching transaction history:', error);
-      throw error;
-    }
-  }, [address]);
-
-  // Fetch transactions function
-  const fetchTransactions = useCallback(async () => {
-    if (!isConnected || !address || !publicClient) {
-      setTransactions(getFallbackTransactions());
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
-    console.log('RecentActivity - Fetching transactions for address:', address?.slice(0, 10) + '...');
-    setLoading(true);
-    setError(null);
-
-    try {
-      const txHistory = await getTransactionHistory(publicClient, address, transactionCount);
-      setTransactions(txHistory);
-      setHasInitialData(true);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      setError('Failed to fetch transaction history');
-      setTransactions(getFallbackTransactions());
-      setHasInitialData(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [isConnected, address, publicClient, transactionCount, getTransactionHistory]);
-
-  // Handle wallet connection changes and force refresh
-  useEffect(() => {
-    if (isConnected && address && publicClient) {
-      fetchTransactions();
-    } else {
-      setTransactions(getFallbackTransactions());
-      setError(null);
-      setLoading(false);
-    }
-  }, [isConnected, address, publicClient, fetchTransactions]);
-
-  // Handle force refresh flag
-  useEffect(() => {
-    if (forceRefresh && !lastForceRefreshRef.current && isConnected && address && publicClient) {
-      lastForceRefreshRef.current = true;
-      fetchTransactions();
-    } else if (!forceRefresh) {
-      lastForceRefreshRef.current = false;
-    }
-  }, [forceRefresh, isConnected, address, publicClient, transactionCount, fetchTransactions]);
-
   // Format transaction data
-  const formatTransaction = async (client, tx, block) => {
+  const formatTransaction = useCallback(async (client, tx, block) => {
     try {
       const isIncoming = tx.to?.toLowerCase() === address?.toLowerCase();
       const isOutgoing = tx.from?.toLowerCase() === address?.toLowerCase();
@@ -210,7 +109,108 @@ const RecentActivity = ({ transactionCount = 3, forceRefresh = false }) => {
       console.error('Error formatting transaction:', error);
       return null;
     }
-  };
+  }, [address]);
+
+  // Get transaction history from blockchain
+  const getTransactionHistory = useCallback(async (client, userAddress, count) => {
+    try {
+      // Get recent blocks to search for transactions
+      const currentBlock = await client.getBlockNumber();
+      const transactions = [];
+      
+      // Search through recent blocks (last 100 blocks should be sufficient for recent activity)
+      const searchBlocks = Math.min(100, count * 10); // Search more blocks than needed
+      
+      for (let i = 0; i < searchBlocks && transactions.length < count; i++) {
+        // Ensure we don't go below 0 when subtracting from currentBlock
+        // eslint-disable-next-line no-undef
+        const iBigInt = BigInt(i);
+        // eslint-disable-next-line no-undef
+        const currentBlockBigInt = typeof currentBlock === 'bigint' ? currentBlock : BigInt(currentBlock);
+        if (currentBlockBigInt < iBigInt) break;
+        const blockNumber = currentBlockBigInt - iBigInt;
+        
+        try {
+          const block = await client.getBlock({
+            blockNumber,
+            includeTransactions: true
+          });
+          
+          if (block && block.transactions) {
+            for (const tx of block.transactions) {
+              if (transactions.length >= count) break;
+              
+              // Check if transaction involves the user
+              if (tx.from?.toLowerCase() === userAddress.toLowerCase() || 
+                  tx.to?.toLowerCase() === userAddress.toLowerCase()) {
+                
+                const transaction = await formatTransaction(client, tx, block);
+                if (transaction) {
+                  transactions.push(transaction);
+                }
+              }
+            }
+          }
+        } catch (blockError) {
+          console.warn('Failed to fetch block', blockNumber, blockError);
+          continue;
+        }
+      }
+      
+      return transactions;
+    } catch (error) {
+      console.error('Error fetching transaction history:', error);
+      throw error;
+    }
+  }, [formatTransaction]);
+
+  // Fetch transactions function
+  const fetchTransactions = useCallback(async () => {
+    if (!isConnected || !address || !publicClient) {
+      setTransactions(getFallbackTransactions());
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    console.log('RecentActivity - Fetching transactions for address:', address?.slice(0, 10) + '...');
+    setLoading(true);
+    setError(null);
+
+    try {
+      const txHistory = await getTransactionHistory(publicClient, address, transactionCount);
+      setTransactions(txHistory);
+      setHasInitialData(true);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      setError('Failed to fetch transaction history');
+      setTransactions(getFallbackTransactions());
+      setHasInitialData(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [isConnected, address, publicClient, transactionCount, getTransactionHistory]);
+
+  // Handle wallet connection changes and force refresh
+  useEffect(() => {
+    if (isConnected && address && publicClient) {
+      fetchTransactions();
+    } else {
+      setTransactions(getFallbackTransactions());
+      setError(null);
+      setLoading(false);
+    }
+  }, [isConnected, address, publicClient, fetchTransactions]);
+
+  // Handle force refresh flag
+  useEffect(() => {
+    if (forceRefresh && !lastForceRefreshRef.current && isConnected && address && publicClient) {
+      lastForceRefreshRef.current = true;
+      fetchTransactions();
+    } else if (!forceRefresh) {
+      lastForceRefreshRef.current = false;
+    }
+  }, [forceRefresh, isConnected, address, publicClient, transactionCount, fetchTransactions]);
 
   // Get fallback transactions for demo mode
   const getFallbackTransactions = () => {
