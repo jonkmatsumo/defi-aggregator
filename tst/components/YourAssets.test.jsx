@@ -1,21 +1,21 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import YourAssets from '../../src/components/YourAssets';
 
 // Mock wagmi hooks
 jest.mock('wagmi', () => ({
   useAccount: jest.fn(),
-  usePublicClient: jest.fn(),
-  useChainId: jest.fn()
+  usePublicClient: jest.fn()
 }));
 
 // Mock TokenBalanceService
+const mockFetchAllTokenBalances = jest.fn();
+
 jest.mock('../../src/services/tokenBalanceService', () => {
   const MockedTokenBalanceService = jest.fn().mockImplementation(() => ({
-    fetchAllTokenBalances: jest.fn().mockResolvedValue([
-      { symbol: 'ETH', name: 'Ethereum', balance: '2.000', value: '$4,000.00', color: '#627eea', decimals: 18, isMock: false }
-    ])
+    fetchAllTokenBalances: mockFetchAllTokenBalances
   }));
+  
   MockedTokenBalanceService.getFallbackAssets = jest.fn(() => [
     { symbol: 'ETH', name: 'Ethereum', balance: '1.234', value: '$2,468.00', color: '#627eea', decimals: 18 },
     { symbol: 'USDC', name: 'USD Coin', balance: '1000.00', value: '$1,000.00', color: '#2775ca', decimals: 6 },
@@ -26,22 +26,32 @@ jest.mock('../../src/services/tokenBalanceService', () => {
     return `$${(parseFloat(balance) * (prices[symbol] || 1)).toFixed(2)}`;
   });
   MockedTokenBalanceService.formatBalance = jest.fn((balance, decimals) => balance.toString());
+  
   return { __esModule: true, default: MockedTokenBalanceService };
 });
 
 describe('YourAssets', () => {
+  let mockUseAccount;
+  let mockUsePublicClient;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFetchAllTokenBalances.mockResolvedValue([
+      { symbol: 'ETH', name: 'Ethereum', balance: '2.000', value: '$4,000.00', color: '#627eea', decimals: 18, isMock: false }
+    ]);
+    
     // Set default mock return values
-    const { useAccount, usePublicClient, useChainId } = require('wagmi');
-    useAccount.mockReturnValue({
+    const { useAccount, usePublicClient } = require('wagmi');
+    mockUseAccount = useAccount;
+    mockUsePublicClient = usePublicClient;
+    
+    mockUseAccount.mockReturnValue({
       isConnected: false,
       address: null
     });
-    usePublicClient.mockReturnValue({
+    mockUsePublicClient.mockReturnValue({
       getBalance: jest.fn().mockResolvedValue('2000000000000000000')
     });
-    useChainId.mockReturnValue(1);
   });
 
   it('renders the title correctly', () => {
@@ -76,8 +86,7 @@ describe('YourAssets', () => {
   });
 
   it('shows loading state when connected and fetching data', () => {
-    const { useAccount } = require('wagmi');
-    useAccount.mockReturnValue({
+    mockUseAccount.mockReturnValue({
       isConnected: true,
       address: '0x1234567890123456789012345678901234567890'
     });
@@ -101,6 +110,89 @@ describe('YourAssets', () => {
       fontSize: '16px',
       fontWeight: '600',
       margin: '0px'
+    });
+  });
+
+  // Test Hook execution behavior - fetchTokenBalances is called when wallet connects
+  it('calls fetchTokenBalances when wallet connects', async () => {
+    const mockPublicClient = {
+      getBalance: jest.fn().mockResolvedValue('2000000000000000000')
+    };
+    
+    mockUseAccount.mockReturnValue({
+      isConnected: true,
+      address: '0x1234567890123456789012345678901234567890'
+    });
+    mockUsePublicClient.mockReturnValue(mockPublicClient);
+
+    render(<YourAssets />);
+
+    await waitFor(() => {
+      expect(mockFetchAllTokenBalances).toHaveBeenCalled();
+    });
+  });
+
+  // Test Hook execution behavior - fetchTokenBalances is called with forceRefresh
+  it('calls fetchTokenBalances when forceRefresh changes to true', async () => {
+    const mockPublicClient = {
+      getBalance: jest.fn().mockResolvedValue('2000000000000000000')
+    };
+    
+    mockUseAccount.mockReturnValue({
+      isConnected: true,
+      address: '0x1234567890123456789012345678901234567890'
+    });
+    mockUsePublicClient.mockReturnValue(mockPublicClient);
+
+    const { rerender } = render(<YourAssets forceRefresh={false} />);
+
+    await waitFor(() => {
+      expect(mockFetchAllTokenBalances).toHaveBeenCalledTimes(1);
+    });
+
+    // Change forceRefresh to true
+    rerender(<YourAssets forceRefresh={true} />);
+
+    await waitFor(() => {
+      expect(mockFetchAllTokenBalances).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // Test Hook execution behavior - fetchTokenBalances not called when disconnected
+  it('does not call fetchTokenBalances when wallet is disconnected', async () => {
+    mockUseAccount.mockReturnValue({
+      isConnected: false,
+      address: null
+    });
+
+    render(<YourAssets />);
+
+    // Wait a bit to ensure no calls are made
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    expect(mockFetchAllTokenBalances).not.toHaveBeenCalled();
+  });
+
+  // Test Hook execution behavior - fetchTokenBalances respects maxAssets dependency
+  it('calls fetchTokenBalances with correct maxAssets parameter', async () => {
+    const mockPublicClient = {
+      getBalance: jest.fn().mockResolvedValue('2000000000000000000')
+    };
+    
+    mockUseAccount.mockReturnValue({
+      isConnected: true,
+      address: '0x1234567890123456789012345678901234567890'
+    });
+    mockUsePublicClient.mockReturnValue(mockPublicClient);
+
+    render(<YourAssets maxAssets={5} />);
+
+    await waitFor(() => {
+      expect(mockFetchAllTokenBalances).toHaveBeenCalledWith(
+        mockPublicClient,
+        '0x1234567890123456789012345678901234567890',
+        5
+      );
     });
   });
 });

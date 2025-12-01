@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useAccount, usePublicClient, useChainId } from 'wagmi';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useAccount, usePublicClient } from 'wagmi';
 import TokenBalanceService from '../services/tokenBalanceService';
 
 const YourAssets = ({ maxAssets = 3, forceRefresh = false }) => {
@@ -15,7 +15,6 @@ const YourAssets = ({ maxAssets = 3, forceRefresh = false }) => {
   // Wagmi hooks
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
-  const chainId = useChainId();
 
   // Initialize component
   useEffect(() => {
@@ -24,31 +23,8 @@ const YourAssets = ({ maxAssets = 3, forceRefresh = false }) => {
     }
   }, []);
 
-  // Handle wallet connection changes and force refresh
-  useEffect(() => {
-    if (isConnected && address && publicClient) {
-      // Fetch initial data
-      fetchTokenBalances();
-    } else {
-      // Wallet disconnected, show fallback data
-      setAssets(TokenBalanceService.getFallbackAssets());
-      setError(null);
-      setLoading(false);
-    }
-  }, [isConnected, address, publicClient]);
-
-  // Handle force refresh flag
-  useEffect(() => {
-    if (forceRefresh && !lastForceRefreshRef.current && isConnected && address && publicClient) {
-      lastForceRefreshRef.current = true;
-      fetchTokenBalances();
-    } else if (!forceRefresh) {
-      lastForceRefreshRef.current = false;
-    }
-  }, [forceRefresh, isConnected, address, publicClient]);
-
   // Fetch token balances function
-  const fetchTokenBalances = async () => {
+  const fetchTokenBalances = useCallback(async () => {
     if (!isConnected || !address || !publicClient) {
       setAssets(TokenBalanceService.getFallbackAssets());
       setError(null);
@@ -91,7 +67,30 @@ const YourAssets = ({ maxAssets = 3, forceRefresh = false }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isConnected, address, publicClient, maxAssets]);
+
+  // Handle wallet connection changes and force refresh
+  useEffect(() => {
+    if (isConnected && address && publicClient) {
+      // Fetch initial data
+      fetchTokenBalances();
+    } else {
+      // Wallet disconnected, show fallback data
+      setAssets(TokenBalanceService.getFallbackAssets());
+      setError(null);
+      setLoading(false);
+    }
+  }, [isConnected, address, publicClient, fetchTokenBalances]);
+
+  // Handle force refresh flag
+  useEffect(() => {
+    if (forceRefresh && !lastForceRefreshRef.current && isConnected && address && publicClient) {
+      lastForceRefreshRef.current = true;
+      fetchTokenBalances();
+    } else if (!forceRefresh) {
+      lastForceRefreshRef.current = false;
+    }
+  }, [forceRefresh, isConnected, address, publicClient, fetchTokenBalances]);
 
   // Manual refresh function
   const handleRefresh = () => {
