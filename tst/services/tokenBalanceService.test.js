@@ -13,13 +13,7 @@ jest.mock('viem', () => ({
     const divisor = Math.pow(10, decimals);
     return (parseInt(value) / divisor).toString();
   }),
-  parseUnits: jest.fn((value, decimals) => {
-    const multiplier = Math.pow(10, decimals);
-    return (parseFloat(value) * multiplier).toString();
-  }),
-  getContract: jest.fn(),
-  createPublicClient: jest.fn(),
-  http: jest.fn()
+  getContract: jest.fn()
 }));
 
 describe('TokenBalanceService', () => {

@@ -1,6 +1,6 @@
 // Token Balance Service for fetching real token balances using wagmi and viem
 
-import { formatUnits, parseUnits, getContract, createPublicClient, http } from 'viem';
+import { formatUnits, getContract } from 'viem';
 
 // ERC-20 ABI for balanceOf and basic token info
 const erc20Abi = [
@@ -386,7 +386,7 @@ class TokenBalanceService {
       
       if (chainTokens) {
         console.log('TokenBalanceService - Fetching common tokens for chain:', chainId);
-        for (const [tokenAddress, metadata] of Object.entries(chainTokens)) {
+        for (const tokenAddress of Object.keys(chainTokens)) {
           const tokenBalance = await this.fetchTokenBalance(client, tokenAddress, userAddress);
           if (tokenBalance) {
             balances.push(tokenBalance);
