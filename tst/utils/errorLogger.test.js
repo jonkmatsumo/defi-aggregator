@@ -2,6 +2,7 @@
  * Tests for errorLogger utility
  */
 
+import * as fc from 'fast-check';
 import {
   logError,
   formatErrorForLogging,
@@ -358,6 +359,195 @@ describe('errorLogger', () => {
 
       expect(formatted.sessionId).toBe(existingSessionId);
       expect(mockSessionStorage.setItem).not.toHaveBeenCalled();
+    });
+  });
+
+  // Feature: error-boundary, Property 6: Error Message Logging
+  // **Validates: Requirements 2.1**
+  describe('Property 6: Error Message Logging', () => {
+    it('should log error message to console for any error', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.string({ minLength: 1 }),
+          fc.option(fc.string(), { nil: null }),
+          fc.string({ minLength: 1 }),
+          async (errorMessage, componentStack, boundaryName) => {
+            // Reset mocks for each iteration
+            console.error.mockClear();
+            console.group.mockClear();
+            console.groupEnd.mockClear();
+
+            // Create error with the generated message
+            const error = new Error(errorMessage);
+            const errorInfo = componentStack ? { componentStack } : null;
+
+            // Log the error
+            await logError(error, errorInfo, boundaryName);
+
+            // Verify that console.error was called with the error message
+            expect(console.error).toHaveBeenCalledWith('Error Message:', errorMessage);
+            
+            // Verify that console logging was initiated
+            expect(console.group).toHaveBeenCalled();
+            expect(console.groupEnd).toHaveBeenCalled();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+
+  // Feature: error-boundary, Property 7: Stack Trace Logging
+  // **Validates: Requirements 2.2**
+  describe('Property 7: Stack Trace Logging', () => {
+    it('should log component stack trace to console for any error', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.string({ minLength: 1 }),
+          fc.string({ minLength: 1 }),
+          fc.string({ minLength: 1 }),
+          async (errorMessage, componentStack, boundaryName) => {
+            // Reset mocks for each iteration
+            console.error.mockClear();
+            console.group.mockClear();
+            console.groupEnd.mockClear();
+
+            // Create error with the generated message
+            const error = new Error(errorMessage);
+            const errorInfo = { componentStack };
+
+            // Log the error
+            await logError(error, errorInfo, boundaryName);
+
+            // Verify that console.error was called with the component stack
+            expect(console.error).toHaveBeenCalledWith('Component Stack:', componentStack);
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+
+  // Feature: error-boundary, Property 8: Timestamp Inclusion
+  // **Validates: Requirements 2.3**
+  describe('Property 8: Timestamp Inclusion', () => {
+    it('should include timestamp in error logs for any error', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.string({ minLength: 1 }),
+          fc.option(fc.string(), { nil: null }),
+          fc.string({ minLength: 1 }),
+          async (errorMessage, componentStack, boundaryName) => {
+            // Reset mocks for each iteration
+            console.error.mockClear();
+            console.group.mockClear();
+            console.groupEnd.mockClear();
+
+            // Create error with the generated message
+            const error = new Error(errorMessage);
+            const errorInfo = componentStack ? { componentStack } : null;
+
+            // Log the error
+            await logError(error, errorInfo, boundaryName);
+
+            // Verify that console.error was called with a timestamp
+            // The timestamp should be in ISO format
+            const timestampCall = console.error.mock.calls.find(
+              call => call[0] === 'Timestamp:'
+            );
+            expect(timestampCall).toBeDefined();
+            expect(timestampCall[1]).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+
+  // Feature: error-boundary, Property 9: Context Logging
+  // **Validates: Requirements 2.4**
+  describe('Property 9: Context Logging', () => {
+    it('should log URL and user agent for any error', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.string({ minLength: 1 }),
+          fc.option(fc.string(), { nil: null }),
+          fc.string({ minLength: 1 }),
+          async (errorMessage, componentStack, boundaryName) => {
+            // Reset mocks for each iteration
+            console.error.mockClear();
+            console.group.mockClear();
+            console.groupEnd.mockClear();
+
+            // Create error with the generated message
+            const error = new Error(errorMessage);
+            const errorInfo = componentStack ? { componentStack } : null;
+
+            // Log the error
+            await logError(error, errorInfo, boundaryName);
+
+            // Verify that console.error was called with URL
+            expect(console.error).toHaveBeenCalledWith('URL:', expect.any(String));
+            
+            // Verify that console.error was called with User Agent
+            expect(console.error).toHaveBeenCalledWith('User Agent:', expect.any(String));
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+
+  // Feature: error-boundary, Property 10: Conditional External Logging
+  // **Validates: Requirements 2.5**
+  describe('Property 10: Conditional External Logging', () => {
+    it('should send to external service only when configured', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.string({ minLength: 1 }),
+          fc.option(fc.string(), { nil: null }),
+          fc.string({ minLength: 1 }),
+          fc.boolean(),
+          async (errorMessage, componentStack, boundaryName, shouldConfigure) => {
+            // Reset mocks and configuration for each iteration
+            fetch.mockClear();
+            console.error.mockClear();
+            console.group.mockClear();
+            console.groupEnd.mockClear();
+
+            // Configure external logging based on the boolean
+            if (shouldConfigure) {
+              configureExternalLogging({
+                endpoint: 'https://api.example.com/errors',
+                apiKey: 'test-key'
+              });
+              
+              // Mock successful response
+              fetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200
+              });
+            } else {
+              // Disable external logging
+              configureExternalLogging({ enabled: false });
+            }
+
+            // Create error with the generated message
+            const error = new Error(errorMessage);
+            const errorInfo = componentStack ? { componentStack } : null;
+
+            // Log the error
+            await logError(error, errorInfo, boundaryName);
+
+            // Verify that fetch was called only when configured
+            // Use a single assertion that checks the expected behavior
+            const fetchCallCount = fetch.mock.calls.length;
+            const expectedCallCount = shouldConfigure ? 1 : 0;
+            expect(fetchCallCount).toBe(expectedCallCount);
+          }
+        ),
+        { numRuns: 100 }
+      );
     });
   });
 });
