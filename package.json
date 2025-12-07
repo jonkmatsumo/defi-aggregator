@@ -12,6 +12,7 @@
     "ethers": "^6.15.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-router-dom": "^7.10.1",
     "react-scripts": "5.0.1",
     "viem": "^2.40.3",
     "wagmi": "^2.19.5",
@@ -26,7 +27,6 @@
     "test:src": "react-scripts test --watchAll=false",
     "eject": "react-scripts eject"
   },
-
   "browserslist": {
     "production": [
       ">0.2%",

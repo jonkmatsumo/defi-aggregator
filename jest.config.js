@@ -13,6 +13,9 @@ module.exports = {
     '<rootDir>/src/**/*.spec.{js,jsx}'
   ],
   
+  // Module directories
+  moduleDirectories: ['node_modules', '<rootDir>'],
+  
   // Module name mapping for cleaner imports
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
@@ -27,7 +30,7 @@ module.exports = {
   
   // Transform ignore patterns to handle ES modules
   transformIgnorePatterns: [
-    'node_modules/(?!(wagmi|@wagmi|@rainbow-me|viem|@viem|cuer|@cuer|fast-check)/)'
+    'node_modules/(?!(wagmi|@wagmi|@rainbow-me|viem|@viem|cuer|@cuer|fast-check|react-router|react-router-dom|@remix-run)/)'
   ],
   
   // Coverage configuration

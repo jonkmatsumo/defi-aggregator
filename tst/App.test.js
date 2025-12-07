@@ -1,6 +1,8 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import App from '../src/App';
+
+// Mock react-router-dom (using manual mock from __mocks__)
+jest.mock('react-router-dom');
 
 // Mock wagmi and rainbowkit before importing App
 jest.mock('wagmi', () => ({
@@ -42,35 +44,21 @@ jest.mock('../src/components/WalletProvider', () => ({
   default: ({ children }) => <div data-testid="wallet-provider">{children}</div>,
 }));
 
-// Mock all the dashboard components
+// Mock the Header component
 jest.mock('../src/components/Header', () => ({
   __esModule: true,
   default: () => <div data-testid="header">Header Component</div>,
 }));
 
-jest.mock('../src/components/TokenSwap', () => ({
+// Mock the route components
+jest.mock('../src/routes/DashboardRoute', () => ({
   __esModule: true,
-  default: () => <div data-testid="token-swap">Token Swap Component</div>,
+  default: () => <div data-testid="dashboard-route">Dashboard Route</div>,
 }));
 
-jest.mock('../src/components/NetworkStatus', () => ({
+jest.mock('../src/routes/ChatRoute', () => ({
   __esModule: true,
-  default: () => <div data-testid="network-status">Network Status Component</div>,
-}));
-
-jest.mock('../src/components/YourAssets', () => ({
-  __esModule: true,
-  default: () => <div data-testid="your-assets">Your Assets Component</div>,
-}));
-
-jest.mock('../src/components/LendingSection', () => ({
-  __esModule: true,
-  default: () => <div data-testid="lending-section">Lending Section Component</div>,
-}));
-
-jest.mock('../src/components/RecentActivity', () => ({
-  __esModule: true,
-  default: () => <div data-testid="recent-activity">Recent Activity Component</div>,
+  default: () => <div data-testid="chat-route">Chat Route</div>,
 }));
 
 describe('App', () => {
@@ -87,22 +75,16 @@ describe('App', () => {
     expect(screen.getByTestId('header')).toBeInTheDocument();
   });
 
-  it('displays main content components', () => {
+  it('renders with BrowserRouter', () => {
     render(<App />);
     
-    expect(screen.getByTestId('token-swap')).toBeInTheDocument();
-    expect(screen.getByTestId('lending-section')).toBeInTheDocument();
-    expect(screen.getByTestId('network-status')).toBeInTheDocument();
-    expect(screen.getByTestId('your-assets')).toBeInTheDocument();
-    expect(screen.getByTestId('recent-activity')).toBeInTheDocument();
+    expect(screen.getByTestId('browser-router')).toBeInTheDocument();
   });
 
-  it('has correct CSS classes', () => {
+  it('renders Routes component', () => {
     render(<App />);
     
-    // Test that the app structure is rendered correctly
-    expect(screen.getByTestId('wallet-provider')).toBeInTheDocument();
-    expect(screen.getByTestId('header')).toBeInTheDocument();
+    expect(screen.getByTestId('routes')).toBeInTheDocument();
   });
 
   it('wraps content in WalletProvider', () => {
@@ -110,6 +92,5 @@ describe('App', () => {
     
     const walletProvider = screen.getByTestId('wallet-provider');
     expect(walletProvider).toContainElement(screen.getByTestId('header'));
-    expect(walletProvider).toContainElement(screen.getByTestId('token-swap'));
   });
 }); 

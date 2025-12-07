@@ -1,6 +1,8 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import Header from '../../src/components/Header';
+
+// Mock react-router-dom (using manual mock from __mocks__)
+jest.mock('react-router-dom');
 
 // Mock ConnectWalletButton since it's a complex component with wagmi dependencies
 jest.mock('../../src/components/ConnectWalletButton', () => {
@@ -28,6 +30,24 @@ describe('Header', () => {
   it('renders the connect wallet button', () => {
     render(<Header />);
     expect(screen.getByTestId('connect-wallet-button')).toBeInTheDocument();
+  });
+
+  it('renders navigation links', () => {
+    render(<Header />);
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Chat')).toBeInTheDocument();
+  });
+
+  it('has navigation link to dashboard', () => {
+    render(<Header />);
+    const dashboardLink = screen.getByTestId('nav-link-/');
+    expect(dashboardLink).toHaveAttribute('href', '/');
+  });
+
+  it('has navigation link to chat', () => {
+    render(<Header />);
+    const chatLink = screen.getByTestId('nav-link-/chat');
+    expect(chatLink).toHaveAttribute('href', '/chat');
   });
 
   it('has correct header styling', () => {

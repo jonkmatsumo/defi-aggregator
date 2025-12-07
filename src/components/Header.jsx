@@ -1,4 +1,4 @@
-import React from 'react';
+import { NavLink } from 'react-router-dom';
 import ConnectWalletButton from './ConnectWalletButton';
 
 const Header = () => {
@@ -12,30 +12,69 @@ const Header = () => {
       borderBottom: '1px solid #2d3748',
       minHeight: 'clamp(60px, 8vh, 80px)'
     }}>
-      {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1vw, 12px)' }}>
-        <div style={{
-          width: 'clamp(28px, 4vw, 40px)',
-          height: 'clamp(28px, 4vw, 40px)',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: 'clamp(6px, 1vw, 12px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontWeight: 'bold',
-          fontSize: 'clamp(14px, 2vw, 20px)'
-        }}>
-          D
+      {/* Logo and Navigation */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(24px, 4vw, 48px)' }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1vw, 12px)' }}>
+          <div style={{
+            width: 'clamp(28px, 4vw, 40px)',
+            height: 'clamp(28px, 4vw, 40px)',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: 'clamp(6px, 1vw, 12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontWeight: 'bold',
+            fontSize: 'clamp(14px, 2vw, 20px)'
+          }}>
+            D
+          </div>
+          <span style={{ 
+            color: 'white', 
+            fontSize: 'clamp(16px, 2.5vw, 24px)', 
+            fontWeight: '600',
+            fontFamily: 'system-ui, -apple-system, sans-serif'
+          }}>
+            DeFiHub
+          </span>
         </div>
-        <span style={{ 
-          color: 'white', 
-          fontSize: 'clamp(16px, 2.5vw, 24px)', 
-          fontWeight: '600',
-          fontFamily: 'system-ui, -apple-system, sans-serif'
-        }}>
-          DeFiHub
-        </span>
+
+        {/* Navigation Links */}
+        <nav style={{ display: 'flex', gap: 'clamp(12px, 2vw, 24px)' }}>
+          <NavLink
+            to="/"
+            style={({ isActive }) => ({
+              color: isActive ? '#667eea' : 'rgba(255, 255, 255, 0.7)',
+              textDecoration: 'none',
+              fontSize: 'clamp(14px, 1.8vw, 16px)',
+              fontWeight: '500',
+              padding: 'clamp(6px, 1vw, 8px) clamp(12px, 1.5vw, 16px)',
+              borderRadius: 'clamp(6px, 1vw, 8px)',
+              background: isActive ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
+              border: isActive ? '1px solid rgba(102, 126, 234, 0.3)' : '1px solid transparent',
+              transition: 'all 0.2s ease'
+            })}
+          >
+            Dashboard
+          </NavLink>
+          <NavLink
+            to="/chat"
+            style={({ isActive }) => ({
+              color: isActive ? '#667eea' : 'rgba(255, 255, 255, 0.7)',
+              textDecoration: 'none',
+              fontSize: 'clamp(14px, 1.8vw, 16px)',
+              fontWeight: '500',
+              padding: 'clamp(6px, 1vw, 8px) clamp(12px, 1.5vw, 16px)',
+              borderRadius: 'clamp(6px, 1vw, 8px)',
+              background: isActive ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
+              border: isActive ? '1px solid rgba(102, 126, 234, 0.3)' : '1px solid transparent',
+              transition: 'all 0.2s ease'
+            })}
+          >
+            Chat
+          </NavLink>
+        </nav>
       </div>
 
       {/* Right side - Network and Wallet */}
