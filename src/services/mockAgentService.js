@@ -151,15 +151,29 @@ class AgentService {
  */
 class MockAgentService extends AgentService {
   /**
+   * Create a new MockAgentService
+   * @param {Object} options - Configuration options
+   * @param {number} options.minDelay - Minimum delay in ms (default: 200)
+   * @param {number} options.maxDelay - Maximum delay in ms (default: 400)
+   */
+  constructor(options = {}) {
+    super();
+    this.minDelay = options.minDelay !== undefined ? options.minDelay : 200;
+    this.maxDelay = options.maxDelay !== undefined ? options.maxDelay : 400;
+  }
+
+  /**
    * Send a message and receive a mock response
    * @param {string} message - The user's message
    * @param {Array} history - Array of previous ChatMessage objects (maintained for future use)
    * @returns {Promise<Object>} Mock agent response
    */
   async sendMessage(message, history = []) {
-    // Simulate network delay (200-400ms) - just enough to be noticeable
-    const delayMs = 200 + Math.random() * 200;
-    await delay(delayMs);
+    // Simulate network delay - configurable for testing
+    if (this.maxDelay > 0) {
+      const delayMs = this.minDelay + Math.random() * (this.maxDelay - this.minDelay);
+      await delay(delayMs);
+    }
     
     // Generate response based on message content
     const content = generateResponse(message);

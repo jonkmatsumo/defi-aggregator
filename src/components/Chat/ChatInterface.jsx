@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import MessageStream from './MessageStream';
 import ChatInput from './ChatInput';
 import MockAgentService from '../../services/mockAgentService';
+import './Chat.css';
 
 const ChatInterface = () => {
   // Initialize state
@@ -74,7 +75,7 @@ const ChatInterface = () => {
   };
 
   return (
-    <div style={styles.container}>
+    <div className="chat-interface">
       {/* Message Stream */}
       <MessageStream messages={messages} isLoading={isLoading} />
       
@@ -87,16 +88,6 @@ const ChatInterface = () => {
       />
     </div>
   );
-};
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100%',
-    background: 'linear-gradient(135deg, #1a202c 0%, #2d3748 100%)',
-    overflow: 'hidden'
-  }
 };
 
 export default ChatInterface;

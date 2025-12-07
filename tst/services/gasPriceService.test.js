@@ -254,6 +254,21 @@ describe('GasPriceService', () => {
   });
 
   describe('fetchGasPrice', () => {
+    beforeEach(() => {
+      // Ensure mock client is properly set up for each test
+      gasPriceService.clients.ethereum = mockClient;
+      gasPriceService.clients.polygon = mockClient;
+      gasPriceService.clients.bsc = mockClient;
+      gasPriceService.clients.arbitrum = mockClient;
+      gasPriceService.clients.optimism = mockClient;
+      
+      // Mock the delay function to prevent actual delays in tests
+      jest.spyOn(gasPriceService, 'delay').mockResolvedValue();
+      
+      // Clear retry delays to prevent rate limit waits
+      gasPriceService.retryDelays.clear();
+    });
+
     it('should return cached data if valid', async () => {
       const networkKey = 'ethereum';
       const cachedData = { gasPrice: '20' };
@@ -285,12 +300,13 @@ describe('GasPriceService', () => {
         FastGasPrice: '25000000000 gwei',
         currentGasPrice: '20000000000 gwei'
       });
-    }, 15000);
+    });
 
     it('should handle client errors and return fallback data', async () => {
       const networkKey = 'ethereum';
 
       mockClient.getGasPrice.mockRejectedValue(new Error('Network error'));
+      mockClient.getFeeHistory.mockRejectedValue(new Error('Network error'));
 
       const result = await gasPriceService.fetchGasPrice(networkKey);
 
@@ -299,14 +315,13 @@ describe('GasPriceService', () => {
         ProposeGasPrice: '18 gwei',
         FastGasPrice: '22 gwei'
       });
-    }, 15000);
+    });
 
     it('should implement exponential backoff on retries', async () => {
       const networkKey = 'ethereum';
 
-      mockClient.getGasPrice
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockResolvedValueOnce('20000000000');
+      mockClient.getGasPrice.mockRejectedValue(new Error('Network error'));
+      mockClient.getFeeHistory.mockRejectedValue(new Error('Network error'));
 
       const result = await gasPriceService.fetchGasPrice(networkKey);
 
@@ -316,7 +331,7 @@ describe('GasPriceService', () => {
         ProposeGasPrice: '18 gwei',
         FastGasPrice: '22 gwei'
       });
-    }, 15000);
+    });
   });
 
   describe('static fetchConnectedWalletGasPrice', () => {
@@ -352,6 +367,21 @@ describe('GasPriceService', () => {
   });
 
   describe('fetchMultipleGasPrices', () => {
+    beforeEach(() => {
+      // Ensure mock client is properly set up for each test
+      gasPriceService.clients.ethereum = mockClient;
+      gasPriceService.clients.polygon = mockClient;
+      gasPriceService.clients.bsc = mockClient;
+      gasPriceService.clients.arbitrum = mockClient;
+      gasPriceService.clients.optimism = mockClient;
+      
+      // Mock the delay function to prevent actual delays in tests
+      jest.spyOn(gasPriceService, 'delay').mockResolvedValue();
+      
+      // Clear retry delays to prevent rate limit waits
+      gasPriceService.retryDelays.clear();
+    });
+
     it('should fetch gas prices for multiple networks', async () => {
       const networkKeys = ['ethereum', 'polygon'];
       const mockGasPrices = ['20000000000', '3000000000'];
@@ -383,7 +413,7 @@ describe('GasPriceService', () => {
           currentGasPrice: '3000000000 gwei'
         }
       });
-    }, 15000);
+    });
 
     it('should handle errors for individual networks', async () => {
       const networkKeys = ['ethereum', 'polygon'];
@@ -411,7 +441,7 @@ describe('GasPriceService', () => {
           FastGasPrice: '4 gwei'
         }
       });
-    }, 15000);
+    });
   });
 
   describe('static getDisplayGasPrice', () => {

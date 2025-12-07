@@ -5,7 +5,8 @@ describe('MockAgentService', () => {
   let mockAgentService;
 
   beforeEach(() => {
-    mockAgentService = new MockAgentService();
+    // Use zero delay for tests to speed up execution
+    mockAgentService = new MockAgentService({ minDelay: 0, maxDelay: 0 });
   });
 
   describe('Property-Based Tests', () => {
@@ -60,7 +61,7 @@ describe('MockAgentService', () => {
         ),
         { numRuns: 100 } // Run 100 iterations as specified in design
       );
-    }, 60000); // Increase timeout for property test with delays (100 runs * ~300ms avg = ~30s)
+    }, 10000); // Timeout for property test (should complete in <5s with zero delay)
 
     // **Feature: chat-agent-ui, Property 17: Pattern-based UI intent generation**
     // **Validates: Requirements 6.2**
@@ -120,7 +121,7 @@ describe('MockAgentService', () => {
         ),
         { numRuns: 100 } // Run 100 iterations as specified in design
       );
-    }, 60000); // Increase timeout for property test with delays
+    }, 10000); // Timeout for property test (should complete in <5s with zero delay)
 
     // **Feature: chat-agent-ui, Property 18: Conversation history accumulation**
     // **Validates: Requirements 6.4**
@@ -183,7 +184,7 @@ describe('MockAgentService', () => {
         ),
         { numRuns: 100 } // Run 100 iterations as specified in design
       );
-    }, 180000); // Increase timeout for property test with multiple sequential calls (100 runs * 5 msgs * 300ms avg = ~150s)
+    }, 30000); // Timeout for property test with multiple sequential calls (should complete in <15s with zero delay)
   });
 
   describe('Unit Tests', () => {
@@ -280,10 +281,12 @@ describe('MockAgentService', () => {
 
     describe('Response Delay', () => {
       it('should have response delay within expected range (200-400ms)', async () => {
+        // Create a service with delay enabled for this test
+        const serviceWithDelay = new MockAgentService({ minDelay: 200, maxDelay: 400 });
         const message = 'test message';
         const startTime = Date.now();
         
-        await mockAgentService.sendMessage(message, []);
+        await serviceWithDelay.sendMessage(message, []);
         
         const endTime = Date.now();
         const delay = endTime - startTime;
@@ -294,11 +297,13 @@ describe('MockAgentService', () => {
       });
 
       it('should have consistent delay across multiple calls', async () => {
+        // Create a service with delay enabled for this test
+        const serviceWithDelay = new MockAgentService({ minDelay: 200, maxDelay: 400 });
         const delays = [];
         
         for (let i = 0; i < 5; i++) {
           const startTime = Date.now();
-          await mockAgentService.sendMessage('test', []);
+          await serviceWithDelay.sendMessage('test', []);
           const endTime = Date.now();
           delays.push(endTime - startTime);
         }
@@ -308,6 +313,17 @@ describe('MockAgentService', () => {
           expect(delay).toBeGreaterThanOrEqual(200);
           expect(delay).toBeLessThan(500);
         });
+      });
+
+      it('should support zero delay for testing', async () => {
+        // The default mockAgentService in tests has zero delay
+        const startTime = Date.now();
+        await mockAgentService.sendMessage('test', []);
+        const endTime = Date.now();
+        const delay = endTime - startTime;
+        
+        // Should complete very quickly (under 50ms)
+        expect(delay).toBeLessThan(50);
       });
     });
 

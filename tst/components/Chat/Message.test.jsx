@@ -31,13 +31,13 @@ describe('Message', () => {
             // eslint-disable-next-line testing-library/no-node-access
             const messageContainer = container.firstChild;
             
-            // Verify the message container has different alignment based on role
-            // This is the key visual distinction we can reliably test
-            const justifyContent = messageContainer.style.justifyContent;
-            const expectedAlignment = isUser ? 'flex-end' : 'flex-start';
+            // Verify the message container has different CSS class based on role
+            const expectedClass = isUser ? 'user' : 'assistant';
             
             // eslint-disable-next-line jest/no-conditional-expect
-            expect(justifyContent).toBe(expectedAlignment);
+            expect(messageContainer.className).toContain('message-container');
+            // eslint-disable-next-line jest/no-conditional-expect
+            expect(messageContainer.className).toContain(expectedClass);
             
             // Verify content is rendered
             expect(screen.getByText((textContent, element) => {
@@ -95,10 +95,11 @@ describe('Message', () => {
 
       const { container } = render(<Message message={message} isUser={true} />);
 
-      // Check that message is right-aligned
+      // Check that message has correct CSS classes
       // eslint-disable-next-line testing-library/no-node-access
       const messageContainer = container.firstChild;
-      expect(messageContainer.style.justifyContent).toBe('flex-end');
+      expect(messageContainer.className).toContain('message-container');
+      expect(messageContainer.className).toContain('user');
 
       // Check that content is rendered
       expect(screen.getByText('Hello, this is a user message')).toBeInTheDocument();
@@ -114,10 +115,11 @@ describe('Message', () => {
 
       const { container } = render(<Message message={message} isUser={false} />);
 
-      // Check that message is left-aligned
+      // Check that message has correct CSS classes
       // eslint-disable-next-line testing-library/no-node-access
       const messageContainer = container.firstChild;
-      expect(messageContainer.style.justifyContent).toBe('flex-start');
+      expect(messageContainer.className).toContain('message-container');
+      expect(messageContainer.className).toContain('assistant');
 
       // Check that content is rendered
       expect(screen.getByText('Hello, this is an assistant message')).toBeInTheDocument();
