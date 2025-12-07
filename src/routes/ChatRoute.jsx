@@ -1,3 +1,6 @@
+import ErrorBoundary from '../components/ErrorBoundary';
+import ChatInterface from '../components/Chat/ChatInterface';
+
 function ChatRoute() {
   return (
     <div style={{
@@ -13,32 +16,14 @@ function ChatRoute() {
     }}>
       <div style={{
         maxWidth: '1200px',
-        width: '100%'
+        width: '100%',
+        height: 'calc(100vh - 80px - clamp(32px, 6vw, 64px))',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
-        <h1 style={{
-          fontSize: 'clamp(24px, 4vw, 36px)',
-          marginBottom: '24px',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text'
-        }}>
-          Chat Interface
-        </h1>
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '16px',
-          padding: '32px',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
-        }}>
-          <p style={{
-            fontSize: '16px',
-            lineHeight: '1.6',
-            color: 'rgba(255, 255, 255, 0.8)'
-          }}>
-            Chat interface coming soon. This will allow you to interact with your DeFi dashboard through natural conversation.
-          </p>
-        </div>
+        <ErrorBoundary name="chat-interface">
+          <ChatInterface />
+        </ErrorBoundary>
       </div>
     </div>
   );
