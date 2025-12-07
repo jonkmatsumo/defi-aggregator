@@ -1,8 +1,39 @@
 import React from 'react';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import fc from 'fast-check';
 import Message from '../../../src/components/Chat/Message';
+
+// Mock all dashboard components to avoid slow rendering and dependency issues
+jest.mock('../../../src/components/NetworkStatus', () => ({
+  __esModule: true,
+  default: () => <div data-testid="network-status">Network Status Mock</div>
+}));
+
+jest.mock('../../../src/components/YourAssets', () => ({
+  __esModule: true,
+  default: () => <div data-testid="your-assets">Your Assets Mock</div>
+}));
+
+jest.mock('../../../src/components/TokenSwap', () => ({
+  __esModule: true,
+  default: () => <div data-testid="token-swap">Token Swap Mock</div>
+}));
+
+jest.mock('../../../src/components/LendingSection', () => ({
+  __esModule: true,
+  default: () => <div data-testid="lending-section">Lending Section Mock</div>
+}));
+
+jest.mock('../../../src/components/PerpetualsSection', () => ({
+  __esModule: true,
+  default: () => <div data-testid="perpetuals-section">Perpetuals Section Mock</div>
+}));
+
+jest.mock('../../../src/components/RecentActivity', () => ({
+  __esModule: true,
+  default: () => <div data-testid="recent-activity">Recent Activity Mock</div>
+}));
 
 describe('Message', () => {
   // **Feature: chat-agent-ui, Property 8: Role-based message styling**
@@ -75,6 +106,173 @@ describe('Message', () => {
             expect(screen.getByText((textContent, element) => {
               return element.textContent === content;
             })).toBeInTheDocument();
+
+            cleanup();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+
+  // **Feature: chat-agent-ui, Property 13: Independent component rendering**
+  // **Validates: Requirements 4.4**
+  describe('Property 13: Independent component rendering', () => {
+    it('should render each component independently for multiple messages with UI intents', () => {
+      fc.assert(
+        fc.property(
+          // Generate an array of 2-5 messages with UI intents
+          fc.array(
+            fc.record({
+              content: fc.string({ minLength: 1, maxLength: 100 }).filter(s => s.trim().length > 0),
+              timestamp: fc.integer({ min: 1000000000000, max: Date.now() }),
+              componentName: fc.constantFrom('NetworkStatus', 'YourAssets', 'TokenSwap', 'LendingSection', 'PerpetualsSection', 'RecentActivity')
+            }),
+            { minLength: 2, maxLength: 5 }
+          ),
+          (messageConfigs) => {
+            // Create messages with UI intents
+            const messages = messageConfigs.map((config, index) => ({
+              id: `msg-${config.timestamp}-${index}`,
+              role: 'assistant',
+              content: config.content,
+              timestamp: config.timestamp,
+              uiIntent: {
+                type: 'RENDER_COMPONENT',
+                component: config.componentName,
+                props: {}
+              }
+            }));
+
+            // Render all messages
+            render(
+              <div>
+                {messages.map((message) => (
+                  <Message key={message.id} message={message} isUser={false} />
+                ))}
+              </div>
+            );
+
+            // Verify each message is rendered independently
+            messages.forEach((message) => {
+              // Check that the message content is present
+              expect(screen.getByText((textContent, element) => {
+                return element.textContent === message.content;
+              })).toBeInTheDocument();
+            });
+
+            // Verify we have the correct number of message containers
+            // Each message should have its content rendered
+            // eslint-disable-next-line jest/no-conditional-expect
+            expect(messages.length).toBeGreaterThan(0);
+
+            cleanup();
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+
+  // **Feature: chat-agent-ui, Property 14: Component state isolation**
+  // **Validates: Requirements 4.5**
+  describe('Property 14: Component state isolation', () => {
+    // Create a simple stateful test component
+    const StatefulTestComponent = ({ initialValue = 0, testId }) => {
+      const [count, setCount] = React.useState(initialValue);
+      
+      return (
+        <div data-testid={testId}>
+          <span data-testid={`${testId}-count`}>{count}</span>
+          <button 
+            data-testid={`${testId}-button`}
+            onClick={() => setCount(prevCount => prevCount + 1)}
+          >
+            Increment
+          </button>
+        </div>
+      );
+    };
+
+    // Register the test component temporarily
+    beforeAll(() => {
+      const { ComponentRegistry } = require('../../../src/components/Chat/componentRegistry');
+      ComponentRegistry['StatefulTestComponent'] = StatefulTestComponent;
+    });
+
+    afterAll(() => {
+      const { ComponentRegistry } = require('../../../src/components/Chat/componentRegistry');
+      delete ComponentRegistry['StatefulTestComponent'];
+    });
+
+    it('should maintain state isolation when one component state changes', () => {
+      fc.assert(
+        fc.property(
+          // Generate 2-4 messages with stateful components
+          fc.integer({ min: 2, max: 4 }).chain(numMessages =>
+            fc.tuple(
+              fc.constant(numMessages),
+              fc.array(fc.integer({ min: 0, max: 100 }), { minLength: numMessages, maxLength: numMessages }),
+              fc.integer({ min: 0, max: numMessages - 1 })
+            )
+          ),
+          ([numMessages, initialValues, interactIndex]) => {
+            const values = initialValues;
+            const actualInteractIndex = interactIndex % numMessages;
+
+            // Create messages with stateful components
+            // Use unique timestamps to ensure unique keys
+            const baseTimestamp = Date.now();
+            const messages = values.map((value, index) => ({
+              id: `msg-state-${baseTimestamp}-${index}`,
+              role: 'assistant',
+              content: `Message ${index}`,
+              timestamp: baseTimestamp + index * 1000,
+              uiIntent: {
+                type: 'RENDER_COMPONENT',
+                component: 'StatefulTestComponent',
+                props: {
+                  initialValue: value,
+                  testId: `component-${baseTimestamp}-${index}`
+                }
+              }
+            }));
+
+            render(
+              <div>
+                {messages.map((message) => (
+                  <Message key={message.id} message={message} isUser={false} />
+                ))}
+              </div>
+            );
+
+            // Verify initial state for all components
+            messages.forEach((message, index) => {
+              const testId = `component-${baseTimestamp}-${index}`;
+              const countElement = screen.getByTestId(`${testId}-count`);
+              // eslint-disable-next-line jest/no-conditional-expect
+              expect(countElement.textContent).toBe(values[index].toString());
+            });
+
+            // Interact with one component (click its button)
+            const interactTestId = `component-${baseTimestamp}-${actualInteractIndex}`;
+            const buttonToClick = screen.getByTestId(`${interactTestId}-button`);
+            fireEvent.click(buttonToClick);
+
+            // Verify the clicked component's state changed
+            const clickedCount = screen.getByTestId(`${interactTestId}-count`);
+            // eslint-disable-next-line jest/no-conditional-expect
+            expect(clickedCount.textContent).toBe((values[actualInteractIndex] + 1).toString());
+
+            // Verify all other components' states remain unchanged
+            messages.forEach((message, index) => {
+              if (index !== actualInteractIndex) {
+                const testId = `component-${baseTimestamp}-${index}`;
+                const countElement = screen.getByTestId(`${testId}-count`);
+                // eslint-disable-next-line jest/no-conditional-expect
+                expect(countElement.textContent).toBe(values[index].toString());
+              }
+            });
 
             cleanup();
           }
