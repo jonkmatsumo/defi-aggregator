@@ -1,4 +1,5 @@
 import React from 'react';
+import GenerativeUIRenderer from './GenerativeUIRenderer';
 
 const MessageBubble = ({ content, isUser }) => {
   return (
@@ -39,6 +40,9 @@ const Message = ({ message, isUser }) => {
         >
           {formatTimestamp(message.timestamp)}
         </div>
+        {message.uiIntent && (
+          <GenerativeUIRenderer uiIntent={message.uiIntent} />
+        )}
       </div>
     </div>
   );
