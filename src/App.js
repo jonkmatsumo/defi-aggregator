@@ -15,8 +15,9 @@ function App() {
           
           {/* Routes */}
           <Routes>
-            <Route path="/" element={<DashboardRoute />} />
+            <Route path="/" element={<ChatRoute />} />
             <Route path="/chat" element={<ChatRoute />} />
+            <Route path="/dashboard" element={<DashboardRoute />} />
           </Routes>
         </div>
       </WalletProvider>

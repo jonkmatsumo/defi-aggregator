@@ -43,23 +43,8 @@ const Header = () => {
         {/* Navigation Links */}
         <nav style={{ display: 'flex', gap: 'clamp(12px, 2vw, 24px)' }}>
           <NavLink
-            to="/"
-            style={({ isActive }) => ({
-              color: isActive ? '#667eea' : 'rgba(255, 255, 255, 0.7)',
-              textDecoration: 'none',
-              fontSize: 'clamp(14px, 1.8vw, 16px)',
-              fontWeight: '500',
-              padding: 'clamp(6px, 1vw, 8px) clamp(12px, 1.5vw, 16px)',
-              borderRadius: 'clamp(6px, 1vw, 8px)',
-              background: isActive ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
-              border: isActive ? '1px solid rgba(102, 126, 234, 0.3)' : '1px solid transparent',
-              transition: 'all 0.2s ease'
-            })}
-          >
-            Dashboard
-          </NavLink>
-          <NavLink
             to="/chat"
+            end
             style={({ isActive }) => ({
               color: isActive ? '#667eea' : 'rgba(255, 255, 255, 0.7)',
               textDecoration: 'none',
@@ -73,6 +58,22 @@ const Header = () => {
             })}
           >
             Chat
+          </NavLink>
+          <NavLink
+            to="/dashboard"
+            style={({ isActive }) => ({
+              color: isActive ? '#667eea' : 'rgba(255, 255, 255, 0.7)',
+              textDecoration: 'none',
+              fontSize: 'clamp(14px, 1.8vw, 16px)',
+              fontWeight: '500',
+              padding: 'clamp(6px, 1vw, 8px) clamp(12px, 1.5vw, 16px)',
+              borderRadius: 'clamp(6px, 1vw, 8px)',
+              background: isActive ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
+              border: isActive ? '1px solid rgba(102, 126, 234, 0.3)' : '1px solid transparent',
+              transition: 'all 0.2s ease'
+            })}
+          >
+            Dashboard
           </NavLink>
         </nav>
       </div>

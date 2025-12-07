@@ -38,16 +38,16 @@ describe('Header', () => {
     expect(screen.getByText('Chat')).toBeInTheDocument();
   });
 
-  it('has navigation link to dashboard', () => {
-    render(<Header />);
-    const dashboardLink = screen.getByTestId('nav-link-/');
-    expect(dashboardLink).toHaveAttribute('href', '/');
-  });
-
   it('has navigation link to chat', () => {
     render(<Header />);
     const chatLink = screen.getByTestId('nav-link-/chat');
     expect(chatLink).toHaveAttribute('href', '/chat');
+  });
+
+  it('has navigation link to dashboard', () => {
+    render(<Header />);
+    const dashboardLink = screen.getByTestId('nav-link-/dashboard');
+    expect(dashboardLink).toHaveAttribute('href', '/dashboard');
   });
 
   it('has correct header styling', () => {

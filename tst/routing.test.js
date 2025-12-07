@@ -83,43 +83,13 @@ jest.mock('../src/components/RecentActivity', () => ({
 
 describe('Routing Tests', () => {
   describe('Integration Tests', () => {
-    it('navigates from dashboard to chat', () => {
-      // Start at dashboard
+    it('navigates from chat to dashboard', () => {
+      // Start at chat (default route)
       const { unmount } = render(
         <MemoryRouter initialEntries={['/']}>
           <Routes>
-            <Route path="/" element={<DashboardRoute />} />
-            <Route path="/chat" element={<ChatRoute />} />
-          </Routes>
-        </MemoryRouter>
-      );
-
-      // Verify dashboard components are rendered
-      expect(screen.getByTestId('token-swap')).toBeInTheDocument();
-      
-      unmount();
-      
-      // Navigate to chat
-      render(
-        <MemoryRouter initialEntries={['/chat']}>
-          <Routes>
-            <Route path="/" element={<DashboardRoute />} />
-            <Route path="/chat" element={<ChatRoute />} />
-          </Routes>
-        </MemoryRouter>
-      );
-
-      // Verify chat is rendered
-      expect(screen.getByTestId('chat-interface')).toBeInTheDocument();
-    });
-
-    it('navigates from chat to dashboard', () => {
-      // Start at chat
-      const { unmount } = render(
-        <MemoryRouter initialEntries={['/chat']}>
-          <Routes>
-            <Route path="/" element={<DashboardRoute />} />
-            <Route path="/chat" element={<ChatRoute />} />
+            <Route path="/" element={<ChatRoute />} />
+            <Route path="/dashboard" element={<DashboardRoute />} />
           </Routes>
         </MemoryRouter>
       );
@@ -131,16 +101,46 @@ describe('Routing Tests', () => {
       
       // Navigate to dashboard
       render(
-        <MemoryRouter initialEntries={['/']}>
+        <MemoryRouter initialEntries={['/dashboard']}>
           <Routes>
-            <Route path="/" element={<DashboardRoute />} />
-            <Route path="/chat" element={<ChatRoute />} />
+            <Route path="/" element={<ChatRoute />} />
+            <Route path="/dashboard" element={<DashboardRoute />} />
           </Routes>
         </MemoryRouter>
       );
 
       // Verify dashboard components are rendered
       expect(screen.getByTestId('token-swap')).toBeInTheDocument();
+    });
+
+    it('navigates from dashboard to chat', () => {
+      // Start at dashboard
+      const { unmount } = render(
+        <MemoryRouter initialEntries={['/dashboard']}>
+          <Routes>
+            <Route path="/" element={<ChatRoute />} />
+            <Route path="/dashboard" element={<DashboardRoute />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      // Verify dashboard components are rendered
+      expect(screen.getByTestId('token-swap')).toBeInTheDocument();
+      
+      unmount();
+      
+      // Navigate to chat
+      render(
+        <MemoryRouter initialEntries={['/']}>
+          <Routes>
+            <Route path="/" element={<ChatRoute />} />
+            <Route path="/dashboard" element={<DashboardRoute />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      // Verify chat is rendered
+      expect(screen.getByTestId('chat-interface')).toBeInTheDocument();
     });
 
     it('chat route displays ChatInterface', () => {
@@ -155,11 +155,23 @@ describe('Routing Tests', () => {
       expect(screen.getByTestId('chat-interface')).toBeInTheDocument();
     });
 
-    it('dashboard route displays dashboard components', () => {
+    it('default route (/) displays ChatInterface', () => {
       render(
         <MemoryRouter initialEntries={['/']}>
           <Routes>
-            <Route path="/" element={<DashboardRoute />} />
+            <Route path="/" element={<ChatRoute />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      expect(screen.getByTestId('chat-interface')).toBeInTheDocument();
+    });
+
+    it('dashboard route displays dashboard components', () => {
+      render(
+        <MemoryRouter initialEntries={['/dashboard']}>
+          <Routes>
+            <Route path="/dashboard" element={<DashboardRoute />} />
           </Routes>
         </MemoryRouter>
       );
@@ -207,11 +219,11 @@ describe('Routing Tests', () => {
             // that the component can be mounted/unmounted without errors,
             // which is the foundation for state preservation.
             
-            // Render chat route
+            // Render chat route (default route)
             const { unmount } = render(
-              <MemoryRouter initialEntries={['/chat']}>
+              <MemoryRouter initialEntries={['/']}>
                 <Routes>
-                  <Route path="/chat" element={<ChatRoute />} />
+                  <Route path="/" element={<ChatRoute />} />
                 </Routes>
               </MemoryRouter>
             );
@@ -224,9 +236,9 @@ describe('Routing Tests', () => {
 
             // Re-render chat route (simulating navigation back)
             const { unmount: unmount2 } = render(
-              <MemoryRouter initialEntries={['/chat']}>
+              <MemoryRouter initialEntries={['/']}>
                 <Routes>
-                  <Route path="/chat" element={<ChatRoute />} />
+                  <Route path="/" element={<ChatRoute />} />
                 </Routes>
               </MemoryRouter>
             );
