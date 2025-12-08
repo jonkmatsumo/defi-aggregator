@@ -1,9 +1,18 @@
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger.js';
 import { LLMError } from '../utils/errors.js';
 
 export class LLMInterface {
   constructor(config) {
-    this.config = config;
+    this.config = {
+      maxTokens: 4000,
+      temperature: 0.7,
+      timeout: 30000,
+      maxRetries: 3,
+      retryDelay: 1000,
+      ...config
+    };
   }
 
   async generateResponse(messages, _tools = [], _options = {}) {
@@ -13,39 +22,360 @@ export class LLMInterface {
   async generateStreamingResponse(messages, _tools = [], onChunk, _options = {}) {
     throw new Error('generateStreamingResponse must be implemented by subclass');
   }
+
+  // Exponential backoff retry logic
+  async _retryWithBackoff(operation, context = {}) {
+    let lastError;
+    
+    for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
+      try {
+        logger.debug('LLM API attempt', { attempt: attempt + 1, ...context });
+        return await operation();
+      } catch (error) {
+        lastError = error;
+        
+        // Don't retry on authentication or invalid request errors
+        if (this._isNonRetryableError(error)) {
+          logger.error('Non-retryable LLM error', { error: error.message, ...context });
+          throw new LLMError(`LLM API error: ${error.message}`, error);
+        }
+        
+        if (attempt < this.config.maxRetries - 1) {
+          const delay = this.config.retryDelay * Math.pow(2, attempt);
+          logger.warn('LLM API retry', { 
+            attempt: attempt + 1, 
+            delay, 
+            error: error.message,
+            ...context 
+          });
+          await this._sleep(delay);
+        }
+      }
+    }
+    
+    logger.error('LLM API max retries exceeded', { 
+      maxRetries: this.config.maxRetries, 
+      error: lastError.message,
+      ...context 
+    });
+    throw new LLMError(`LLM API failed after ${this.config.maxRetries} attempts: ${lastError.message}`, lastError);
+  }
+
+  _isNonRetryableError(error) {
+    // Don't retry on authentication, invalid request, or quota errors
+    return error.status === 401 || error.status === 400 || error.status === 403 || error.status === 429;
+  }
+
+  _sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  _formatMessages(messages) {
+    return messages.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
+  }
+
+  _formatTools(tools) {
+    return tools.map(tool => ({
+      type: 'function',
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters
+      }
+    }));
+  }
 }
 
 export class OpenAILLM extends LLMInterface {
   constructor(config) {
     super(config);
-    // OpenAI implementation will be added in later tasks
-    logger.info('OpenAI LLM interface initialized', { model: config.model });
+    
+    if (!config.apiKey) {
+      throw new LLMError('OpenAI API key is required');
+    }
+    
+    this.client = new OpenAI({
+      apiKey: config.apiKey,
+      timeout: this.config.timeout
+    });
+    
+    this.model = config.model || 'gpt-4';
+    logger.info('OpenAI LLM interface initialized', { model: this.model });
   }
 
-  async generateResponse(messages, _tools = [], _options = {}) {
-    // Placeholder implementation
-    logger.info('OpenAI generateResponse called', { messageCount: messages.length });
-    return {
-      content: 'OpenAI placeholder response',
-      toolCalls: []
-    };
+  async generateResponse(messages, tools = [], options = {}) {
+    const context = { messageCount: messages.length, toolCount: tools.length };
+    
+    return this._retryWithBackoff(async () => {
+      const requestParams = {
+        model: this.model,
+        messages: this._formatMessages(messages),
+        max_tokens: options.maxTokens || this.config.maxTokens,
+        temperature: options.temperature || this.config.temperature
+      };
+
+      if (tools.length > 0) {
+        requestParams.tools = this._formatTools(tools);
+        requestParams.tool_choice = 'auto';
+      }
+
+      logger.debug('OpenAI API request', { ...context, model: this.model });
+      
+      const response = await this.client.chat.completions.create(requestParams);
+      
+      const result = {
+        content: response.choices[0].message.content || '',
+        toolCalls: response.choices[0].message.tool_calls || [],
+        usage: response.usage
+      };
+      
+      logger.info('OpenAI response generated', { 
+        ...context, 
+        responseLength: result.content.length,
+        toolCallCount: result.toolCalls.length,
+        usage: result.usage
+      });
+      
+      return result;
+    }, context);
+  }
+
+  async generateStreamingResponse(messages, tools = [], onChunk, options = {}) {
+    const context = { messageCount: messages.length, toolCount: tools.length, streaming: true };
+    
+    return this._retryWithBackoff(async () => {
+      const requestParams = {
+        model: this.model,
+        messages: this._formatMessages(messages),
+        max_tokens: options.maxTokens || this.config.maxTokens,
+        temperature: options.temperature || this.config.temperature,
+        stream: true
+      };
+
+      if (tools.length > 0) {
+        requestParams.tools = this._formatTools(tools);
+        requestParams.tool_choice = 'auto';
+      }
+
+      logger.debug('OpenAI streaming request', { ...context, model: this.model });
+      
+      const stream = await this.client.chat.completions.create(requestParams);
+      
+      let fullContent = '';
+      const toolCalls = [];
+      
+      try {
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta;
+          
+          if (delta?.content) {
+            fullContent += delta.content;
+            onChunk({
+              type: 'content',
+              content: delta.content,
+              done: false
+            });
+          }
+          
+          if (delta?.tool_calls) {
+            toolCalls.push(...delta.tool_calls);
+          }
+          
+          // Check if stream is done
+          if (chunk.choices[0]?.finish_reason) {
+            onChunk({
+              type: 'done',
+              content: fullContent,
+              toolCalls,
+              done: true
+            });
+            break;
+          }
+        }
+        
+        logger.info('OpenAI streaming completed', { 
+          ...context, 
+          responseLength: fullContent.length,
+          toolCallCount: toolCalls.length
+        });
+        
+        return {
+          content: fullContent,
+          toolCalls,
+          streaming: true
+        };
+        
+      } catch (streamError) {
+        logger.error('OpenAI streaming error', { 
+          ...context, 
+          error: streamError.message 
+        });
+        
+        // Send error to client
+        onChunk({
+          type: 'error',
+          error: streamError.message,
+          done: true
+        });
+        
+        throw streamError;
+      }
+    }, context);
   }
 }
 
 export class AnthropicLLM extends LLMInterface {
   constructor(config) {
     super(config);
-    // Anthropic implementation will be added in later tasks
-    logger.info('Anthropic LLM interface initialized', { model: config.model });
+    
+    if (!config.apiKey) {
+      throw new LLMError('Anthropic API key is required');
+    }
+    
+    this.client = new Anthropic({
+      apiKey: config.apiKey,
+      timeout: this.config.timeout
+    });
+    
+    this.model = config.model || 'claude-3-sonnet-20240229';
+    logger.info('Anthropic LLM interface initialized', { model: this.model });
   }
 
-  async generateResponse(messages, _tools = [], _options = {}) {
-    // Placeholder implementation
-    logger.info('Anthropic generateResponse called', { messageCount: messages.length });
-    return {
-      content: 'Anthropic placeholder response',
-      toolCalls: []
-    };
+  async generateResponse(messages, tools = [], options = {}) {
+    const context = { messageCount: messages.length, toolCount: tools.length };
+    
+    return this._retryWithBackoff(async () => {
+      // Convert messages to Anthropic format
+      const anthropicMessages = this._formatAnthropicMessages(messages);
+      
+      const requestParams = {
+        model: this.model,
+        messages: anthropicMessages,
+        max_tokens: options.maxTokens || this.config.maxTokens,
+        temperature: options.temperature || this.config.temperature
+      };
+
+      if (tools.length > 0) {
+        requestParams.tools = this._formatAnthropicTools(tools);
+      }
+
+      logger.debug('Anthropic API request', { ...context, model: this.model });
+      
+      const response = await this.client.messages.create(requestParams);
+      
+      const result = {
+        content: response.content[0]?.text || '',
+        toolCalls: response.content.filter(c => c.type === 'tool_use') || [],
+        usage: response.usage
+      };
+      
+      logger.info('Anthropic response generated', { 
+        ...context, 
+        responseLength: result.content.length,
+        toolCallCount: result.toolCalls.length,
+        usage: result.usage
+      });
+      
+      return result;
+    }, context);
+  }
+
+  async generateStreamingResponse(messages, tools = [], onChunk, options = {}) {
+    const context = { messageCount: messages.length, toolCount: tools.length, streaming: true };
+    
+    return this._retryWithBackoff(async () => {
+      const anthropicMessages = this._formatAnthropicMessages(messages);
+      
+      const requestParams = {
+        model: this.model,
+        messages: anthropicMessages,
+        max_tokens: options.maxTokens || this.config.maxTokens,
+        temperature: options.temperature || this.config.temperature,
+        stream: true
+      };
+
+      if (tools.length > 0) {
+        requestParams.tools = this._formatAnthropicTools(tools);
+      }
+
+      logger.debug('Anthropic streaming request', { ...context, model: this.model });
+      
+      const stream = await this.client.messages.create(requestParams);
+      
+      let fullContent = '';
+      const toolCalls = [];
+      
+      try {
+        for await (const chunk of stream) {
+          if (chunk.type === 'content_block_delta' && chunk.delta?.text) {
+            fullContent += chunk.delta.text;
+            onChunk({
+              type: 'content',
+              content: chunk.delta.text,
+              done: false
+            });
+          }
+          
+          if (chunk.type === 'content_block_start' && chunk.content_block?.type === 'tool_use') {
+            toolCalls.push(chunk.content_block);
+          }
+          
+          if (chunk.type === 'message_stop') {
+            onChunk({
+              type: 'done',
+              content: fullContent,
+              toolCalls,
+              done: true
+            });
+            break;
+          }
+        }
+        
+        logger.info('Anthropic streaming completed', { 
+          ...context, 
+          responseLength: fullContent.length,
+          toolCallCount: toolCalls.length
+        });
+        
+        return {
+          content: fullContent,
+          toolCalls,
+          streaming: true
+        };
+        
+      } catch (streamError) {
+        logger.error('Anthropic streaming error', { 
+          ...context, 
+          error: streamError.message 
+        });
+        
+        onChunk({
+          type: 'error',
+          error: streamError.message,
+          done: true
+        });
+        
+        throw streamError;
+      }
+    }, context);
+  }
+
+  _formatAnthropicMessages(messages) {
+    return messages.map(msg => ({
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
+      content: msg.content
+    }));
+  }
+
+  _formatAnthropicTools(tools) {
+    return tools.map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      input_schema: tool.parameters
+    }));
   }
 }
 
