@@ -1,9 +1,11 @@
 import { logger } from '../utils/logger.js';
 import { ServiceError } from '../utils/errors.js';
+import { RateLimiter } from './rateLimiter.js';
+import { CachingService } from './cachingService.js';
 
 /**
  * Base service class with common functionality
- * Provides caching, rate limiting, error handling, and configuration management
+ * Provides advanced caching, rate limiting, error handling, and configuration management
  */
 export class BaseService {
   constructor(config = {}) {
@@ -13,15 +15,38 @@ export class BaseService {
       rateLimitMax: 100, // 100 requests per window
       retryAttempts: 3,
       retryDelay: 1000,
+      useAdvancedCaching: true,
+      useAdvancedRateLimit: true,
       ...config
     };
 
-    // Initialize cache
+    // Initialize caching (always use simple caching for backward compatibility)
     this.cache = new Map();
     this.cacheTimestamps = new Map();
 
-    // Initialize rate limiting
+    // Initialize advanced caching if explicitly enabled
+    if (this.config.useAdvancedCaching) {
+      this.cachingService = new CachingService({
+        defaultStrategy: config.cacheStrategy || 'lru',
+        maxCaches: config.maxCaches || 5,
+        globalMaxSize: config.globalMaxSize || 2000,
+        globalMaxMemoryMB: config.globalMaxMemoryMB || 100
+      });
+      this.cacheName = config.cacheName || this.constructor.name.toLowerCase();
+    }
+
+    // Initialize rate limiting (always use simple rate limiting for backward compatibility)
     this.rateLimitRequests = new Map(); // key -> [timestamps]
+
+    // Initialize advanced rate limiting if explicitly enabled
+    if (this.config.useAdvancedRateLimit) {
+      this.rateLimiter = new RateLimiter({
+        defaultWindow: this.config.rateLimitWindow,
+        defaultMaxRequests: this.config.rateLimitMax,
+        coordinationEnabled: config.coordinationEnabled !== false,
+        burstAllowance: config.burstAllowance || 0.2
+      });
+    }
     
     // Initialize metrics
     this.metrics = {
@@ -43,37 +68,60 @@ export class BaseService {
   /**
    * Get cached data if valid
    * @param {string} key - Cache key
+   * @param {Object} options - Caching options
    * @returns {*} Cached data or null
    */
-  getCachedData(key) {
-    const data = this.cache.get(key);
-    const timestamp = this.cacheTimestamps.get(key);
-
-    if (data && timestamp && (Date.now() - timestamp) < this.config.cacheTimeout) {
-      this.metrics.cacheHits++;
-      logger.debug('Cache hit', { key, serviceName: this.constructor.name });
+  getCachedData(key, options = {}) {
+    if (this.config.useAdvancedCaching && this.cachingService) {
+      const data = this.cachingService.get(this.cacheName, key, options);
+      if (data !== null) {
+        this.metrics.cacheHits++;
+        logger.debug('Advanced cache hit', { key, cacheName: this.cacheName, serviceName: this.constructor.name });
+      } else {
+        this.metrics.cacheMisses++;
+      }
       return data;
-    }
+    } else {
+      // Use simple caching
+      const data = this.cache.get(key);
+      const timestamp = this.cacheTimestamps.get(key);
 
-    if (data) {
-      // Remove expired cache entry
-      this.cache.delete(key);
-      this.cacheTimestamps.delete(key);
-    }
+      if (data && timestamp && (Date.now() - timestamp) < this.config.cacheTimeout) {
+        this.metrics.cacheHits++;
+        logger.debug('Simple cache hit', { key, serviceName: this.constructor.name });
+        return data;
+      }
 
-    this.metrics.cacheMisses++;
-    return null;
+      if (data) {
+        // Remove expired cache entry
+        this.cache.delete(key);
+        this.cacheTimestamps.delete(key);
+      }
+
+      this.metrics.cacheMisses++;
+      return null;
+    }
   }
 
   /**
    * Set cached data
    * @param {string} key - Cache key
    * @param {*} data - Data to cache
+   * @param {Object} options - Caching options
    */
-  setCachedData(key, data) {
-    this.cache.set(key, data);
-    this.cacheTimestamps.set(key, Date.now());
-    logger.debug('Data cached', { key, serviceName: this.constructor.name });
+  setCachedData(key, data, options = {}) {
+    if (this.config.useAdvancedCaching && this.cachingService) {
+      this.cachingService.set(this.cacheName, key, data, {
+        ttl: options.ttl || this.config.cacheTimeout,
+        ...options
+      });
+      logger.debug('Advanced cache set', { key, cacheName: this.cacheName, serviceName: this.constructor.name });
+    } else {
+      // Use simple caching
+      this.cache.set(key, data);
+      this.cacheTimestamps.set(key, Date.now());
+      logger.debug('Simple cache set', { key, serviceName: this.constructor.name });
+    }
   }
 
   /**
@@ -81,49 +129,103 @@ export class BaseService {
    * @param {string} key - Cache key (optional)
    */
   clearCache(key = null) {
-    if (key) {
-      this.cache.delete(key);
-      this.cacheTimestamps.delete(key);
-      logger.debug('Cache cleared for key', { key, serviceName: this.constructor.name });
+    if (this.config.useAdvancedCaching && this.cachingService) {
+      if (key) {
+        this.cachingService.delete(this.cacheName, key);
+        logger.debug('Advanced cache cleared for key', { key, cacheName: this.cacheName, serviceName: this.constructor.name });
+      } else {
+        this.cachingService.clear(this.cacheName);
+        logger.debug('Advanced cache cleared', { cacheName: this.cacheName, serviceName: this.constructor.name });
+      }
     } else {
-      this.cache.clear();
-      this.cacheTimestamps.clear();
-      logger.debug('All cache cleared', { serviceName: this.constructor.name });
+      // Use simple caching
+      if (key) {
+        this.cache.delete(key);
+        this.cacheTimestamps.delete(key);
+        logger.debug('Simple cache cleared for key', { key, serviceName: this.constructor.name });
+      } else {
+        this.cache.clear();
+        this.cacheTimestamps.clear();
+        logger.debug('Simple cache cleared', { serviceName: this.constructor.name });
+      }
     }
   }
 
   /**
    * Check rate limit for a key
    * @param {string} key - Rate limit key
-   * @returns {boolean} True if within rate limit
+   * @param {Object} options - Rate limit options
+   * @returns {boolean|Object} True if within rate limit, or result object for advanced rate limiting
    */
-  checkRateLimit(key) {
-    const now = Date.now();
-    const windowStart = now - this.config.rateLimitWindow;
+  checkRateLimit(key, options = {}) {
+    if (this.config.useAdvancedRateLimit && this.rateLimiter) {
+      const result = this.rateLimiter.checkRateLimit(key, options);
+      if (!result.allowed) {
+        this.metrics.rateLimitExceeded++;
+        logger.warn('Advanced rate limit exceeded', { 
+          key, 
+          reason: result.reason,
+          serviceName: this.constructor.name 
+        });
+      }
+      return result.allowed;
+    } else {
+      // Use simple rate limiting
+      const now = Date.now();
+      const windowStart = now - this.config.rateLimitWindow;
 
-    // Get existing requests for this key
-    let requests = this.rateLimitRequests.get(key) || [];
+      // Get existing requests for this key
+      let requests = this.rateLimitRequests.get(key) || [];
 
-    // Remove requests outside the window
-    requests = requests.filter(timestamp => timestamp > windowStart);
+      // Remove requests outside the window
+      requests = requests.filter(timestamp => timestamp > windowStart);
 
-    // Check if we're within the limit
-    if (requests.length >= this.config.rateLimitMax) {
-      this.metrics.rateLimitExceeded++;
-      logger.warn('Rate limit exceeded', { 
-        key, 
-        requests: requests.length, 
-        limit: this.config.rateLimitMax,
-        serviceName: this.constructor.name 
-      });
-      return false;
+      // Check if we're within the limit
+      if (requests.length >= this.config.rateLimitMax) {
+        this.metrics.rateLimitExceeded++;
+        logger.warn('Simple rate limit exceeded', { 
+          key, 
+          requests: requests.length, 
+          limit: this.config.rateLimitMax,
+          serviceName: this.constructor.name 
+        });
+        return false;
+      }
+
+      // Add current request
+      requests.push(now);
+      this.rateLimitRequests.set(key, requests);
+
+      return true;
     }
+  }
 
-    // Add current request
-    requests.push(now);
-    this.rateLimitRequests.set(key, requests);
+  /**
+   * Configure rate limiting for a specific key
+   * @param {string} key - Rate limit key
+   * @param {Object} config - Rate limit configuration
+   */
+  configureRateLimit(key, config) {
+    if (this.config.useAdvancedRateLimit && this.rateLimiter) {
+      this.rateLimiter.configure(key, config);
+      logger.debug('Rate limit configured', { key, config, serviceName: this.constructor.name });
+    } else {
+      logger.warn('Advanced rate limiting not enabled, configuration ignored', { key, serviceName: this.constructor.name });
+    }
+  }
 
-    return true;
+  /**
+   * Configure provider-level rate limiting for coordination
+   * @param {string} provider - Provider name
+   * @param {Object} config - Provider rate limit configuration
+   */
+  configureProviderRateLimit(provider, config) {
+    if (this.config.useAdvancedRateLimit && this.rateLimiter) {
+      this.rateLimiter.configureProvider(provider, config);
+      logger.debug('Provider rate limit configured', { provider, config, serviceName: this.constructor.name });
+    } else {
+      logger.warn('Advanced rate limiting not enabled, provider configuration ignored', { provider, serviceName: this.constructor.name });
+    }
   }
 
   /**
@@ -255,12 +357,26 @@ export class BaseService {
    * @returns {Object} Service metrics
    */
   getMetrics() {
-    return {
+    const baseMetrics = {
       ...this.metrics,
-      cacheSize: this.cache.size,
-      rateLimitKeys: this.rateLimitRequests.size,
       serviceName: this.constructor.name
     };
+
+    if (this.config.useAdvancedCaching && this.cachingService) {
+      const cachingStats = this.cachingService.getStats();
+      baseMetrics.caching = cachingStats.caches[this.cacheName] || {};
+      baseMetrics.globalCaching = cachingStats.global;
+    } else {
+      baseMetrics.cacheSize = this.cache.size;
+    }
+
+    if (this.config.useAdvancedRateLimit && this.rateLimiter) {
+      baseMetrics.rateLimiting = this.rateLimiter.getMetrics();
+    } else {
+      baseMetrics.rateLimitKeys = this.rateLimitRequests.size;
+    }
+
+    return baseMetrics;
   }
 
   /**
