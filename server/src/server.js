@@ -1,7 +1,9 @@
 import express from 'express';
 import { createServer as createHttpServer } from 'http';
 import { WebSocketServer } from 'ws';
-import { logger } from './utils/logger.js';
+import { logger, getLoggerStats } from './utils/logger.js';
+import { metricsCollector } from './utils/metrics.js';
+import { requestLoggerMiddleware, errorLoggerMiddleware } from './middleware/requestLogger.js';
 import { WebSocketHandler } from './websocket/handler.js';
 import { ConversationManager } from './conversation/manager.js';
 import { createLLMInterface } from './llm/interface.js';
@@ -16,6 +18,14 @@ export async function createServer(config) {
   
   // Middleware
   app.use(express.json());
+  
+  // Request logging middleware (before other routes)
+  app.use(requestLoggerMiddleware({
+    slowThreshold: config.logging?.slowThreshold || 1000,
+    excludePaths: ['/health', '/favicon.ico'],
+    logBody: config.logging?.logBody || false,
+    logHeaders: config.logging?.logHeaders || false
+  }));
   
   // CORS handling
   app.use((req, res, next) => {
@@ -35,21 +45,27 @@ export async function createServer(config) {
     });
   });
 
-  // Metrics endpoint
+  // Metrics endpoint - comprehensive metrics from MetricsCollector
   app.get('/metrics', (req, res) => {
-    const metrics = {
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      timestamp: new Date().toISOString(),
-      system: {
-        platform: process.platform,
-        nodeVersion: process.version,
-        pid: process.pid
-      },
-      server: {
-        environment: config.nodeEnv,
-        logLevel: config.logging?.level || 'info'
-      }
+    const { format, summary } = req.query;
+    
+    // Return summary metrics for quick health checks
+    if (summary === 'true') {
+      return res.json({
+        success: true,
+        data: metricsCollector.getSummary(),
+        timestamp: Date.now()
+      });
+    }
+    
+    // Get comprehensive metrics
+    const metrics = metricsCollector.getMetrics();
+    
+    // Add server-specific metrics
+    metrics.server = {
+      environment: config.nodeEnv,
+      logLevel: config.logging?.level || 'info',
+      version: '1.0.0'
     };
 
     // Add WebSocket metrics if available
@@ -62,7 +78,68 @@ export async function createServer(config) {
       metrics.conversations = server.conversationManager.getMetrics();
     }
 
-    res.json(metrics);
+    // Add logger stats
+    metrics.logging = getLoggerStats();
+
+    // Add service metrics
+    try {
+      const gasPriceService = serviceContainer.get('GasPriceAPIService');
+      if (gasPriceService) {
+        metrics.services = metrics.services || {};
+        metrics.services.gasPrice = gasPriceService.getMetrics();
+        metricsCollector.recordServiceMetrics('GasPriceAPIService', gasPriceService.getMetrics());
+      }
+    } catch (e) { /* Service not initialized */ }
+
+    try {
+      const lendingService = serviceContainer.get('LendingAPIService');
+      if (lendingService) {
+        metrics.services = metrics.services || {};
+        metrics.services.lending = lendingService.getMetrics();
+        metricsCollector.recordServiceMetrics('LendingAPIService', lendingService.getMetrics());
+      }
+    } catch (e) { /* Service not initialized */ }
+
+    try {
+      const priceFeedService = serviceContainer.get('PriceFeedAPIService');
+      if (priceFeedService) {
+        metrics.services = metrics.services || {};
+        metrics.services.priceFeed = priceFeedService.getMetrics();
+        metricsCollector.recordServiceMetrics('PriceFeedAPIService', priceFeedService.getMetrics());
+      }
+    } catch (e) { /* Service not initialized */ }
+
+    try {
+      const tokenBalanceService = serviceContainer.get('TokenBalanceAPIService');
+      if (tokenBalanceService) {
+        metrics.services = metrics.services || {};
+        metrics.services.tokenBalance = tokenBalanceService.getMetrics();
+        metricsCollector.recordServiceMetrics('TokenBalanceAPIService', tokenBalanceService.getMetrics());
+      }
+    } catch (e) { /* Service not initialized */ }
+
+    // Prometheus format for monitoring systems
+    if (format === 'prometheus') {
+      res.setHeader('Content-Type', 'text/plain');
+      return res.send(formatPrometheusMetrics(metrics));
+    }
+
+    res.json({
+      success: true,
+      data: metrics,
+      timestamp: Date.now()
+    });
+  });
+
+  // Metrics reset endpoint (for testing/admin)
+  app.post('/metrics/reset', (req, res) => {
+    metricsCollector.reset();
+    logger.info('Metrics reset via API');
+    res.json({
+      success: true,
+      message: 'Metrics reset successfully',
+      timestamp: Date.now()
+    });
   });
 
   // Detailed health check endpoint
@@ -190,7 +267,72 @@ export async function createServer(config) {
   // Store reference to wsHandler for cleanup
   server.wsHandler = wsHandler;
 
-  logger.info('Server components initialized successfully');
+  // Error logging middleware (after all routes)
+  app.use(errorLoggerMiddleware({
+    includeStackTrace: config.nodeEnv !== 'production'
+  }));
+
+  logger.info('Server components initialized successfully', {
+    port: config.port,
+    environment: config.nodeEnv,
+    logLevel: config.logging?.level || 'info'
+  });
 
   return server;
+}
+
+/**
+ * Format metrics in Prometheus format
+ * @param {Object} metrics - Metrics object
+ * @returns {string} Prometheus-formatted metrics
+ */
+function formatPrometheusMetrics(metrics) {
+  const lines = [];
+  
+  // Request metrics
+  lines.push('# HELP http_requests_total Total number of HTTP requests');
+  lines.push('# TYPE http_requests_total counter');
+  lines.push(`http_requests_total ${metrics.requests?.total || 0}`);
+  
+  // Response time metrics
+  if (metrics.responseTimes?.overall) {
+    lines.push('# HELP http_request_duration_ms HTTP request duration in milliseconds');
+    lines.push('# TYPE http_request_duration_ms gauge');
+    lines.push(`http_request_duration_ms_avg ${metrics.responseTimes.overall.avg || 0}`);
+    lines.push(`http_request_duration_ms_p50 ${metrics.responseTimes.overall.p50 || 0}`);
+    lines.push(`http_request_duration_ms_p95 ${metrics.responseTimes.overall.p95 || 0}`);
+    lines.push(`http_request_duration_ms_p99 ${metrics.responseTimes.overall.p99 || 0}`);
+  }
+  
+  // Error metrics
+  lines.push('# HELP http_errors_total Total number of HTTP errors');
+  lines.push('# TYPE http_errors_total counter');
+  lines.push(`http_errors_total ${metrics.errors?.total || 0}`);
+  
+  // Cache metrics
+  lines.push('# HELP cache_hits_total Total number of cache hits');
+  lines.push('# TYPE cache_hits_total counter');
+  lines.push(`cache_hits_total ${metrics.cache?.hits || 0}`);
+  lines.push(`cache_misses_total ${metrics.cache?.misses || 0}`);
+  
+  // Rate limit metrics
+  lines.push('# HELP rate_limit_exceeded_total Total number of rate limit exceeded events');
+  lines.push('# TYPE rate_limit_exceeded_total counter');
+  lines.push(`rate_limit_exceeded_total ${metrics.rateLimits?.exceeded || 0}`);
+  
+  // Memory metrics
+  if (metrics.system?.memory) {
+    lines.push('# HELP process_memory_bytes Process memory usage in bytes');
+    lines.push('# TYPE process_memory_bytes gauge');
+    lines.push(`process_memory_heap_used_bytes ${metrics.system.memory.heapUsed}`);
+    lines.push(`process_memory_heap_total_bytes ${metrics.system.memory.heapTotal}`);
+    lines.push(`process_memory_rss_bytes ${metrics.system.memory.rss}`);
+  }
+  
+  // Uptime
+  lines.push('# HELP process_uptime_seconds Process uptime in seconds');
+  lines.push('# TYPE process_uptime_seconds gauge');
+  lines.push(`process_uptime_seconds ${metrics.uptime?.seconds || 0}`);
+  
+  return lines.join('\n');
 }
