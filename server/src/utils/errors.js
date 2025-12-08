@@ -55,6 +55,14 @@ export class ConversationError extends ServerError {
   }
 }
 
+export class ServiceError extends ServerError {
+  constructor(message, serviceName = 'unknown') {
+    super(message, 500, 'SERVICE_ERROR');
+    this.name = 'ServiceError';
+    this.serviceName = serviceName;
+  }
+}
+
 export function createErrorResponse(error, requestId = null) {
   return {
     type: 'ERROR',
@@ -153,6 +161,10 @@ export function classifyError(error) {
   
   if (error instanceof ConversationError) {
     return { category: 'conversation', severity: 'warn', recoverable: true };
+  }
+  
+  if (error instanceof ServiceError) {
+    return { category: 'service', severity: 'warn', recoverable: true };
   }
   
   // Network/timeout errors
