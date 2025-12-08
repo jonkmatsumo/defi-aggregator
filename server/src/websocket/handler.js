@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import { logger } from '../utils/logger.js';
-import { WebSocketError, createErrorResponse } from '../utils/errors.js';
+import { logger, logError } from '../utils/logger.js';
+import { WebSocketError, createErrorResponse, classifyError } from '../utils/errors.js';
 
 export class WebSocketHandler {
   constructor(wss, conversationManager, config = {}) {
@@ -63,7 +63,12 @@ export class WebSocketHandler {
 
     // Handle errors
     ws.on('error', (error) => {
-      logger.error('WebSocket error', { sessionId, error: error.message });
+      const errorClassification = classifyError(error);
+      logError(error, { 
+        sessionId, 
+        connectionCount: this.connections.size,
+        classification: errorClassification
+      });
       this.handleDisconnection(sessionId);
     });
 
@@ -107,11 +112,15 @@ export class WebSocketHandler {
       }
 
     } catch (error) {
-      logger.error('Error handling message', { 
+      // Comprehensive error logging with classification
+      const errorClassification = classifyError(error);
+      logError(error, { 
         sessionId, 
-        error: error.message,
-        stack: error.stack 
+        messageType: 'unknown',
+        classification: errorClassification,
+        rawDataLength: data.length
       });
+      
       let parsedMessage = null;
       try {
         parsedMessage = JSON.parse(data.toString());
@@ -155,10 +164,12 @@ export class WebSocketHandler {
       });
 
     } catch (error) {
-      logger.error('Error processing chat message', {
+      const errorClassification = classifyError(error);
+      logError(error, {
         sessionId,
         messageId: message.id,
-        error: error.message
+        messageLength: message.payload?.message?.length || 0,
+        classification: errorClassification
       });
 
       // Send error response
@@ -195,6 +206,14 @@ export class WebSocketHandler {
         this.connections.delete(_sessionId);
       }
     }
+  }
+
+  getMetrics() {
+    return {
+      activeConnections: this.connections.size,
+      maxConnections: this.config.maxConnections,
+      connectionUtilization: (this.connections.size / this.config.maxConnections) * 100
+    };
   }
 
   destroy() {

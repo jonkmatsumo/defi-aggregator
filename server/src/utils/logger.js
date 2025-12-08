@@ -31,6 +31,41 @@ export const logger = winston.createLogger({
   exitOnError: false
 });
 
+// Enhanced logging methods for structured error logging
+export function logError(error, context = {}) {
+  const errorInfo = {
+    message: error.message,
+    stack: error.stack,
+    code: error.code,
+    statusCode: error.statusCode,
+    timestamp: error.timestamp || new Date().toISOString(),
+    context
+  };
+
+  if (error.severity) {
+    logger[error.severity](errorInfo);
+  } else {
+    logger.error(errorInfo);
+  }
+}
+
+export function logStructured(level, message, metadata = {}) {
+  logger[level]({
+    message,
+    timestamp: new Date().toISOString(),
+    ...metadata
+  });
+}
+
+export function createRequestLogger(requestId) {
+  return {
+    info: (message, metadata = {}) => logStructured('info', message, { requestId, ...metadata }),
+    warn: (message, metadata = {}) => logStructured('warn', message, { requestId, ...metadata }),
+    error: (message, metadata = {}) => logStructured('error', message, { requestId, ...metadata }),
+    debug: (message, metadata = {}) => logStructured('debug', message, { requestId, ...metadata })
+  };
+}
+
 // Add file transport in production
 if (process.env.NODE_ENV === 'production') {
   logger.add(new winston.transports.File({

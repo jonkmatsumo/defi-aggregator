@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
-import { logger } from '../utils/logger.js';
-import { LLMError } from '../utils/errors.js';
+import { logger, logError } from '../utils/logger.js';
+import { LLMError, CircuitBreaker, classifyError } from '../utils/errors.js';
 
 export class LLMInterface {
   constructor(config) {
@@ -13,6 +13,13 @@ export class LLMInterface {
       retryDelay: 1000,
       ...config
     };
+    
+    // Initialize circuit breaker for error recovery
+    this.circuitBreaker = new CircuitBreaker({
+      failureThreshold: 5,
+      resetTimeout: 60000, // 1 minute
+      monitoringPeriod: 10000 // 10 seconds
+    });
   }
 
   async generateResponse(messages, _tools = [], _options = {}) {
@@ -23,42 +30,52 @@ export class LLMInterface {
     throw new Error('generateStreamingResponse must be implemented by subclass');
   }
 
-  // Exponential backoff retry logic
+  // Exponential backoff retry logic with circuit breaker
   async _retryWithBackoff(operation, context = {}) {
-    let lastError;
-    
-    for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
-      try {
-        logger.debug('LLM API attempt', { attempt: attempt + 1, ...context });
-        return await operation();
-      } catch (error) {
-        lastError = error;
-        
-        // Don't retry on authentication or invalid request errors
-        if (this._isNonRetryableError(error)) {
-          logger.error('Non-retryable LLM error', { error: error.message, ...context });
-          throw new LLMError(`LLM API error: ${error.message}`, error);
-        }
-        
-        if (attempt < this.config.maxRetries - 1) {
-          const delay = this.config.retryDelay * Math.pow(2, attempt);
-          logger.warn('LLM API retry', { 
-            attempt: attempt + 1, 
-            delay, 
-            error: error.message,
-            ...context 
+    return this.circuitBreaker.execute(async () => {
+      let lastError;
+      
+      for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
+        try {
+          logger.debug('LLM API attempt', { attempt: attempt + 1, ...context });
+          return await operation();
+        } catch (error) {
+          lastError = error;
+          
+          // Log error with classification
+          const errorClassification = classifyError(error);
+          logError(error, { 
+            ...context, 
+            attempt: attempt + 1,
+            classification: errorClassification
           });
-          await this._sleep(delay);
+          
+          // Don't retry on authentication or invalid request errors
+          if (this._isNonRetryableError(error)) {
+            logger.error('Non-retryable LLM error', { error: error.message, ...context });
+            throw new LLMError(`LLM API error: ${error.message}`, this.config.provider);
+          }
+          
+          if (attempt < this.config.maxRetries - 1) {
+            const delay = this.config.retryDelay * Math.pow(2, attempt);
+            logger.warn('LLM API retry', { 
+              attempt: attempt + 1, 
+              delay, 
+              error: error.message,
+              ...context 
+            });
+            await this._sleep(delay);
+          }
         }
       }
-    }
-    
-    logger.error('LLM API max retries exceeded', { 
-      maxRetries: this.config.maxRetries, 
-      error: lastError.message,
-      ...context 
+      
+      logger.error('LLM API max retries exceeded', { 
+        maxRetries: this.config.maxRetries, 
+        error: lastError.message,
+        ...context 
+      });
+      throw new LLMError(`LLM API failed after ${this.config.maxRetries} attempts: ${lastError.message}`, this.config.provider);
     });
-    throw new LLMError(`LLM API failed after ${this.config.maxRetries} attempts: ${lastError.message}`, lastError);
   }
 
   _isNonRetryableError(error) {

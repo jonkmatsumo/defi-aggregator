@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import { logger } from '../utils/logger.js';
-import { ConversationError } from '../utils/errors.js';
+import { logger, logError } from '../utils/logger.js';
+import { ConversationError, classifyError } from '../utils/errors.js';
 
 export class ConversationManager {
   constructor(llmInterface, toolRegistry, componentIntentGenerator, options = {}) {
@@ -154,10 +154,12 @@ export class ConversationManager {
       return assistantResponse;
 
     } catch (error) {
-      logger.error('Error processing message', {
+      const errorClassification = classifyError(error);
+      logError(error, {
         sessionId,
-        error: error.message,
-        stack: error.stack
+        messageLength: userMessage.length,
+        historyLength: messageHistory.length,
+        classification: errorClassification
       });
 
       // Create error response
@@ -168,7 +170,8 @@ export class ConversationManager {
         timestamp: Date.now(),
         error: {
           type: error.constructor.name,
-          message: error.message
+          message: error.message,
+          classification: errorClassification
         }
       };
 
@@ -207,10 +210,12 @@ export class ConversationManager {
         });
 
       } catch (error) {
-        logger.error('Tool execution failed', {
+        const errorClassification = classifyError(error);
+        logError(error, {
           sessionId,
           toolName: toolCall.name,
-          error: error.message
+          parameters: toolCall.parameters,
+          classification: errorClassification
         });
 
         results.push({
@@ -381,6 +386,10 @@ export class ConversationManager {
       totalMessages,
       averageMessagesPerSession: this.sessions.size > 0 ? totalMessages / this.sessions.size : 0
     };
+  }
+
+  getMetrics() {
+    return this.getSessionStats();
   }
 
   destroy() {

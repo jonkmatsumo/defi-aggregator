@@ -34,11 +34,75 @@ export async function createServer(config) {
 
   // Metrics endpoint
   app.get('/metrics', (req, res) => {
-    res.json({
+    const metrics = {
       uptime: process.uptime(),
       memory: process.memoryUsage(),
-      timestamp: new Date().toISOString()
-    });
+      timestamp: new Date().toISOString(),
+      system: {
+        platform: process.platform,
+        nodeVersion: process.version,
+        pid: process.pid
+      },
+      server: {
+        environment: config.nodeEnv,
+        logLevel: config.logging?.level || 'info'
+      }
+    };
+
+    // Add WebSocket metrics if available
+    if (server.wsHandler) {
+      metrics.websocket = server.wsHandler.getMetrics();
+    }
+
+    // Add conversation metrics if available
+    if (server.conversationManager) {
+      metrics.conversations = server.conversationManager.getMetrics();
+    }
+
+    res.json(metrics);
+  });
+
+  // Detailed health check endpoint
+  app.get('/health/detailed', (req, res) => {
+    const health = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      environment: config.nodeEnv,
+      components: {
+        server: { status: 'healthy' },
+        websocket: { status: 'healthy' },
+        llm: { status: 'healthy' },
+        tools: { status: 'healthy' }
+      }
+    };
+
+    // Check component health
+    try {
+      if (server.wsHandler) {
+        const wsMetrics = server.wsHandler.getMetrics();
+        health.components.websocket = {
+          status: wsMetrics.activeConnections < config.websocket.maxConnections ? 'healthy' : 'degraded',
+          activeConnections: wsMetrics.activeConnections,
+          maxConnections: config.websocket.maxConnections
+        };
+      }
+
+      if (server.conversationManager) {
+        const convMetrics = server.conversationManager.getMetrics();
+        health.components.conversations = {
+          status: 'healthy',
+          activeSessions: convMetrics.activeSessions,
+          totalMessages: convMetrics.totalMessages
+        };
+      }
+    } catch (error) {
+      health.status = 'degraded';
+      health.components.monitoring = { status: 'error', error: error.message };
+    }
+
+    const statusCode = health.status === 'healthy' ? 200 : 503;
+    res.status(statusCode).json(health);
   });
 
   // Create HTTP server
