@@ -1,5 +1,6 @@
 import { logger } from '../utils/logger.js';
 import { ToolError } from '../utils/errors.js';
+import { serviceContainer } from '../services/container.js';
 
 export class ToolRegistry {
   constructor() {
@@ -8,31 +9,46 @@ export class ToolRegistry {
   }
 
   initializeDefaultTools() {
-    // Gas price tool placeholder
+    // Gas price tool with backend service integration
     this.registerTool('get_gas_prices', {
-      description: 'Get current gas prices for different transaction speeds',
+      description: 'Get current gas prices and network fee estimates for blockchain transactions',
       parameters: {
         type: 'object',
         properties: {
-          network: { 
-            type: 'string', 
-            enum: ['ethereum', 'polygon', 'arbitrum'],
-            default: 'ethereum'
+          network: {
+            type: 'string',
+            enum: ['ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism'],
+            default: 'ethereum',
+            description: 'Blockchain network to check gas prices for'
+          },
+          transactionType: {
+            type: 'string',
+            enum: ['transfer', 'swap', 'contract_interaction'],
+            default: 'transfer',
+            description: 'Type of transaction to estimate gas for'
+          },
+          includeUSDCosts: {
+            type: 'boolean',
+            default: true,
+            description: 'Include USD cost estimates for gas fees'
           }
         }
       },
-      execute: async ({ network = 'ethereum' }) => {
-        // Placeholder implementation
-        logger.info('Gas price tool executed', { network });
-        return {
-          network,
-          prices: {
-            slow: '10 gwei',
-            standard: '15 gwei',
-            fast: '20 gwei'
-          },
-          timestamp: new Date().toISOString()
-        };
+      execute: async ({ network = 'ethereum', transactionType = 'transfer', includeUSDCosts = true }) => {
+        try {
+          const gasPriceService = serviceContainer.get('GasPriceAPIService');
+          const result = await gasPriceService.getGasPrices(network, { transactionType, includeUSDCosts });
+          
+          logger.info('Gas price tool executed successfully', { network, transactionType });
+          return result;
+        } catch (error) {
+          logger.error('Gas price tool execution failed', { 
+            network, 
+            transactionType, 
+            error: error.message 
+          });
+          throw error;
+        }
       }
     });
 

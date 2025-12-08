@@ -18,6 +18,31 @@ jest.mock('uuid', () => ({
   v4: jest.fn(() => 'test-uuid-' + Math.random().toString(36).substr(2, 9))
 }));
 
+// Mock the service container
+const mockServiceContainer = {
+  get: jest.fn().mockImplementation((serviceName) => {
+    if (serviceName === 'GasPriceAPIService') {
+      return {
+        getGasPrices: jest.fn().mockResolvedValue({
+          network: 'ethereum',
+          gasPrices: {
+            slow: { gwei: 10, usd_cost: 0.30 },
+            standard: { gwei: 15, usd_cost: 0.45 },
+            fast: { gwei: 20, usd_cost: 0.60 }
+          },
+          timestamp: Date.now(),
+          source: 'test'
+        })
+      };
+    }
+    throw new Error(`Service not found: ${serviceName}`);
+  })
+};
+
+jest.mock('../../src/services/container.js', () => ({
+  serviceContainer: mockServiceContainer
+}));
+
 describe('ConversationManager', () => {
 
   beforeEach(() => {

@@ -8,6 +8,7 @@ import { createLLMInterface } from './llm/interface.js';
 import { ToolRegistry } from './tools/registry.js';
 import { ComponentIntentGenerator } from './components/intentGenerator.js';
 import { SystemPromptManager } from './prompts/systemPromptManager.js';
+import { serviceContainer, GasPriceAPIService } from './services/index.js';
 
 export async function createServer(config) {
   const app = express();
@@ -108,6 +109,21 @@ export async function createServer(config) {
 
   // Create HTTP server
   const server = createHttpServer(app);
+
+  // Initialize services
+  serviceContainer.register('GasPriceAPIService', () => {
+    return new GasPriceAPIService({
+      apiKeys: {
+        etherscan: config.apiKeys?.etherscan || process.env.ETHERSCAN_API_KEY,
+        polygonscan: config.apiKeys?.polygonscan || process.env.POLYGONSCAN_API_KEY,
+        bscscan: config.apiKeys?.bscscan || process.env.BSCSCAN_API_KEY,
+        arbiscan: config.apiKeys?.arbiscan || process.env.ARBISCAN_API_KEY,
+        optimistic: config.apiKeys?.optimistic || process.env.OPTIMISTIC_API_KEY
+      },
+      cacheTimeout: config.services?.gasPriceCache || 300000, // 5 minutes
+      rateLimitMax: config.services?.rateLimitMax || 60
+    });
+  });
 
   // Initialize components
   const llmInterface = createLLMInterface(config.llm);

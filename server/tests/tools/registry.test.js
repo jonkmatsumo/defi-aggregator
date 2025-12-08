@@ -3,6 +3,31 @@ import fc from 'fast-check';
 import { ToolRegistry } from '../../src/tools/registry.js';
 import { ToolError } from '../../src/utils/errors.js';
 
+// Mock the service container
+const mockServiceContainer = {
+  get: jest.fn().mockImplementation((serviceName) => {
+    if (serviceName === 'GasPriceAPIService') {
+      return {
+        getGasPrices: jest.fn().mockResolvedValue({
+          network: 'ethereum',
+          gasPrices: {
+            slow: { gwei: 10, usd_cost: 0.30 },
+            standard: { gwei: 15, usd_cost: 0.45 },
+            fast: { gwei: 20, usd_cost: 0.60 }
+          },
+          timestamp: Date.now(),
+          source: 'test'
+        })
+      };
+    }
+    throw new Error(`Service not found: ${serviceName}`);
+  })
+};
+
+jest.mock('../../src/services/container.js', () => ({
+  serviceContainer: mockServiceContainer
+}));
+
 describe('ToolRegistry', () => {
   let registry;
 
@@ -77,6 +102,9 @@ describe('ToolRegistry', () => {
           expect(result.executionTime).toBeGreaterThanOrEqual(0);
           
           // For successful execution
+          if (!result.success) {
+            // Tool execution failed - this is expected for some test cases
+          }
           expect(result.success).toBe(true);
           expect(result.result).toBeDefined();
           expect(result.error).toBeUndefined();
