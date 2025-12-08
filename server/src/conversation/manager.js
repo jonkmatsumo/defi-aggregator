@@ -7,6 +7,7 @@ export class ConversationManager {
     this.llmInterface = llmInterface;
     this.toolRegistry = toolRegistry;
     this.componentIntentGenerator = componentIntentGenerator;
+    this.systemPromptManager = options.systemPromptManager || null;
     this.sessions = new Map(); // sessionId -> ConversationSession
     
     // Configuration options
@@ -62,11 +63,22 @@ export class ConversationManager {
       // Get available tools
       const availableTools = this.toolRegistry.getToolDefinitions();
 
+      // Prepare system prompt with tool integration
+      let systemPrompt = null;
+      if (this.systemPromptManager) {
+        systemPrompt = this.systemPromptManager.formatPromptWithTools(availableTools, 'defi_assistant');
+        logger.debug('System prompt prepared', {
+          sessionId,
+          promptLength: systemPrompt.length,
+          toolCount: availableTools.length
+        });
+      }
+
       // Call LLM with message processing pipeline
       const llmResponse = await this.llmInterface.generateResponse(
         messages,
         availableTools,
-        { sessionId }
+        { sessionId, systemPrompt }
       );
 
       logger.debug('LLM response received', { 
@@ -112,7 +124,7 @@ export class ConversationManager {
         finalResponse = await this.llmInterface.generateResponse(
           updatedMessages,
           availableTools,
-          { sessionId, followUp: true }
+          { sessionId, followUp: true, systemPrompt }
         );
 
         logger.debug('Follow-up LLM response after tool execution', {

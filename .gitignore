@@ -91,3 +91,10 @@ pids
 
 # Documentation folder
 /docs
+
+# Kiro IDE configuration and specs
+.kiro/
+
+# Root-level markdown files (excluding README.md)
+/*.md
+!README.md

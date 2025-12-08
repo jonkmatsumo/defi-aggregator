@@ -7,6 +7,7 @@ import { ConversationManager } from './conversation/manager.js';
 import { createLLMInterface } from './llm/interface.js';
 import { ToolRegistry } from './tools/registry.js';
 import { ComponentIntentGenerator } from './components/intentGenerator.js';
+import { SystemPromptManager } from './prompts/systemPromptManager.js';
 
 export async function createServer(config) {
   const app = express();
@@ -112,10 +113,16 @@ export async function createServer(config) {
   const llmInterface = createLLMInterface(config.llm);
   const toolRegistry = new ToolRegistry();
   const componentIntentGenerator = new ComponentIntentGenerator();
+  const systemPromptManager = new SystemPromptManager({
+    defaultContext: 'defi_assistant',
+    includeToolExamples: true,
+    includeEducationalGuidance: true
+  });
   const conversationManager = new ConversationManager(
     llmInterface,
     toolRegistry,
-    componentIntentGenerator
+    componentIntentGenerator,
+    { systemPromptManager }
   );
 
   // Store reference to conversationManager for cleanup

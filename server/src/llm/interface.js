@@ -127,9 +127,18 @@ export class OpenAILLM extends LLMInterface {
     const context = { messageCount: messages.length, toolCount: tools.length };
     
     return this._retryWithBackoff(async () => {
+      // Prepare messages with system prompt if provided
+      let formattedMessages = this._formatMessages(messages);
+      if (options.systemPrompt) {
+        formattedMessages = [
+          { role: 'system', content: options.systemPrompt },
+          ...formattedMessages
+        ];
+      }
+      
       const requestParams = {
         model: this.model,
-        messages: this._formatMessages(messages),
+        messages: formattedMessages,
         max_tokens: options.maxTokens || this.config.maxTokens,
         temperature: options.temperature || this.config.temperature
       };
@@ -164,9 +173,18 @@ export class OpenAILLM extends LLMInterface {
     const context = { messageCount: messages.length, toolCount: tools.length, streaming: true };
     
     return this._retryWithBackoff(async () => {
+      // Prepare messages with system prompt if provided
+      let formattedMessages = this._formatMessages(messages);
+      if (options.systemPrompt) {
+        formattedMessages = [
+          { role: 'system', content: options.systemPrompt },
+          ...formattedMessages
+        ];
+      }
+      
       const requestParams = {
         model: this.model,
-        messages: this._formatMessages(messages),
+        messages: formattedMessages,
         max_tokens: options.maxTokens || this.config.maxTokens,
         temperature: options.temperature || this.config.temperature,
         stream: true
@@ -275,6 +293,11 @@ export class AnthropicLLM extends LLMInterface {
         temperature: options.temperature || this.config.temperature
       };
 
+      // Add system prompt if provided (Anthropic uses separate system parameter)
+      if (options.systemPrompt) {
+        requestParams.system = options.systemPrompt;
+      }
+
       if (tools.length > 0) {
         requestParams.tools = this._formatAnthropicTools(tools);
       }
@@ -313,6 +336,11 @@ export class AnthropicLLM extends LLMInterface {
         temperature: options.temperature || this.config.temperature,
         stream: true
       };
+
+      // Add system prompt if provided (Anthropic uses separate system parameter)
+      if (options.systemPrompt) {
+        requestParams.system = options.systemPrompt;
+      }
 
       if (tools.length > 0) {
         requestParams.tools = this._formatAnthropicTools(tools);
