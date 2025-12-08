@@ -8,7 +8,7 @@ import { createLLMInterface } from './llm/interface.js';
 import { ToolRegistry } from './tools/registry.js';
 import { ComponentIntentGenerator } from './components/intentGenerator.js';
 import { SystemPromptManager } from './prompts/systemPromptManager.js';
-import { serviceContainer, GasPriceAPIService } from './services/index.js';
+import { serviceContainer, GasPriceAPIService, LendingAPIService } from './services/index.js';
 
 export async function createServer(config) {
   const app = express();
@@ -122,6 +122,13 @@ export async function createServer(config) {
       },
       cacheTimeout: config.services?.gasPriceCache || 300000, // 5 minutes
       rateLimitMax: config.services?.rateLimitMax || 60
+    });
+  });
+
+  serviceContainer.register('LendingAPIService', () => {
+    return new LendingAPIService({
+      cacheTimeout: config.services?.lendingCache || 300000, // 5 minutes
+      rateLimitMax: config.services?.rateLimitMax || 30
     });
   });
 
