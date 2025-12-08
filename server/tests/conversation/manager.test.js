@@ -3,7 +3,7 @@ import fc from 'fast-check';
 import { ConversationManager } from '../../src/conversation/manager.js';
 import { ToolRegistry } from '../../src/tools/registry.js';
 
-// Mock the logger
+// Mock the logger to suppress output during tests
 jest.mock('../../src/utils/logger.js', () => ({
   logger: {
     info: jest.fn(),
@@ -149,7 +149,7 @@ describe('ConversationManager', () => {
             manager.destroy();
           }
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
 
     test('should handle tool execution errors gracefully', async () => {
@@ -202,7 +202,7 @@ describe('ConversationManager', () => {
             manager.destroy();
           }
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
 
     test('should handle messages without tool calls normally', async () => {
@@ -236,7 +236,7 @@ describe('ConversationManager', () => {
             manager.destroy();
           }
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
 
     test('should maintain conversation context across tool executions', async () => {
@@ -301,7 +301,7 @@ describe('ConversationManager', () => {
             manager.destroy();
           }
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
   });
 

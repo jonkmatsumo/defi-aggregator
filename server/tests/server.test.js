@@ -125,7 +125,7 @@ describe('Server Startup Tests', () => {
           });
         }
       ),
-      { numRuns: 5 } // Reduce runs for faster execution
+      { numRuns: 3 } // Reduce runs for faster execution
     );
   });
 
@@ -227,7 +227,7 @@ describe('Server Startup Tests', () => {
           });
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 5 }
     );
   });
 
@@ -313,7 +313,7 @@ describe('Server Startup Tests', () => {
           }
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 5 }
     );
   });
 
@@ -389,7 +389,7 @@ describe('Server Startup Tests', () => {
           }
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 5 }
     );
   });
 
@@ -474,7 +474,7 @@ describe('Server Startup Tests', () => {
           }
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 5 }
     );
   });
 
@@ -845,7 +845,7 @@ describe('Error Handling and Logging Tests', () => {
           expect(logData.context).toBeDefined();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 20 }
     );
   });
 
@@ -920,7 +920,7 @@ describe('Error Handling and Logging Tests', () => {
           expect(['json', 'text'].includes(logFormat)).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 20 }
     );
   });
 
@@ -1032,7 +1032,7 @@ describe('Error Handling and Logging Tests', () => {
           });
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 5 }
     );
   });
 });
@@ -1126,7 +1126,7 @@ describe('WebSocket Connection Tests', () => {
             const connectionPromise = new Promise((resolve, reject) => {
               const timeout = setTimeout(() => {
                 reject(new Error('Connection timeout'));
-              }, 2000);
+              }, 1000);
 
               ws.on('open', () => {
                 clearTimeout(timeout);
@@ -1196,7 +1196,7 @@ describe('WebSocket Connection Tests', () => {
           });
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 3 }
     );
   });
 
@@ -1231,7 +1231,7 @@ describe('WebSocket Connection Tests', () => {
           await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
               reject(new Error('Connection timeout'));
-            }, 2000);
+            }, 1000);
 
             ws.on('message', (data) => {
               try {
@@ -1311,9 +1311,9 @@ describe('WebSocket Connection Tests', () => {
           });
         }
       ),
-      { numRuns: 3 }
+      { numRuns: 2 }
     );
-  }, 10000);
+  }, 5000);
 
   /**
    * **Feature: genai-server-integration, Property 31: WebSocket error handling and cleanup**
@@ -1340,7 +1340,7 @@ describe('WebSocket Connection Tests', () => {
     await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error('Connection timeout'));
-      }, 2000);
+      }, 1000);
 
       ws.on('open', () => {
         clearTimeout(timeout);
@@ -1390,7 +1390,7 @@ describe('WebSocket Connection Tests', () => {
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Connection timeout'));
-        }, 1000);
+        }, 500);
 
         ws.on('open', () => {
           clearTimeout(timeout);

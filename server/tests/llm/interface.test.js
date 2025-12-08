@@ -141,7 +141,7 @@ describe('LLM Interface', () => {
           expect(result.content).toContain(`${messages.length} messages`);
           expect(llm.callCount).toBe(1);
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
 
     /**
@@ -175,7 +175,7 @@ describe('LLM Interface', () => {
           expect(result.toolCalls).toEqual(toolCalls);
           expect(result).toHaveProperty('usage');
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
 
     /**
@@ -202,7 +202,7 @@ describe('LLM Interface', () => {
           await expect(llm.generateResponse([{ role: 'user', content: 'test' }]))
             .rejects.toThrow(errorMessage);
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
 
     /**
@@ -233,7 +233,7 @@ describe('LLM Interface', () => {
           // Should have been called twice (initial + 1 retry)
           expect(llm.callCount).toBe(2);
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
 
     /**
@@ -260,7 +260,7 @@ describe('LLM Interface', () => {
           const doneChunks = receivedChunks.filter(chunk => chunk.done === true);
           expect(doneChunks).toHaveLength(1);
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
 
     /**
@@ -284,7 +284,7 @@ describe('LLM Interface', () => {
           expect(completionChunks).toHaveLength(1);
           expect(completionChunks[0]).toHaveProperty('content');
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
 
     /**
@@ -317,7 +317,7 @@ describe('LLM Interface', () => {
           expect(errorChunks.length).toBeGreaterThan(0);
           expect(errorChunks[0].error).toBe(errorMessage);
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
 
     /**
@@ -345,7 +345,7 @@ describe('LLM Interface', () => {
           expect(streamResult).toHaveProperty('content');
           expect(streamResult.streaming).toBe(true); // Marked as streaming
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
   });
 

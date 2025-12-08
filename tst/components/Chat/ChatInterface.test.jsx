@@ -4,9 +4,11 @@ import '@testing-library/jest-dom';
 import fc from 'fast-check';
 import ChatInterface from '../../../src/components/Chat/ChatInterface';
 import MockAgentService from '../../../src/services/mockAgentService';
+import { AgentServiceClient } from '../../../src/services/agentServiceClient';
 
-// Mock the MockAgentService
+// Mock both services
 jest.mock('../../../src/services/mockAgentService');
+jest.mock('../../../src/services/agentServiceClient');
 
 // Mock scrollIntoView
 Element.prototype.scrollIntoView = jest.fn();
@@ -14,6 +16,16 @@ Element.prototype.scrollIntoView = jest.fn();
 describe('ChatInterface', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Mock AgentServiceClient to fail connection and fallback to MockAgentService
+    AgentServiceClient.mockImplementation(() => ({
+      connect: jest.fn().mockRejectedValue(new Error('Connection failed')),
+      disconnect: jest.fn(),
+      onConnectionChange: jest.fn(),
+      onError: jest.fn(),
+      sendMessage: jest.fn().mockRejectedValue(new Error('Connection closed')),
+      isAgentServiceClient: true // Add identifier for fallback logic
+    }));
     
     // Default mock implementation with zero delay for fast tests
     // Return immediately without any delay
@@ -214,6 +226,7 @@ describe('ChatInterface', () => {
         timestamp: Date.now()
       };
 
+      // Update the mock to return the expected response for fallback service
       MockAgentService.mockImplementation(() => ({
         sendMessage: jest.fn().mockResolvedValue(mockResponse)
       }));
@@ -234,9 +247,9 @@ describe('ChatInterface', () => {
       expect(input).toBeDisabled();
       expect(sendButton).toBeDisabled();
 
-      // Wait for response
+      // Wait for response (should be from fallback service with [Offline Mode] prefix)
       await waitFor(() => {
-        expect(screen.getByText('Test agent response')).toBeInTheDocument();
+        expect(screen.getByText('[Offline Mode] Test agent response')).toBeInTheDocument();
       });
 
       // Input should be enabled again
@@ -316,7 +329,7 @@ describe('ChatInterface', () => {
       fireEvent.click(sendButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Response to: First message')).toBeInTheDocument();
+        expect(screen.getByText('[Offline Mode] Response to: First message')).toBeInTheDocument();
       });
 
       // Send second message
@@ -324,7 +337,7 @@ describe('ChatInterface', () => {
       fireEvent.click(sendButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Response to: Second message')).toBeInTheDocument();
+        expect(screen.getByText('[Offline Mode] Response to: Second message')).toBeInTheDocument();
       });
 
       // Verify both messages are still visible
@@ -357,9 +370,9 @@ describe('ChatInterface', () => {
       fireEvent.change(input, { target: { value: 'Show gas prices' } });
       fireEvent.click(sendButton);
 
-      // Wait for response with UI intent
+      // Wait for response with UI intent (should have [Offline Mode] prefix)
       await waitFor(() => {
-        expect(screen.getByText('Here are the current gas prices:')).toBeInTheDocument();
+        expect(screen.getByText('[Offline Mode] Here are the current gas prices:')).toBeInTheDocument();
       });
 
       // The GenerativeUIRenderer should attempt to render the component

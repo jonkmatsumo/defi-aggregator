@@ -74,6 +74,9 @@ class AgentServiceClient extends AgentService {
     
     // Conversation context for restoration
     this.conversationHistory = [];
+    
+    // Identifier for fallback logic
+    this.isAgentServiceClient = true;
   }
 
   /**

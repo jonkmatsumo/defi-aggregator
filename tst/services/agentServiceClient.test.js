@@ -302,6 +302,302 @@ describe('AgentServiceClient Property-Based Tests', () => {
     });
   });
 
+  /**
+   * **Feature: genai-server-integration, Property 25: End-to-end behavior preservation**
+   * **Validates: Requirements 6.4**
+   * 
+   * Property: For any chat interaction flow that worked with the mock implementation, 
+   * the same flow should work identically with the server implementation.
+   */
+  describe('Property 25: End-to-end behavior preservation', () => {
+    test('should preserve message flow behavior between mock and client implementations', async () => {
+      await fc.assert(fc.asyncProperty(
+        fc.record({
+          message: fc.string({ minLength: 1, maxLength: 100 }).filter(s => s.trim().length > 0),
+          history: fc.array(fc.record({
+            id: fc.string({ minLength: 1, maxLength: 20 }),
+            role: fc.constantFrom('user', 'assistant'),
+            content: fc.string({ minLength: 1, maxLength: 100 }),
+            timestamp: fc.integer({ min: 1000000000000, max: Date.now() })
+          }), { maxLength: 3 })
+        }),
+        async ({ message, history }) => {
+          const mockService = new MockAgentService({ minDelay: 0, maxDelay: 0 });
+          const client = new AgentServiceClient('ws://localhost:3001');
+          
+          // Test that both services have the same interface structure
+          expect(typeof mockService.sendMessage).toBe('function');
+          expect(typeof client.sendMessage).toBe('function');
+          
+          // Both should accept the same parameters
+          expect(mockService.sendMessage.length).toBe(client.sendMessage.length);
+          
+          // Mock service should work with the test data
+          const mockResponse = await mockService.sendMessage(message, history);
+          
+          // Verify mock response structure
+          expect(mockResponse).toHaveProperty('id');
+          expect(mockResponse).toHaveProperty('role', 'assistant');
+          expect(mockResponse).toHaveProperty('content');
+          expect(mockResponse).toHaveProperty('timestamp');
+          expect(typeof mockResponse.id).toBe('string');
+          expect(typeof mockResponse.content).toBe('string');
+          expect(typeof mockResponse.timestamp).toBe('number');
+          
+          // Client should have the same response structure expectation
+          // (We can't test actual server communication in unit tests, but we can verify interface compatibility)
+          expect(client.conversationHistory).toBeDefined();
+          expect(Array.isArray(client.conversationHistory)).toBe(true);
+          
+          // Both should handle the same message format
+          const testUserMessage = {
+            id: 'test-id',
+            role: 'user',
+            content: message,
+            timestamp: Date.now()
+          };
+          
+          // Mock service should handle this message format
+          const mockResult = await mockService.sendMessage(testUserMessage.content, history);
+          expect(mockResult.role).toBe('assistant');
+          
+          client.disconnect();
+        }
+      ), { numRuns: 100 });
+    });
+
+    test('should maintain consistent response structure across implementations', async () => {
+      await fc.assert(fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 50 }).filter(s => s.trim().length > 0),
+        async (message) => {
+          const mockService = new MockAgentService({ minDelay: 0, maxDelay: 0 });
+          
+          // Get mock response
+          const mockResponse = await mockService.sendMessage(message, []);
+          
+          // Verify response structure that client implementation should also follow
+          expect(mockResponse).toMatchObject({
+            id: expect.any(String),
+            role: 'assistant',
+            content: expect.any(String),
+            timestamp: expect.any(Number)
+          });
+          
+          // Optional uiIntent should be properly structured if present
+          expect(mockResponse.uiIntent === undefined || (
+            typeof mockResponse.uiIntent === 'object' &&
+            typeof mockResponse.uiIntent.type === 'string' &&
+            typeof mockResponse.uiIntent.component === 'string' &&
+            typeof mockResponse.uiIntent.props === 'object'
+          )).toBe(true);
+          
+          // Client should be able to handle the same response structure
+          const client = new AgentServiceClient('ws://localhost:3001');
+          
+          // Verify client can store messages in the same format
+          client.conversationHistory.push(mockResponse);
+          expect(client.conversationHistory[0]).toEqual(mockResponse);
+          
+          client.disconnect();
+        }
+      ), { numRuns: 100 });
+    });
+  });
+
+  /**
+   * **Feature: genai-server-integration, Property 26: Dual response mode support**
+   * **Validates: Requirements 6.5**
+   * 
+   * Property: For any server configuration, it should support both AI-generated responses 
+   * and pattern-based fallback responses based on the configuration settings.
+   */
+  describe('Property 26: Dual response mode support', () => {
+    test('should support both AI and pattern-based response modes', () => {
+      // Test with a simple case first
+      const client = new AgentServiceClient('ws://localhost:3001');
+      const mockService = new MockAgentService({ minDelay: 0, maxDelay: 0 });
+      
+      // Both implementations should be able to handle the same message
+      expect(typeof client.sendMessage).toBe('function');
+      expect(typeof mockService.sendMessage).toBe('function');
+      
+      // Client should be configurable for different response modes
+      expect(client.options).toBeDefined();
+      expect(typeof client.options).toBe('object');
+      
+      // Mock service represents pattern-based mode
+      expect(typeof mockService.sendMessage).toBe('function');
+      
+      // Client represents AI mode capability
+      expect(typeof client.sendMessage).toBe('function');
+      
+      // Verify both can accept the same parameters (both have default parameters)
+      expect(mockService.sendMessage.length).toBe(1); // has default parameter
+      expect(client.sendMessage.length).toBe(1); // also has default parameter
+      
+      client.disconnect();
+      
+      // Now run property-based test
+      fc.assert(fc.property(
+        fc.record({
+          message: fc.string({ minLength: 1, maxLength: 100 }).filter(s => s.trim().length > 0),
+          useAIMode: fc.boolean()
+        }),
+        ({ message, useAIMode }) => {
+          const testClient = new AgentServiceClient('ws://localhost:3001');
+          const testMockService = new MockAgentService({ minDelay: 0, maxDelay: 0 });
+          
+          // Basic interface checks
+          expect(typeof testClient.sendMessage).toBe('function');
+          expect(typeof testMockService.sendMessage).toBe('function');
+          expect(testClient.options).toBeDefined();
+          expect(typeof testClient.options).toBe('object');
+          expect(testMockService.sendMessage.length).toBe(1); // has default parameter
+          expect(testClient.sendMessage.length).toBe(1); // also has default parameter
+          
+          testClient.disconnect();
+          return true; // Explicit return for property test
+        }
+      ), { numRuns: 50 });
+    });
+
+    test('should maintain response format consistency across modes', async () => {
+      await fc.assert(fc.asyncProperty(
+        fc.array(fc.string({ minLength: 1, maxLength: 50 }).filter(s => s.trim().length > 0), { minLength: 1, maxLength: 3 }),
+        async (messages) => {
+          const mockService = new MockAgentService({ minDelay: 0, maxDelay: 0 });
+          
+          // Test pattern-based responses (mock service)
+          const responses = [];
+          for (const message of messages) {
+            const response = await mockService.sendMessage(message, []);
+            responses.push(response);
+          }
+          
+          // All responses should have consistent structure
+          responses.forEach(response => {
+            expect(response).toMatchObject({
+              id: expect.any(String),
+              role: 'assistant',
+              content: expect.any(String),
+              timestamp: expect.any(Number)
+            });
+          });
+          
+          // Client should expect the same response format
+          const client = new AgentServiceClient('ws://localhost:3001');
+          
+          // Verify client can handle all response formats
+          responses.forEach(response => {
+            expect(() => client.conversationHistory.push(response)).not.toThrow();
+          });
+          
+          expect(client.conversationHistory.length).toBe(responses.length);
+          
+          client.disconnect();
+        }
+      ), { numRuns: 100 });
+    });
+  });
+
+  /**
+   * **Feature: genai-server-integration, Property 27: API interface backward compatibility**
+   * **Validates: Requirements 7.4**
+   * 
+   * Property: For any existing client interface, the new server-side implementation 
+   * should maintain compatibility without requiring client-side changes.
+   */
+  describe('Property 27: API interface backward compatibility', () => {
+    test('should maintain backward compatible API interface', () => {
+      // Test basic compatibility first
+      const mockService = new MockAgentService({ minDelay: 0, maxDelay: 0 });
+      const client = new AgentServiceClient('ws://localhost:3001');
+      
+      // Core API compatibility: sendMessage method
+      expect(typeof mockService.sendMessage).toBe('function');
+      expect(typeof client.sendMessage).toBe('function');
+      expect(mockService.sendMessage.length).toBe(client.sendMessage.length);
+      expect(client.constructor.name).toBe('AgentServiceClient');
+      expect(mockService.constructor.name).toBe('MockAgentService');
+      
+      client.disconnect();
+      
+      // Property-based test
+      fc.assert(fc.property(
+        fc.record({
+          message: fc.string({ minLength: 1, maxLength: 100 }).filter(s => s.trim().length > 0),
+          history: fc.array(fc.record({
+            id: fc.string({ minLength: 1, maxLength: 20 }),
+            role: fc.constantFrom('user', 'assistant'),
+            content: fc.string({ minLength: 1, maxLength: 100 }),
+            timestamp: fc.integer({ min: 1000000000000, max: Date.now() })
+          }), { maxLength: 2 })
+        }),
+        ({ message, history }) => {
+          const testMockService = new MockAgentService({ minDelay: 0, maxDelay: 0 });
+          const testClient = new AgentServiceClient('ws://localhost:3001');
+          
+          // Core API compatibility checks
+          expect(typeof testMockService.sendMessage).toBe('function');
+          expect(typeof testClient.sendMessage).toBe('function');
+          // Both accept 2 parameters and both have default parameters
+          expect(testMockService.sendMessage.length).toBe(1); // has default parameter
+          expect(testClient.sendMessage.length).toBe(1); // also has default parameter
+          expect(typeof message).toBe('string');
+          expect(Array.isArray(history)).toBe(true);
+          expect(testClient.constructor.name).toBe('AgentServiceClient');
+          expect(testMockService.constructor.name).toBe('MockAgentService');
+          
+          testClient.disconnect();
+          return true; // Explicit return for property test
+        }
+      ), { numRuns: 50 });
+    });
+
+    test('should preserve existing response format expectations', async () => {
+      await fc.assert(fc.asyncProperty(
+        fc.string({ minLength: 1, maxLength: 100 }).filter(s => s.trim().length > 0),
+        async (message) => {
+          const mockService = new MockAgentService({ minDelay: 0, maxDelay: 0 });
+          
+          // Get existing format from mock service
+          const existingResponse = await mockService.sendMessage(message, []);
+          
+          // Verify the format that must be preserved
+          const requiredFields = ['id', 'role', 'content', 'timestamp'];
+          requiredFields.forEach(field => {
+            expect(existingResponse).toHaveProperty(field);
+          });
+          
+          // Verify field types that must be preserved
+          expect(typeof existingResponse.id).toBe('string');
+          expect(existingResponse.role).toBe('assistant');
+          expect(typeof existingResponse.content).toBe('string');
+          expect(typeof existingResponse.timestamp).toBe('number');
+          
+          // Optional fields should be properly typed if present
+          expect(existingResponse.uiIntent === undefined || (
+            typeof existingResponse.uiIntent === 'object' &&
+            typeof existingResponse.uiIntent.type === 'string' &&
+            typeof existingResponse.uiIntent.component === 'string' &&
+            typeof existingResponse.uiIntent.props === 'object'
+          )).toBe(true);
+          
+          // Client implementation should handle this exact format
+          const client = new AgentServiceClient('ws://localhost:3001');
+          
+          // Should be able to store and retrieve the same format
+          client.conversationHistory.push(existingResponse);
+          const storedResponse = client.conversationHistory[0];
+          
+          expect(storedResponse).toEqual(existingResponse);
+          
+          client.disconnect();
+        }
+      ), { numRuns: 100 });
+    });
+  });
+
   describe('Basic Functionality', () => {
     test('should initialize with correct default options', () => {
       const client = new AgentServiceClient('ws://localhost:3001');

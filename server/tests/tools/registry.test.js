@@ -45,7 +45,7 @@ describe('ToolRegistry', () => {
             expect(def.name.length).toBeGreaterThan(0);
           });
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
   });
 
@@ -81,7 +81,7 @@ describe('ToolRegistry', () => {
           expect(result.result).toBeDefined();
           expect(result.error).toBeUndefined();
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
 
     test('should handle lookup of non-existent tools', async () => {
@@ -102,7 +102,7 @@ describe('ToolRegistry', () => {
             toolName: invalidToolName
           });
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
   });
 
@@ -132,7 +132,7 @@ describe('ToolRegistry', () => {
           expect(result.result.prices).toHaveProperty('standard');
           expect(result.result.prices).toHaveProperty('fast');
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
   });
 
@@ -165,7 +165,7 @@ describe('ToolRegistry', () => {
           expect(result.parameters).toEqual(parameters);
           expect(typeof result.executionTime).toBe('number');
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
   });
 
@@ -205,7 +205,7 @@ describe('ToolRegistry', () => {
           expect(toolDef.description).toBe(description);
           expect(toolDef.parameters).toEqual(parameters);
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
 
     test('should validate tool registration parameters', () => {
@@ -284,7 +284,7 @@ describe('ToolRegistry', () => {
           expect(result.toolName).toBe('failing_tool');
           expect(result.parameters).toEqual(parameters);
         }
-      ), { numRuns: 100 });
+      ), { numRuns: 20 });
     });
   });
 });

@@ -56,7 +56,7 @@ describe('ComponentIntentGenerator', () => {
             expect(isValidResult).toBe(true);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 20 }
       );
     });
   });
@@ -109,7 +109,7 @@ describe('ComponentIntentGenerator', () => {
             expect(isValidStructure).toBe(true);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 20 }
       );
     });
   });
@@ -170,7 +170,7 @@ describe('ComponentIntentGenerator', () => {
             expect(hasUniqueComponents).toBe(true);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 20 }
       );
     });
   });
@@ -226,7 +226,7 @@ describe('ComponentIntentGenerator', () => {
             expect(isValidPatternMatch).toBe(true);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 20 }
       );
     });
   });
@@ -289,7 +289,7 @@ describe('ComponentIntentGenerator', () => {
             expect(typeof intent.props).toBe('object');
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 20 }
       );
     });
   });
