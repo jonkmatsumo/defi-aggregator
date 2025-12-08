@@ -77,22 +77,63 @@ export class ConversationManager {
 
       // Execute tool calls if present
       let toolResults = [];
+      let finalResponse = llmResponse;
+      
       if (llmResponse.toolCalls && llmResponse.toolCalls.length > 0) {
         toolResults = await this.executeToolCalls(sessionId, llmResponse.toolCalls);
+        
+        // Add tool call message to session history
+        const toolCallMessage = {
+          id: uuidv4(),
+          role: 'assistant',
+          content: llmResponse.content,
+          timestamp: Date.now(),
+          toolCalls: llmResponse.toolCalls
+        };
+        this.addMessageToSession(session, toolCallMessage);
+
+        // Add tool results as tool messages
+        for (const toolResult of toolResults) {
+          const toolMessage = {
+            id: uuidv4(),
+            role: 'tool',
+            content: JSON.stringify(toolResult.result),
+            timestamp: Date.now(),
+            tool_call_id: toolResult.toolName, // Use tool name as ID
+            name: toolResult.toolName
+          };
+          this.addMessageToSession(session, toolMessage);
+        }
+
+        // Get updated messages for follow-up LLM call
+        const updatedMessages = this.prepareMessagesForLLM(session, messageHistory);
+        
+        // Call LLM again with tool results to get final response
+        finalResponse = await this.llmInterface.generateResponse(
+          updatedMessages,
+          availableTools,
+          { sessionId, followUp: true }
+        );
+
+        logger.debug('Follow-up LLM response after tool execution', {
+          sessionId,
+          toolCount: toolResults.length,
+          finalResponseLength: finalResponse.content?.length || 0
+        });
       }
 
-      // Generate component intents
+      // Generate component intents based on final response
       const uiIntents = this.componentIntentGenerator.generateIntent(
         toolResults,
         userMessage,
-        llmResponse.content
+        finalResponse.content
       );
 
-      // Create assistant response
+      // Create final assistant response
       const assistantResponse = {
         id: uuidv4(),
         role: 'assistant',
-        content: llmResponse.content,
+        content: finalResponse.content,
         timestamp: Date.now(),
         uiIntents: uiIntents || undefined,
         toolResults: toolResults.length > 0 ? toolResults : undefined,
@@ -219,12 +260,27 @@ export class ConversationManager {
       });
     }
 
-    // Convert to LLM format (remove internal fields)
-    return allMessages.map(msg => ({
-      role: msg.role,
-      content: msg.content,
-      timestamp: msg.timestamp
-    }));
+    // Convert to LLM format (include tool calls and results for context)
+    return allMessages.map(msg => {
+      const llmMessage = {
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp
+      };
+
+      // Include tool calls if present (for assistant messages)
+      if (msg.toolCalls && msg.toolCalls.length > 0) {
+        llmMessage.tool_calls = msg.toolCalls;
+      }
+
+      // Include tool results if present (for assistant messages)
+      if (msg.toolResults && msg.toolResults.length > 0) {
+        // Add tool results as system messages for LLM context
+        llmMessage.tool_results = msg.toolResults;
+      }
+
+      return llmMessage;
+    });
   }
 
   addMessageToSession(session, message) {
