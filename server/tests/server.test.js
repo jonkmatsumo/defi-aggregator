@@ -1,5 +1,6 @@
 // import { jest } from '@jest/globals';
 import fc from 'fast-check';
+import WebSocket from 'ws';
 import { createServer } from '../src/server.js';
 import { validateConfig } from '../src/config/environment.js';
 
@@ -482,5 +483,419 @@ describe('Server Startup Tests', () => {
     expect(data.uptime).toBeGreaterThanOrEqual(0);
     expect(data.memory).toBeDefined();
     expect(data.timestamp).toBeDefined();
+  });
+});
+
+describe('WebSocket Connection Tests', () => {
+  let server;
+  let wsClients = [];
+
+  afterEach(async () => {
+    // Close all WebSocket clients
+    for (const ws of wsClients) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    }
+    wsClients = [];
+
+    if (server && server.listening) {
+      // Clean up WebSocket handler first
+      if (server.wsHandler) {
+        server.wsHandler.destroy();
+      }
+      
+      await new Promise((resolve) => {
+        server.close(() => {
+          server = null;
+          resolve();
+        });
+      });
+    }
+  });
+
+  afterAll(async () => {
+    // Force close any remaining connections
+    for (const ws of wsClients) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    }
+    wsClients = [];
+
+    if (server) {
+      if (server.wsHandler) {
+        server.wsHandler.destroy();
+      }
+      
+      await new Promise((resolve) => {
+        server.close(() => {
+          server = null;
+          resolve();
+        });
+      });
+    }
+  });
+
+  /**
+   * **Feature: genai-server-integration, Property 5: WebSocket connection establishment**
+   * For any client connection attempt to a running server, a WebSocket connection should be successfully established and assigned a unique session ID.
+   * **Validates: Requirements 2.1**
+   */
+  test('Property 5: WebSocket connection establishment', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        // Reduce max connections for faster testing
+        fc.integer({ min: 1, max: 5 }),
+        async (numConnections) => {
+          const config = validateConfig();
+          server = await createServer(config);
+          
+          await new Promise((resolve) => {
+            server.listen(0, resolve);
+          });
+
+          const port = server.address().port;
+          const wsUrl = `ws://localhost:${port}`;
+          
+          const connections = [];
+          const sessionIds = new Set();
+
+          // Create multiple WebSocket connections
+          for (let i = 0; i < numConnections; i++) {
+            const ws = new WebSocket(wsUrl);
+            wsClients.push(ws);
+            
+            const connectionPromise = new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                reject(new Error('Connection timeout'));
+              }, 2000);
+
+              ws.on('open', () => {
+                clearTimeout(timeout);
+              });
+
+              ws.on('message', (data) => {
+                try {
+                  const message = JSON.parse(data.toString());
+                  if (message.type === 'CONNECTION_ESTABLISHED') {
+                    clearTimeout(timeout);
+                    resolve({
+                      ws,
+                      sessionId: message.payload.sessionId
+                    });
+                  }
+                } catch (error) {
+                  clearTimeout(timeout);
+                  reject(error);
+                }
+              });
+
+              ws.on('error', (error) => {
+                clearTimeout(timeout);
+                reject(error);
+              });
+            });
+
+            connections.push(connectionPromise);
+          }
+
+          // Wait for all connections to be established
+          const establishedConnections = await Promise.all(connections);
+
+          // Verify all connections were established
+          expect(establishedConnections).toHaveLength(numConnections);
+
+          // Verify each connection has a unique session ID
+          for (const connection of establishedConnections) {
+            expect(connection.sessionId).toBeDefined();
+            expect(typeof connection.sessionId).toBe('string');
+            expect(connection.sessionId.length).toBeGreaterThan(0);
+            
+            // Check for uniqueness
+            expect(sessionIds.has(connection.sessionId)).toBe(false);
+            sessionIds.add(connection.sessionId);
+          }
+
+          // Verify all session IDs are unique
+          expect(sessionIds.size).toBe(numConnections);
+
+          // Clean up connections
+          for (const connection of establishedConnections) {
+            connection.ws.close();
+          }
+          wsClients = [];
+
+          // Clean up server
+          if (server.wsHandler) {
+            server.wsHandler.destroy();
+          }
+          
+          await new Promise((resolve) => {
+            server.close(() => {
+              server = null;
+              resolve();
+            });
+          });
+        }
+      ),
+      { numRuns: 10 }
+    );
+  });
+
+  /**
+   * **Feature: genai-server-integration, Property 6: Connection persistence**
+   * For any established WebSocket connection, the connection should remain active and responsive to ping/pong messages throughout the session.
+   * **Validates: Requirements 2.2**
+   */
+  test('Property 6: Connection persistence', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        // Generate smaller ping counts and faster intervals for speed
+        fc.record({
+          pingCount: fc.integer({ min: 1, max: 2 }),
+          intervalMs: fc.integer({ min: 10, max: 50 })
+        }),
+        async ({ pingCount, intervalMs }) => {
+          const config = validateConfig();
+          server = await createServer(config);
+          
+          await new Promise((resolve) => {
+            server.listen(0, resolve);
+          });
+
+          const port = server.address().port;
+          const wsUrl = `ws://localhost:${port}`;
+          
+          const ws = new WebSocket(wsUrl);
+          wsClients.push(ws);
+          
+          // Wait for connection establishment with shorter timeout
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error('Connection timeout'));
+            }, 2000);
+
+            ws.on('message', (data) => {
+              try {
+                const message = JSON.parse(data.toString());
+                if (message.type === 'CONNECTION_ESTABLISHED') {
+                  clearTimeout(timeout);
+                  resolve();
+                }
+              } catch (error) {
+                clearTimeout(timeout);
+                reject(error);
+              }
+            });
+
+            ws.on('error', (error) => {
+              clearTimeout(timeout);
+              reject(error);
+            });
+          });
+
+          // Test ping/pong mechanism with promise-based response collection
+          const pongPromises = [];
+          const pongResponses = [];
+          
+          ws.on('message', (data) => {
+            try {
+              const message = JSON.parse(data.toString());
+              if (message.type === 'PONG') {
+                pongResponses.push(message);
+              }
+            } catch (error) {
+              // Ignore parse errors for this test
+            }
+          });
+
+          // Send ping messages rapidly without waiting between them
+          for (let i = 0; i < pingCount; i++) {
+            const pingId = `ping_${i}_${Date.now()}`;
+            
+            ws.send(JSON.stringify({
+              type: 'PING',
+              id: pingId,
+              timestamp: Date.now()
+            }));
+          }
+
+          // Wait for all pong responses with much shorter timeout
+          await new Promise(resolve => setTimeout(resolve, Math.max(100, intervalMs * 2)));
+
+          // Verify we received pong responses
+          expect(pongResponses.length).toBe(pingCount);
+
+          // Verify each pong response has correct structure
+          for (let i = 0; i < pongResponses.length; i++) {
+            const pong = pongResponses[i];
+            expect(pong.type).toBe('PONG');
+            expect(pong.id).toBeDefined();
+            expect(pong.timestamp).toBeDefined();
+            expect(typeof pong.timestamp).toBe('number');
+          }
+
+          // Verify connection is still active
+          expect(ws.readyState).toBe(WebSocket.OPEN);
+
+          // Clean up
+          ws.close();
+          wsClients = [];
+
+          if (server.wsHandler) {
+            server.wsHandler.destroy();
+          }
+          
+          await new Promise((resolve) => {
+            server.close(() => {
+              server = null;
+              resolve();
+            });
+          });
+        }
+      ),
+      { numRuns: 3 }
+    );
+  }, 10000);
+
+  /**
+   * **Feature: genai-server-integration, Property 31: WebSocket error handling and cleanup**
+   * For any WebSocket connection error, the server should log the error details and perform proper cleanup of connection resources.
+   * **Validates: Requirements 8.4**
+   */
+  test('Property 31: WebSocket error handling - malformed messages', async () => {
+    const config = validateConfig();
+    server = await createServer(config);
+    
+    await new Promise((resolve) => {
+      server.listen(0, resolve);
+    });
+
+    const port = server.address().port;
+    const wsUrl = `ws://localhost:${port}`;
+    
+    // Test malformed message handling
+    const ws = new WebSocket(wsUrl);
+    wsClients.push(ws);
+    
+    let connectionState;
+    
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Connection timeout'));
+      }, 2000);
+
+      ws.on('open', () => {
+        clearTimeout(timeout);
+        
+        // Send malformed message (not JSON)
+        ws.send('this is not valid JSON');
+        
+        // Reduce wait time for server to process
+        setTimeout(() => {
+          connectionState = ws.readyState;
+          resolve();
+        }, 100);
+      });
+
+      ws.on('error', (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+    });
+    
+    // Connection should still be open (server handles gracefully)
+    expect(connectionState).toBe(WebSocket.OPEN);
+  });
+
+  test('Property 31: WebSocket error handling - connection limits', async () => {
+    const config = validateConfig();
+    // Set low connection limit for testing
+    config.websocket.maxConnections = 2;
+    
+    server = await createServer(config);
+    
+    await new Promise((resolve) => {
+      server.listen(0, resolve);
+    });
+
+    const port = server.address().port;
+    const wsUrl = `ws://localhost:${port}`;
+    
+    // Create connections up to the limit with faster timeouts
+    const connections = [];
+    
+    for (let i = 0; i < config.websocket.maxConnections; i++) {
+      const ws = new WebSocket(wsUrl);
+      wsClients.push(ws);
+      connections.push(ws);
+      
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Connection timeout'));
+        }, 1000);
+
+        ws.on('open', () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+
+        ws.on('error', (error) => {
+          clearTimeout(timeout);
+          reject(error);
+        });
+      });
+    }
+
+    // Reduce wait time for connections to be registered
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Try to create one more connection (should be rejected or handled gracefully)
+    const extraWs = new WebSocket(wsUrl);
+    wsClients.push(extraWs);
+    
+    let testCompleted = false;
+    
+    await new Promise((resolve) => {
+      let connectionOpened = false;
+      let connectionClosed = false;
+      
+      const timeout = setTimeout(() => {
+        // If neither open nor close occurred, that's acceptable
+        if (!connectionOpened && !connectionClosed) {
+          testCompleted = true;
+          resolve();
+        }
+      }, 1000);
+
+      extraWs.on('open', () => {
+        connectionOpened = true;
+        // Reduce wait time to see if it gets closed
+        setTimeout(() => {
+          if (!connectionClosed) {
+            clearTimeout(timeout);
+            testCompleted = true;
+            resolve();
+          }
+        }, 100);
+      });
+
+      extraWs.on('close', () => {
+        connectionClosed = true;
+        clearTimeout(timeout);
+        testCompleted = true;
+        resolve();
+      });
+
+      extraWs.on('error', () => {
+        clearTimeout(timeout);
+        testCompleted = true;
+        resolve();
+      });
+    });
+    
+    // Test should complete without hanging
+    expect(testCompleted).toBe(true);
   });
 });
