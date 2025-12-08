@@ -8,7 +8,7 @@ import { createLLMInterface } from './llm/interface.js';
 import { ToolRegistry } from './tools/registry.js';
 import { ComponentIntentGenerator } from './components/intentGenerator.js';
 import { SystemPromptManager } from './prompts/systemPromptManager.js';
-import { serviceContainer, GasPriceAPIService, LendingAPIService } from './services/index.js';
+import { serviceContainer, GasPriceAPIService, LendingAPIService, PriceFeedAPIService, TokenBalanceAPIService } from './services/index.js';
 
 export async function createServer(config) {
   const app = express();
@@ -129,6 +129,28 @@ export async function createServer(config) {
     return new LendingAPIService({
       cacheTimeout: config.services?.lendingCache || 300000, // 5 minutes
       rateLimitMax: config.services?.rateLimitMax || 30
+    });
+  });
+
+  serviceContainer.register('PriceFeedAPIService', () => {
+    return new PriceFeedAPIService({
+      apiKeys: {
+        coinGecko: config.apiKeys?.coinGecko || process.env.COINGECKO_API_KEY,
+        coinMarketCap: config.apiKeys?.coinMarketCap || process.env.COINMARKETCAP_API_KEY
+      },
+      cacheTimeout: config.services?.priceFeedCache || 60000, // 1 minute
+      rateLimitMax: config.services?.rateLimitMax || 120
+    });
+  });
+
+  serviceContainer.register('TokenBalanceAPIService', () => {
+    return new TokenBalanceAPIService({
+      apiKeys: {
+        alchemy: config.apiKeys?.alchemy || process.env.ALCHEMY_API_KEY,
+        infura: config.apiKeys?.infura || process.env.INFURA_API_KEY
+      },
+      cacheTimeout: config.services?.tokenBalanceCache || 30000, // 30 seconds
+      rateLimitMax: config.services?.rateLimitMax || 50
     });
   });
 
