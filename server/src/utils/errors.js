@@ -39,6 +39,14 @@ export class WebSocketError extends ServerError {
   }
 }
 
+export class ConversationError extends ServerError {
+  constructor(message, sessionId = 'unknown') {
+    super(message, 500, 'CONVERSATION_ERROR');
+    this.name = 'ConversationError';
+    this.sessionId = sessionId;
+  }
+}
+
 export function createErrorResponse(error, requestId = null) {
   return {
     type: 'ERROR',

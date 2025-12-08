@@ -1,15 +1,19 @@
-// import { jest } from '@jest/globals';
+import { jest } from '@jest/globals';
 import fc from 'fast-check';
 import WebSocket from 'ws';
 import { createServer } from '../src/server.js';
 import { validateConfig } from '../src/config/environment.js';
+import { ConversationManager } from '../src/conversation/manager.js';
 
 describe('Server Startup Tests', () => {
   let server;
 
   afterEach(async () => {
     if (server && server.listening) {
-      // Clean up WebSocket handler first
+      // Clean up components first
+      if (server.conversationManager) {
+        server.conversationManager.destroy();
+      }
       if (server.wsHandler) {
         server.wsHandler.destroy();
       }
@@ -26,6 +30,9 @@ describe('Server Startup Tests', () => {
   afterAll(async () => {
     // Force close any remaining connections
     if (server) {
+      if (server.conversationManager) {
+        server.conversationManager.destroy();
+      }
       if (server.wsHandler) {
         server.wsHandler.destroy();
       }
@@ -486,6 +493,240 @@ describe('Server Startup Tests', () => {
   });
 });
 
+describe('Conversation Management Tests', () => {
+  let conversationManager;
+
+  beforeEach(() => {
+    // Create mock dependencies
+    const mockLLMInterface = {
+      generateResponse: jest.fn().mockResolvedValue({
+        content: 'Mock LLM response',
+        toolCalls: []
+      })
+    };
+
+    const mockToolRegistry = {
+      getToolDefinitions: jest.fn().mockReturnValue([]),
+      executeTool: jest.fn().mockResolvedValue({
+        toolName: 'test_tool',
+        parameters: {},
+        result: 'mock result',
+        executionTime: 100,
+        success: true
+      })
+    };
+
+    const mockComponentIntentGenerator = {
+      generateIntent: jest.fn().mockReturnValue(null)
+    };
+
+    conversationManager = new ConversationManager(
+      mockLLMInterface,
+      mockToolRegistry,
+      mockComponentIntentGenerator,
+      {
+        maxHistoryLength: 10,
+        sessionTimeoutMs: 60000,
+        cleanupIntervalMs: 30000
+      }
+    );
+  });
+
+  afterEach(() => {
+    if (conversationManager) {
+      conversationManager.destroy();
+    }
+  });
+
+  /**
+   * **Feature: genai-server-integration, Property 12: Conversation history accumulation**
+   * For any sequence of messages in a session, the conversation history should accumulate correctly and be available for context in subsequent LLM calls.
+   * **Validates: Requirements 3.4**
+   */
+  test('Property 12: Conversation history accumulation', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        // Generate sequences of messages
+        fc.record({
+          sessionId: fc.string({ minLength: 1, maxLength: 20 }),
+          messages: fc.array(
+            fc.string({ minLength: 1, maxLength: 100 }),
+            { minLength: 1, maxLength: 8 }
+          )
+        }),
+        async ({ sessionId, messages }) => {
+          // Create a fresh ConversationManager for each test run to avoid state pollution
+          const mockLLMInterface = {
+            generateResponse: jest.fn().mockResolvedValue({
+              content: 'Mock LLM response',
+              toolCalls: []
+            })
+          };
+
+          const mockToolRegistry = {
+            getToolDefinitions: jest.fn().mockReturnValue([]),
+            executeTool: jest.fn().mockResolvedValue({
+              toolName: 'test_tool',
+              parameters: {},
+              result: 'mock result',
+              executionTime: 100,
+              success: true
+            })
+          };
+
+          const mockComponentIntentGenerator = {
+            generateIntent: jest.fn().mockReturnValue(null)
+          };
+
+          const testConversationManager = new ConversationManager(
+            mockLLMInterface,
+            mockToolRegistry,
+            mockComponentIntentGenerator,
+            {
+              maxHistoryLength: 50, // Increase for property testing
+              sessionTimeoutMs: 60000,
+              cleanupIntervalMs: 30000
+            }
+          );
+
+          try {
+            // Process each message in sequence
+            const responses = [];
+            
+            for (let i = 0; i < messages.length; i++) {
+              const message = messages[i];
+              const response = await testConversationManager.processMessage(sessionId, message);
+              responses.push(response);
+              
+              // Verify response structure
+              expect(response).toBeDefined();
+              expect(response.id).toBeDefined();
+              expect(response.role).toBe('assistant');
+              expect(response.content).toBeDefined();
+              expect(response.timestamp).toBeDefined();
+              
+              // Check session state after each message
+              const currentSession = testConversationManager.getSession(sessionId);
+              const expectedLength = (i + 1) * 2;
+              expect(currentSession.messages).toHaveLength(expectedLength);
+            }
+            
+            // Final verification: session should contain all messages in chronological order
+            const finalSession = testConversationManager.getSession(sessionId);
+            expect(finalSession).toBeDefined();
+            expect(finalSession.sessionId).toBe(sessionId);
+            
+            // Should have exactly 2 messages per input message (user + assistant)
+            expect(finalSession.messages).toHaveLength(messages.length * 2);
+            
+            // Verify chronological order (timestamps should be non-decreasing)
+            for (let i = 1; i < finalSession.messages.length; i++) {
+              expect(finalSession.messages[i].timestamp).toBeGreaterThanOrEqual(
+                finalSession.messages[i - 1].timestamp
+              );
+            }
+            
+            // Verify alternating user/assistant pattern
+            for (let i = 0; i < finalSession.messages.length; i++) {
+              const expectedRole = i % 2 === 0 ? 'user' : 'assistant';
+              expect(finalSession.messages[i].role).toBe(expectedRole);
+            }
+            
+            // Verify user messages match input (every even index should be a user message)
+            for (let i = 0; i < messages.length; i++) {
+              const userMessageIndex = i * 2;
+              expect(finalSession.messages[userMessageIndex].content).toBe(messages[i]);
+              expect(finalSession.messages[userMessageIndex].role).toBe('user');
+            }
+            
+            // Verify all assistant messages have the expected content
+            for (let i = 0; i < messages.length; i++) {
+              const assistantMessageIndex = i * 2 + 1;
+              expect(finalSession.messages[assistantMessageIndex].role).toBe('assistant');
+              expect(finalSession.messages[assistantMessageIndex].content).toBe('Mock LLM response');
+            }
+
+          } finally {
+            // Clean up the test conversation manager
+            testConversationManager.destroy();
+          }
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  test('ConversationManager session management', async () => {
+    const sessionId = 'test-session-123';
+    
+    // Initially no session should exist
+    expect(conversationManager.getSession(sessionId)).toBeUndefined();
+    
+    // Process a message should create a session
+    const response = await conversationManager.processMessage(sessionId, 'Hello');
+    
+    expect(response).toBeDefined();
+    expect(response.role).toBe('assistant');
+    
+    // Session should now exist
+    const session = conversationManager.getSession(sessionId);
+    expect(session).toBeDefined();
+    expect(session.sessionId).toBe(sessionId);
+    expect(session.messages).toHaveLength(2); // user + assistant
+  });
+
+  test('ConversationManager history trimming', async () => {
+    const sessionId = 'test-session-trim';
+    
+    // Send more messages than maxHistoryLength allows
+    const maxHistory = conversationManager.options.maxHistoryLength;
+    const messageCount = maxHistory + 5;
+    
+    for (let i = 0; i < messageCount; i++) {
+      await conversationManager.processMessage(sessionId, `Message ${i}`);
+    }
+    
+    const session = conversationManager.getSession(sessionId);
+    
+    // History should be trimmed to maxHistoryLength
+    expect(session.messages.length).toBeLessThanOrEqual(maxHistory);
+    
+    // Should contain the most recent messages
+    const lastMessage = session.messages[session.messages.length - 1];
+    expect(lastMessage.role).toBe('assistant');
+  });
+
+  test('ConversationManager session cleanup', async () => {
+    const sessionId = 'test-session-cleanup';
+    
+    // Create a session with short timeout for testing
+    const shortTimeoutManager = new ConversationManager(
+      conversationManager.llmInterface,
+      conversationManager.toolRegistry,
+      conversationManager.componentIntentGenerator,
+      {
+        sessionTimeoutMs: 100, // 100ms timeout
+        cleanupIntervalMs: 50   // 50ms cleanup interval
+      }
+    );
+    
+    try {
+      // Create a session
+      await shortTimeoutManager.processMessage(sessionId, 'Hello');
+      expect(shortTimeoutManager.getSession(sessionId)).toBeDefined();
+      
+      // Wait for session to expire and cleanup to run
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Session should be cleaned up
+      expect(shortTimeoutManager.getSession(sessionId)).toBeUndefined();
+      
+    } finally {
+      shortTimeoutManager.destroy();
+    }
+  });
+});
+
 describe('WebSocket Connection Tests', () => {
   let server;
   let wsClients = [];
@@ -500,7 +741,10 @@ describe('WebSocket Connection Tests', () => {
     wsClients = [];
 
     if (server && server.listening) {
-      // Clean up WebSocket handler first
+      // Clean up components first
+      if (server.conversationManager) {
+        server.conversationManager.destroy();
+      }
       if (server.wsHandler) {
         server.wsHandler.destroy();
       }
@@ -524,6 +768,9 @@ describe('WebSocket Connection Tests', () => {
     wsClients = [];
 
     if (server) {
+      if (server.conversationManager) {
+        server.conversationManager.destroy();
+      }
       if (server.wsHandler) {
         server.wsHandler.destroy();
       }
@@ -695,8 +942,7 @@ describe('WebSocket Connection Tests', () => {
             });
           });
 
-          // Test ping/pong mechanism with promise-based response collection
-          const pongPromises = [];
+          // Test ping/pong mechanism with response collection
           const pongResponses = [];
           
           ws.on('message', (data) => {

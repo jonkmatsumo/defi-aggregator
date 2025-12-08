@@ -54,6 +54,9 @@ export async function createServer(config) {
     componentIntentGenerator
   );
 
+  // Store reference to conversationManager for cleanup
+  server.conversationManager = conversationManager;
+
   // Initialize WebSocket server
   const wss = new WebSocketServer({ 
     server,

@@ -125,23 +125,45 @@ export class WebSocketHandler {
   }
 
   async handleChatMessage(sessionId, message) {
-    // Placeholder - will be implemented when ConversationManager is ready
     logger.info('Chat message received', { sessionId, messageId: message.id });
     
-    // For now, send a simple echo response
-    this.sendMessage(sessionId, {
-      type: 'CHAT_RESPONSE',
-      id: message.id,
-      payload: {
-        message: {
-          id: uuidv4(),
-          role: 'assistant',
-          content: 'Server is running but LLM integration not yet implemented',
-          timestamp: Date.now()
-        }
-      },
-      timestamp: Date.now()
-    });
+    try {
+      // Extract message content and history from payload
+      const userMessage = message.payload?.message || '';
+      const messageHistory = message.payload?.history || [];
+
+      if (!userMessage || typeof userMessage !== 'string') {
+        throw new WebSocketError('Invalid message content', sessionId);
+      }
+
+      // Process message through ConversationManager
+      const response = await this.conversationManager.processMessage(
+        sessionId,
+        userMessage,
+        messageHistory
+      );
+
+      // Send response back to client
+      this.sendMessage(sessionId, {
+        type: 'CHAT_RESPONSE',
+        id: message.id,
+        payload: {
+          message: response,
+          sessionId
+        },
+        timestamp: Date.now()
+      });
+
+    } catch (error) {
+      logger.error('Error processing chat message', {
+        sessionId,
+        messageId: message.id,
+        error: error.message
+      });
+
+      // Send error response
+      this.sendMessage(sessionId, createErrorResponse(error, message.id));
+    }
   }
 
   handleDisconnection(sessionId) {
