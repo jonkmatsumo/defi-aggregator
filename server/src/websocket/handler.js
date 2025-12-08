@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { logger, logError } from '../utils/logger.js';
 import { WebSocketError, createErrorResponse, classifyError } from '../utils/errors.js';
+import { PriceWebSocketHandler } from './priceHandler.js';
 
 export class WebSocketHandler {
   constructor(wss, conversationManager, config = {}) {
@@ -14,10 +15,20 @@ export class WebSocketHandler {
     
     this.connections = new Map(); // sessionId -> { ws, lastActivity }
     this.cleanupInterval = null;
+    
+    // Initialize price handler for real-time price subscriptions
+    this.priceHandler = new PriceWebSocketHandler(wss, {
+      maxSubscriptionsPerClient: config.maxSubscriptionsPerClient || 20,
+      heartbeatInterval: config.pingInterval || 30000
+    });
+    
     this.setupWebSocketServer();
   }
 
   setupWebSocketServer() {
+    // Initialize price handler
+    this.priceHandler.initialize();
+    
     this.wss.on('connection', (ws, request) => {
       this.handleConnection(ws, request);
     });
@@ -50,6 +61,9 @@ export class WebSocketHandler {
       sessionId,
       totalConnections: this.connections.size 
     });
+
+    // Register with price handler for price subscriptions
+    this.priceHandler.handleConnection(sessionId, ws);
 
     // Set up message handling
     ws.on('message', async (data) => {
@@ -105,6 +119,13 @@ export class WebSocketHandler {
       case 'CHAT_MESSAGE':
         // This will be implemented when ConversationManager is ready
         await this.handleChatMessage(sessionId, message);
+        break;
+
+      // Price subscription messages - delegate to price handler
+      case 'subscribe':
+      case 'unsubscribe':
+      case 'get_subscriptions':
+        await this.priceHandler.handleMessage(sessionId, message);
         break;
 
       default:
@@ -180,6 +201,9 @@ export class WebSocketHandler {
   handleDisconnection(sessionId) {
     const connection = this.connections.get(sessionId);
     if (connection) {
+      // Notify price handler of disconnection
+      this.priceHandler.handleDisconnection(sessionId);
+      
       this.connections.delete(sessionId);
       logger.info('WebSocket connection closed', { 
         sessionId,
@@ -212,7 +236,8 @@ export class WebSocketHandler {
     return {
       activeConnections: this.connections.size,
       maxConnections: this.config.maxConnections,
-      connectionUtilization: (this.connections.size / this.config.maxConnections) * 100
+      connectionUtilization: (this.connections.size / this.config.maxConnections) * 100,
+      priceSubscriptions: this.priceHandler.getMetrics()
     };
   }
 
@@ -222,6 +247,9 @@ export class WebSocketHandler {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
     }
+    
+    // Cleanup price handler
+    this.priceHandler.cleanup();
     
     // Close all connections
     for (const [, connection] of this.connections.entries()) {
