@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { logger, logError } from '../utils/logger.js';
 import { ConversationError, classifyError } from '../utils/errors.js';
+import { agentResponseFormatter } from '../utils/agentResponseFormatter.js';
 
 export class ConversationManager {
   constructor(llmInterface, toolRegistry, componentIntentGenerator, options = {}) {
@@ -141,6 +142,11 @@ export class ConversationManager {
         finalResponse.content
       );
 
+      // Format tool results for user-friendly display
+      const formattedToolResults = toolResults.length > 0 
+        ? agentResponseFormatter.formatToolResults(toolResults)
+        : undefined;
+
       // Create final assistant response
       const assistantResponse = {
         id: uuidv4(),
@@ -149,6 +155,7 @@ export class ConversationManager {
         timestamp: Date.now(),
         uiIntents: uiIntents || undefined,
         toolResults: toolResults.length > 0 ? toolResults : undefined,
+        formattedResults: formattedToolResults,
         streaming: false
       };
 
@@ -174,16 +181,21 @@ export class ConversationManager {
         classification: errorClassification
       });
 
-      // Create error response
+      // Create user-friendly error response
+      const userFriendlyMessage = this.getUserFriendlyErrorMessage(error, errorClassification);
+      
       const errorResponse = {
         id: uuidv4(),
         role: 'assistant',
-        content: 'I apologize, but I encountered an error processing your message. Please try again.',
+        content: userFriendlyMessage.content,
         timestamp: Date.now(),
         error: {
           type: error.constructor.name,
           message: error.message,
-          classification: errorClassification
+          code: userFriendlyMessage.code,
+          classification: errorClassification,
+          retryable: userFriendlyMessage.retryable,
+          suggestions: userFriendlyMessage.suggestions
         }
       };
 
@@ -402,6 +414,107 @@ export class ConversationManager {
 
   getMetrics() {
     return this.getSessionStats();
+  }
+
+  /**
+   * Generate user-friendly error message based on error type
+   * @param {Error} error - The error that occurred
+   * @param {Object} classification - Error classification
+   * @returns {Object} User-friendly error details
+   */
+  getUserFriendlyErrorMessage(error, classification) {
+    const errorMessage = error.message?.toLowerCase() || '';
+    const errorType = classification?.type || 'unknown';
+
+    // LLM-specific errors
+    if (errorType === 'llm' || errorMessage.includes('api') || errorMessage.includes('openai')) {
+      return {
+        content: 'I\'m having trouble connecting to my language processing service right now. Please try again in a moment.',
+        code: 'LLM_ERROR',
+        retryable: true,
+        suggestions: [
+          'Wait a few seconds and try again',
+          'If the problem persists, the service may be experiencing high demand'
+        ]
+      };
+    }
+
+    // Tool execution errors
+    if (errorType === 'tool' || errorMessage.includes('tool')) {
+      return {
+        content: 'I encountered an issue while retrieving the data you requested. Let me know if you\'d like me to try again.',
+        code: 'TOOL_ERROR',
+        retryable: true,
+        suggestions: [
+          'Try asking for the same information again',
+          'You can also try asking in a different way'
+        ]
+      };
+    }
+
+    // Rate limiting errors
+    if (errorMessage.includes('rate limit') || errorMessage.includes('429') || errorMessage.includes('too many')) {
+      return {
+        content: 'I\'m receiving too many requests right now. Please wait a moment before trying again.',
+        code: 'RATE_LIMIT',
+        retryable: true,
+        suggestions: [
+          'Wait about 30 seconds before trying again',
+          'Try asking fewer questions at once'
+        ]
+      };
+    }
+
+    // Network/timeout errors
+    if (errorMessage.includes('timeout') || errorMessage.includes('network') || errorMessage.includes('connection')) {
+      return {
+        content: 'I\'m having trouble connecting to external services. This could be a temporary issue.',
+        code: 'NETWORK_ERROR',
+        retryable: true,
+        suggestions: [
+          'Check your internet connection',
+          'Try again in a few moments'
+        ]
+      };
+    }
+
+    // Validation errors
+    if (errorType === 'validation' || errorMessage.includes('invalid') || errorMessage.includes('validation')) {
+      return {
+        content: 'I couldn\'t understand some of the information in your request. Could you please rephrase or check the details?',
+        code: 'VALIDATION_ERROR',
+        retryable: false,
+        suggestions: [
+          'Make sure wallet addresses are valid Ethereum addresses',
+          'Check that token symbols are correct (e.g., ETH, BTC, USDC)',
+          'Verify network names are supported (e.g., ethereum, polygon)'
+        ]
+      };
+    }
+
+    // Session errors
+    if (errorType === 'session' || errorMessage.includes('session')) {
+      return {
+        content: 'There was an issue with your conversation session. Please try starting a new conversation.',
+        code: 'SESSION_ERROR',
+        retryable: false,
+        suggestions: [
+          'Refresh the page to start a new session',
+          'Clear your browser cache if the issue persists'
+        ]
+      };
+    }
+
+    // Default error response
+    return {
+      content: 'I apologize, but I encountered an unexpected error processing your message. Please try again.',
+      code: 'UNKNOWN_ERROR',
+      retryable: true,
+      suggestions: [
+        'Try asking your question again',
+        'If the problem continues, please try again later'
+      ]
+    };
   }
 
   destroy() {
