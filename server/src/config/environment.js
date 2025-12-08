@@ -47,7 +47,7 @@ export function validateConfig() {
         : process.env.OPENAI_API_KEY,
       model: process.env.LLM_MODEL || 'gpt-4',
       maxTokens: parseInt(process.env.LLM_MAX_TOKENS) || 2048,
-      temperature: parseFloat(process.env.LLM_TEMPERATURE) || 0.7
+      temperature: process.env.LLM_TEMPERATURE !== undefined ? parseFloat(process.env.LLM_TEMPERATURE) : 0.7
     },
 
     websocket: {
