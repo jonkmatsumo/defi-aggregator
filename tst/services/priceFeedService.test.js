@@ -1,10 +1,27 @@
 import priceFeedService from '../../src/services/priceFeedService';
+import apiClient from '../../src/services/apiClient';
+
+// Mock the apiClient
+jest.mock('../../src/services/apiClient', () => ({
+  get: jest.fn(),
+  getWebSocketUrl: jest.fn().mockReturnValue('ws://localhost:3001'),
+  __esModule: true,
+  default: {
+    get: jest.fn(),
+    getWebSocketUrl: jest.fn().mockReturnValue('ws://localhost:3001')
+  }
+}));
 
 // Mock WebSocket
 global.WebSocket = class MockWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  
   constructor(url) {
     this.url = url;
-    this.readyState = 0; // CONNECTING
+    this.readyState = MockWebSocket.CONNECTING;
     this.onopen = null;
     this.onmessage = null;
     this.onclose = null;
@@ -12,13 +29,13 @@ global.WebSocket = class MockWebSocket {
     
     // Simulate connection
     setTimeout(() => {
-      this.readyState = 1; // OPEN
+      this.readyState = MockWebSocket.OPEN;
       if (this.onopen) this.onopen();
     }, 10);
   }
   
   close(code = 1000, reason = '') {
-    this.readyState = 3; // CLOSED
+    this.readyState = MockWebSocket.CLOSED;
     if (this.onclose) this.onclose({ code, reason });
   }
   
@@ -31,6 +48,7 @@ describe('PriceFeedService', () => {
   beforeEach(() => {
     // Reset service state before each test
     priceFeedService.cleanup();
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
@@ -40,11 +58,11 @@ describe('PriceFeedService', () => {
 
   describe('Constructor and Initialization', () => {
     test('should initialize with correct default values', () => {
-      expect(priceFeedService.connections).toBeInstanceOf(Map);
       expect(priceFeedService.subscribers).toBeInstanceOf(Map);
       expect(priceFeedService.dataBuffer).toBeInstanceOf(Map);
       expect(priceFeedService.bufferSize).toBe(100);
       expect(priceFeedService.maxReconnectAttempts).toBe(5);
+      expect(priceFeedService.isConnected).toBe(false);
     });
 
     test('should have supported token pairs', () => {
@@ -72,27 +90,26 @@ describe('PriceFeedService', () => {
   describe('Data Validation', () => {
     test('should validate correct price data', () => {
       const validData = {
-        p: '42000.50',
-        q: '0.1',
-        T: 1640995200000
+        p: '42000.50'
       };
       expect(priceFeedService.validatePriceData(validData)).toBe(true);
     });
 
     test('should reject invalid price data', () => {
-      const invalidData = [
-        null,
-        {},
-        { p: 'invalid' },
-        { p: '42000.50' }, // missing timestamp
-        { p: '42000.50', T: 'invalid' }, // invalid timestamp
-        { p: '-100', T: 1640995200000 }, // negative price
-        { p: '0', T: 1640995200000 } // zero price
-      ];
-
-      invalidData.forEach(data => {
-        expect(priceFeedService.validatePriceData(data)).toBe(false);
-      });
+      // Null data
+      expect(priceFeedService.validatePriceData(null)).toBe(false);
+      
+      // Empty object
+      expect(priceFeedService.validatePriceData({})).toBe(false);
+      
+      // Non-numeric price
+      expect(priceFeedService.validatePriceData({ p: 'invalid' })).toBe(false);
+      
+      // Zero price
+      expect(priceFeedService.validatePriceData({ p: '0' })).toBe(false);
+      
+      // Negative price
+      expect(priceFeedService.validatePriceData({ p: '-100' })).toBe(false);
     });
   });
 
@@ -208,55 +225,92 @@ describe('PriceFeedService', () => {
       // Initially not connected
       expect(priceFeedService.getConnectionStatus(tokenPair)).toBe(false);
       
-      // After connection attempt (mocked)
-      priceFeedService.isConnected.set(tokenPair, true);
+      // After connection
+      priceFeedService.isConnected = true;
       expect(priceFeedService.getConnectionStatus(tokenPair)).toBe(true);
+      
+      // Reset
+      priceFeedService.isConnected = false;
     });
   });
 
-  describe('Data Processing', () => {
-    test('should process valid price data', () => {
-      const tokenPair = 'BTC/USDT';
-      const callback = jest.fn();
+  describe('WebSocket Message Handling', () => {
+    test('should handle subscription_confirmed message', () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
       
-      priceFeedService.subscribe(tokenPair, callback);
-      
-      const validData = {
-        p: '42000.50',
-        q: '0.1',
-        T: Date.now()
-      };
-      
-      priceFeedService.processPriceData(tokenPair, validData);
-      
-      expect(callback).toHaveBeenCalledWith({
-        type: 'price',
-        data: {
-          time: validData.T,
-          price: 42000.50,
-          volume: 0.1,
-          timestamp: validData.T
-        },
-        buffer: expect.any(Array),
-        timestamp: expect.any(Number)
+      priceFeedService.handleWebSocketMessage({
+        type: 'subscription_confirmed',
+        symbols: ['BTC', 'ETH']
       });
+      
+      expect(consoleSpy).toHaveBeenCalledWith('Subscription confirmed:', ['BTC', 'ETH']);
+      consoleSpy.mockRestore();
     });
 
-    test('should ignore invalid price data', () => {
+    test('should handle price_update message', () => {
       const tokenPair = 'BTC/USDT';
       const callback = jest.fn();
       
-      priceFeedService.subscribe(tokenPair, callback);
+      // Subscribe first
+      priceFeedService.subscribers.set(tokenPair, new Set([callback]));
+      priceFeedService.dataBuffer.set(tokenPair, []);
       
-      // Clear the callback calls from historical data loading
-      callback.mockClear();
+      priceFeedService.handleWebSocketMessage({
+        type: 'price_update',
+        symbol: 'BTC',
+        data: { price: 42000, volume_24h: 1000000, change_24h: 2.5 },
+        timestamp: Date.now()
+      });
       
-      const invalidData = { p: 'invalid' };
+      // Should add to buffer and notify subscribers
+      const buffer = priceFeedService.getBufferData(tokenPair);
+      expect(buffer.length).toBeGreaterThan(0);
+    });
+
+    test('should handle error message', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       
-      priceFeedService.processPriceData(tokenPair, invalidData);
+      priceFeedService.handleWebSocketMessage({
+        type: 'error',
+        message: 'Test error'
+      });
       
-      // Should not call callback for invalid data
-      expect(callback).not.toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith('WebSocket error from backend:', 'Test error');
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Notify Subscribers', () => {
+    test('should notify subscribers for token pair', () => {
+      const tokenPair = 'BTC/USDT';
+      const callback1 = jest.fn();
+      const callback2 = jest.fn();
+      
+      priceFeedService.subscribers.set(tokenPair, new Set([callback1, callback2]));
+      
+      const testData = { type: 'test', data: 'test data' };
+      priceFeedService.notifySubscribers(tokenPair, testData);
+      
+      expect(callback1).toHaveBeenCalledWith(testData);
+      expect(callback2).toHaveBeenCalledWith(testData);
+    });
+
+    test('should handle callback errors gracefully', () => {
+      const tokenPair = 'BTC/USDT';
+      const errorCallback = jest.fn().mockImplementation(() => {
+        throw new Error('Callback error');
+      });
+      const normalCallback = jest.fn();
+      
+      priceFeedService.subscribers.set(tokenPair, new Set([errorCallback, normalCallback]));
+      
+      // Should not throw
+      expect(() => {
+        priceFeedService.notifySubscribers(tokenPair, { type: 'test' });
+      }).not.toThrow();
+      
+      // Normal callback should still be called
+      expect(normalCallback).toHaveBeenCalled();
     });
   });
 
@@ -268,14 +322,13 @@ describe('PriceFeedService', () => {
       // Set up some state
       priceFeedService.subscribe(tokenPair, callback);
       priceFeedService.addToBuffer(tokenPair, { time: Date.now(), price: 42000, volume: 0.1, timestamp: Date.now() });
-      priceFeedService.isConnected.set(tokenPair, true);
-      priceFeedService.reconnectAttempts.set(tokenPair, 2);
+      priceFeedService.isConnected = true;
+      priceFeedService.reconnectAttempts = 2;
       
       // Verify state exists
       expect(priceFeedService.subscribers.has(tokenPair)).toBe(true);
       expect(priceFeedService.dataBuffer.has(tokenPair)).toBe(true);
-      expect(priceFeedService.isConnected.has(tokenPair)).toBe(true);
-      expect(priceFeedService.reconnectAttempts.has(tokenPair)).toBe(true);
+      expect(priceFeedService.reconnectAttempts).toBe(2);
       
       // Cleanup
       priceFeedService.cleanup();
@@ -283,9 +336,7 @@ describe('PriceFeedService', () => {
       // Verify all state is cleared
       expect(priceFeedService.subscribers.size).toBe(0);
       expect(priceFeedService.dataBuffer.size).toBe(0);
-      expect(priceFeedService.isConnected.size).toBe(0);
-      expect(priceFeedService.reconnectAttempts.size).toBe(0);
-      expect(priceFeedService.connections.size).toBe(0);
+      expect(priceFeedService.reconnectAttempts).toBe(0);
     });
   });
 
@@ -303,4 +354,13 @@ describe('PriceFeedService', () => {
       }).not.toThrow();
     });
   });
-}); 
+
+  describe('Symbol to Pair Mapping', () => {
+    test('should correctly map symbols to token pairs', () => {
+      expect(priceFeedService.pairToSymbol['BTC/USDT']).toBe('BTC');
+      expect(priceFeedService.pairToSymbol['ETH/USDT']).toBe('ETH');
+      expect(priceFeedService.pairToSymbol['SOL/USDT']).toBe('SOL');
+      expect(priceFeedService.pairToSymbol['MATIC/USDT']).toBe('MATIC');
+    });
+  });
+});

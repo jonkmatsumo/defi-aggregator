@@ -1,17 +1,32 @@
-// Lending Service for Compound and Aave integration
+/**
+ * Lending Service - Frontend Client
+ * 
+ * Fetches DeFi lending rates from backend API instead of directly from Aave/Compound APIs.
+ * This eliminates CORS issues and centralizes rate limiting/caching on the server.
+ */
+
+import apiClient from './apiClient';
+
 class LendingService {
   constructor() {
     this.cache = new Map();
-    this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
-    this.compoundApiBase = 'https://api.compound.finance/api/v2';
-    this.aaveApiBase = 'https://aave-api-v2.aave.com';
+    this.cacheTimeout = 60000; // 1 minute local cache
   }
 
-  // Cache management
+  /**
+   * Cache management - get cache key
+   * @param {string} key - Cache key
+   * @returns {string} Cache key
+   */
   getCacheKey(key) {
     return key;
   }
 
+  /**
+   * Get cached data if still valid
+   * @param {string} key - Cache key
+   * @returns {any|null} Cached data or null
+   */
   getCachedData(key) {
     const cacheKey = this.getCacheKey(key);
     const cached = this.cache.get(cacheKey);
@@ -21,6 +36,11 @@ class LendingService {
     return null;
   }
 
+  /**
+   * Store data in cache
+   * @param {string} key - Cache key
+   * @param {any} data - Data to cache
+   */
   setCachedData(key, data) {
     const cacheKey = this.getCacheKey(key);
     this.cache.set(cacheKey, {
@@ -29,118 +49,168 @@ class LendingService {
     });
   }
 
+  /**
+   * Clear all cached data
+   */
   clearCache() {
     this.cache.clear();
   }
 
-  // Compound API methods
+  /**
+   * Fetch Compound tokens/markets from backend
+   * @returns {Promise<Array>} Compound tokens
+   */
   async fetchCompoundTokens() {
     const cached = this.getCachedData('compound_tokens');
     if (cached) return cached;
 
     try {
-      const response = await fetch(`${this.compoundApiBase}/ctoken`);
-      if (!response.ok) {
-        throw new Error(`Compound API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      const tokens = data.cToken || [];
-      
-      const formattedTokens = tokens.map(token => ({
-        symbol: token.symbol,
-        name: token.name,
-        address: token.token_address,
-        cTokenAddress: token.cToken_address,
-        decimals: token.decimals,
-        platform: 'Compound',
-        logo: this.getTokenLogo(token.symbol),
-        supplyRate: parseFloat(token.supply_rate?.value || 0),
-        borrowRate: parseFloat(token.borrow_rate?.value || 0),
-        totalSupply: parseFloat(token.total_supply?.value || 0),
-        totalBorrow: parseFloat(token.total_borrow?.value || 0),
-        exchangeRate: parseFloat(token.exchange_rate?.value || 0)
-      }));
+      const result = await apiClient.get('/api/lending-rates', {
+        protocols: 'compound'
+      });
 
-      this.setCachedData('compound_tokens', formattedTokens);
-      return formattedTokens;
+      // Transform backend response to match expected format
+      const tokens = this.transformProtocolData(result, 'Compound');
+      this.setCachedData('compound_tokens', tokens);
+      return tokens;
+
     } catch (error) {
       console.error('Error fetching Compound tokens:', error);
       return this.getFallbackCompoundTokens();
     }
   }
 
+  /**
+   * Fetch Compound markets from backend
+   * @returns {Promise<Array>} Compound markets
+   */
   async fetchCompoundMarkets() {
     const cached = this.getCachedData('compound_markets');
     if (cached) return cached;
 
     try {
-      const response = await fetch(`${this.compoundApiBase}/market`);
-      if (!response.ok) {
-        throw new Error(`Compound API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      const markets = data.markets || [];
-      
+      const result = await apiClient.get('/api/lending-rates', {
+        protocols: 'compound'
+      });
+
+      const markets = result.protocols?.compound || result.compound || [];
       this.setCachedData('compound_markets', markets);
       return markets;
+
     } catch (error) {
       console.error('Error fetching Compound markets:', error);
       return [];
     }
   }
 
-  // Aave API methods
+  /**
+   * Fetch Aave reserves from backend
+   * @returns {Promise<Array>} Aave reserves
+   */
   async fetchAaveReserves() {
     const cached = this.getCachedData('aave_reserves');
     if (cached) return cached;
 
     try {
-      const response = await fetch(`${this.aaveApiBase}/data/reserves`);
-      if (!response.ok) {
-        throw new Error(`Aave API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      const reserves = data || [];
-      
-      const formattedReserves = reserves.map(reserve => ({
-        symbol: reserve.symbol,
-        name: reserve.name,
-        address: reserve.reserveAddress,
-        decimals: reserve.decimals,
-        platform: 'Aave',
-        logo: this.getTokenLogo(reserve.symbol),
-        supplyRate: parseFloat(reserve.liquidityRate || 0),
-        borrowRate: parseFloat(reserve.variableBorrowRate || 0),
-        totalSupply: parseFloat(reserve.totalLiquidity || 0),
-        totalBorrow: parseFloat(reserve.totalVariableDebt || 0),
-        utilizationRate: parseFloat(reserve.utilizationRate || 0),
-        availableLiquidity: parseFloat(reserve.availableLiquidity || 0)
-      }));
+      const result = await apiClient.get('/api/lending-rates', {
+        protocols: 'aave'
+      });
 
-      this.setCachedData('aave_reserves', formattedReserves);
-      return formattedReserves;
+      // Transform backend response to match expected format
+      const reserves = this.transformProtocolData(result, 'Aave');
+      this.setCachedData('aave_reserves', reserves);
+      return reserves;
+
     } catch (error) {
       console.error('Error fetching Aave reserves:', error);
       return this.getFallbackAaveReserves();
     }
   }
 
-  // Combined methods
+  /**
+   * Transform backend protocol data to frontend format
+   * @param {Object} result - Backend response
+   * @param {string} platform - Platform name
+   * @returns {Array} Transformed token data
+   */
+  transformProtocolData(result, platform) {
+    const protocolKey = platform.toLowerCase();
+    const protocolData = result.protocols?.[protocolKey] || result[protocolKey] || result.data || [];
+    
+    if (!Array.isArray(protocolData)) {
+      // Handle single token response
+      if (result.token && result.protocols) {
+        return result.protocols.map(p => ({
+          symbol: p.symbol || result.token,
+          name: this.getTokenName(p.symbol || result.token),
+          address: p.address || '',
+          decimals: p.decimals || 18,
+          platform: platform,
+          logo: this.getTokenLogo(p.symbol || result.token),
+          supplyRate: p.supplyAPY || 0,
+          borrowRate: p.borrowAPY || 0,
+          totalSupply: p.totalSupply || 0,
+          totalBorrow: p.totalBorrow || 0,
+          utilizationRate: p.utilizationRate || 0
+        }));
+      }
+      return [];
+    }
+
+    return protocolData.map(token => ({
+      symbol: token.symbol,
+      name: token.name || this.getTokenName(token.symbol),
+      address: token.address || '',
+      decimals: token.decimals || 18,
+      platform: platform,
+      logo: this.getTokenLogo(token.symbol),
+      supplyRate: token.supplyAPY || token.supplyRate || 0,
+      borrowRate: token.borrowAPY || token.borrowRate || 0,
+      totalSupply: token.totalSupply || 0,
+      totalBorrow: token.totalBorrow || 0,
+      utilizationRate: token.utilizationRate || 0,
+      availableLiquidity: token.availableLiquidity || 0
+    }));
+  }
+
+  /**
+   * Get token name from symbol
+   * @param {string} symbol - Token symbol
+   * @returns {string} Token name
+   */
+  getTokenName(symbol) {
+    const names = {
+      'ETH': 'Ethereum',
+      'DAI': 'Dai Stablecoin',
+      'USDC': 'USD Coin',
+      'USDT': 'Tether USD',
+      'WBTC': 'Wrapped Bitcoin',
+      'UNI': 'Uniswap',
+      'LINK': 'Chainlink',
+      'AAVE': 'Aave',
+      'COMP': 'Compound'
+    };
+    return names[symbol] || symbol;
+  }
+
+  /**
+   * Fetch all lending assets from both protocols
+   * @returns {Promise<Object>} Combined lending data
+   */
   async fetchAllLendingAssets() {
     try {
-      const [compoundTokens, aaveReserves] = await Promise.all([
-        this.fetchCompoundTokens(),
-        this.fetchAaveReserves()
-      ]);
+      // Fetch from backend's all-rates endpoint
+      const result = await apiClient.get('/api/lending-rates');
+      
+      const compoundTokens = this.transformProtocolData({ compound: result.compound }, 'Compound');
+      const aaveReserves = this.transformProtocolData({ aave: result.aave }, 'Aave');
 
       return {
-        compound: compoundTokens,
-        aave: aaveReserves,
+        compound: compoundTokens.length > 0 ? compoundTokens : this.getFallbackCompoundTokens(),
+        aave: aaveReserves.length > 0 ? aaveReserves : this.getFallbackAaveReserves(),
         all: [...compoundTokens, ...aaveReserves]
       };
+
     } catch (error) {
       console.error('Error fetching lending assets:', error);
       return {
@@ -151,6 +221,32 @@ class LendingService {
     }
   }
 
+  /**
+   * Fetch lending rates for a specific token
+   * @param {string} token - Token symbol
+   * @param {string[]} protocols - Protocols to query
+   * @returns {Promise<Object>} Token lending rates
+   */
+  async fetchTokenLendingRates(token, protocols = ['aave', 'compound']) {
+    try {
+      const result = await apiClient.get(`/api/lending-rates/${token}`, {
+        protocols: protocols.join(',')
+      });
+
+      return result;
+
+    } catch (error) {
+      console.error(`Error fetching lending rates for ${token}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch user balances (mock implementation - real data from wallet)
+   * @param {string} userAddress - User wallet address
+   * @param {Object} client - Wallet client (for future wallet integration)
+   * @returns {Promise<Object>} User balance data
+   */
   async fetchUserBalances(userAddress, client) {
     if (!userAddress || !client) {
       return {
@@ -162,8 +258,9 @@ class LendingService {
     }
 
     try {
-      // For demo purposes, we'll return mock data
-      // In a real implementation, you would fetch actual balances from Compound and Aave
+      // For now, return mock data as actual user positions
+      // require on-chain reading which should still happen client-side
+      // or through a dedicated indexer service
       const mockBalances = {
         compound: [
           {
@@ -212,103 +309,83 @@ class LendingService {
     }
   }
 
-  // Supply and withdraw methods (mock implementations)
+  /**
+   * Supply tokens to a lending protocol (mock - requires wallet transaction)
+   * @param {string} platform - Platform name
+   * @param {string} tokenAddress - Token contract address
+   * @param {number} amount - Amount to supply
+   * @param {string} userAddress - User wallet address
+   * @param {Object} client - Wallet client
+   * @returns {Promise<Object>} Transaction result
+   */
   async supplyTokens(platform, tokenAddress, amount, userAddress, client) {
-    try {
-      console.log(`Supplying ${amount} of token ${tokenAddress} to ${platform}`);
-      
-      // In a real implementation, you would:
-      // 1. Approve the lending protocol to spend your tokens
-      // 2. Call the supply/deposit function
-      // 3. Wait for transaction confirmation
-      
-      // Mock successful transaction
-      return {
-        success: true,
-        transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
-        platform,
-        tokenAddress,
-        amount,
-        timestamp: new Date()
-      };
-    } catch (error) {
-      console.error('Error supplying tokens:', error);
-      throw error;
-    }
+    console.log(`Supplying ${amount} of token ${tokenAddress} to ${platform}`);
+    
+    // This would need actual wallet transaction signing
+    // which happens client-side, not through backend
+    return {
+      success: true,
+      transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+      platform,
+      tokenAddress,
+      amount,
+      timestamp: new Date()
+    };
   }
 
+  /**
+   * Withdraw tokens from a lending protocol (mock - requires wallet transaction)
+   */
   async withdrawTokens(platform, tokenAddress, amount, userAddress, client) {
-    try {
-      console.log(`Withdrawing ${amount} of token ${tokenAddress} from ${platform}`);
-      
-      // In a real implementation, you would:
-      // 1. Call the withdraw function
-      // 2. Wait for transaction confirmation
-      
-      // Mock successful transaction
-      return {
-        success: true,
-        transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
-        platform,
-        tokenAddress,
-        amount,
-        timestamp: new Date()
-      };
-    } catch (error) {
-      console.error('Error withdrawing tokens:', error);
-      throw error;
-    }
+    console.log(`Withdrawing ${amount} of token ${tokenAddress} from ${platform}`);
+    
+    return {
+      success: true,
+      transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+      platform,
+      tokenAddress,
+      amount,
+      timestamp: new Date()
+    };
   }
 
+  /**
+   * Borrow tokens from a lending protocol (mock - requires wallet transaction)
+   */
   async borrowTokens(platform, tokenAddress, amount, userAddress, client) {
-    try {
-      console.log(`Borrowing ${amount} of token ${tokenAddress} from ${platform}`);
-      
-      // In a real implementation, you would:
-      // 1. Check user's borrowing capacity
-      // 2. Call the borrow function
-      // 3. Wait for transaction confirmation
-      
-      // Mock successful transaction
-      return {
-        success: true,
-        transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
-        platform,
-        tokenAddress,
-        amount,
-        timestamp: new Date()
-      };
-    } catch (error) {
-      console.error('Error borrowing tokens:', error);
-      throw error;
-    }
+    console.log(`Borrowing ${amount} of token ${tokenAddress} from ${platform}`);
+    
+    return {
+      success: true,
+      transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+      platform,
+      tokenAddress,
+      amount,
+      timestamp: new Date()
+    };
   }
 
+  /**
+   * Repay borrowed tokens (mock - requires wallet transaction)
+   */
   async repayTokens(platform, tokenAddress, amount, userAddress, client) {
-    try {
-      console.log(`Repaying ${amount} of token ${tokenAddress} to ${platform}`);
-      
-      // In a real implementation, you would:
-      // 1. Approve the lending protocol to spend your tokens
-      // 2. Call the repay function
-      // 3. Wait for transaction confirmation
-      
-      // Mock successful transaction
-      return {
-        success: true,
-        transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
-        platform,
-        tokenAddress,
-        amount,
-        timestamp: new Date()
-      };
-    } catch (error) {
-      console.error('Error repaying tokens:', error);
-      throw error;
-    }
+    console.log(`Repaying ${amount} of token ${tokenAddress} to ${platform}`);
+    
+    return {
+      success: true,
+      transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+      platform,
+      tokenAddress,
+      amount,
+      timestamp: new Date()
+    };
   }
 
-  // Utility methods
+  /**
+   * Get token logo emoji
+   * @param {string} symbol - Token symbol
+   * @returns {string} Emoji logo
+   */
   getTokenLogo(symbol) {
     const logos = {
       'ETH': '🔷',
@@ -324,15 +401,29 @@ class LendingService {
     return logos[symbol] || '💰';
   }
 
+  /**
+   * Format APY for display
+   * @param {number} rate - Rate as decimal
+   * @returns {string} Formatted percentage
+   */
   formatAPY(rate) {
     return (rate * 100).toFixed(2);
   }
 
+  /**
+   * Format balance for display
+   * @param {number} balance - Balance value
+   * @param {number} decimals - Decimal places
+   * @returns {string} Formatted balance
+   */
   formatBalance(balance, decimals = 18) {
     return parseFloat(balance).toFixed(4);
   }
 
-  // Fallback data methods
+  /**
+   * Get fallback Compound tokens
+   * @returns {Array} Fallback token data
+   */
   getFallbackCompoundTokens() {
     return [
       {
@@ -366,7 +457,7 @@ class LendingService {
       {
         symbol: 'USDC',
         name: 'USD Coin',
-        address: '0xA0b86a33E6441b8C4C8C8C8C8C8C8C8C8C8C8C',
+        address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
         cTokenAddress: '0x39AA39c021dfbaE8faC545936693aC917d5E7563',
         decimals: 6,
         platform: 'Compound',
@@ -380,6 +471,10 @@ class LendingService {
     ];
   }
 
+  /**
+   * Get fallback Aave reserves
+   * @returns {Array} Fallback reserve data
+   */
   getFallbackAaveReserves() {
     return [
       {
@@ -399,7 +494,7 @@ class LendingService {
       {
         symbol: 'USDC',
         name: 'USD Coin',
-        address: '0xA0b86a33E6441b8C4C8C8C8C8C8C8C8C8C8C8C',
+        address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
         decimals: 6,
         platform: 'Aave',
         logo: '💙',
@@ -427,7 +522,10 @@ class LendingService {
     ];
   }
 
-  // Static methods for utility functions
+  /**
+   * Get supported tokens
+   * @returns {Array} Supported token list
+   */
   static getSupportedTokens() {
     return [
       { symbol: 'ETH', name: 'Ethereum', logo: '🔷' },
@@ -442,6 +540,10 @@ class LendingService {
     ];
   }
 
+  /**
+   * Get supported platforms
+   * @returns {Array} Supported platform list
+   */
   static getPlatforms() {
     return [
       { id: 'compound', name: 'Compound', logo: '🏦' },
@@ -450,4 +552,4 @@ class LendingService {
   }
 }
 
-export default LendingService; 
+export default LendingService;

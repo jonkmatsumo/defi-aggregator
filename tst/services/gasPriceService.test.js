@@ -1,75 +1,27 @@
 import GasPriceService from '../../src/services/gasPriceService';
+import apiClient from '../../src/services/apiClient';
 
-// Add BigInt serializer for Jest
-if (typeof BigInt !== 'undefined') {
-  BigInt.prototype.toJSON = function () {
-    return this.toString();
-  };
-}
-
-// Mock viem modules
-jest.mock('viem', () => ({
-  createPublicClient: jest.fn(),
-  http: jest.fn(),
-  formatGwei: jest.fn((value) => `${value} gwei`),
-  getGasPrice: jest.fn()
-}));
-
-jest.mock('viem/chains', () => ({
-  mainnet: { id: 1, name: 'Ethereum' },
-  polygon: { id: 137, name: 'Polygon' },
-  bsc: { id: 56, name: 'BSC' },
-  arbitrum: { id: 42161, name: 'Arbitrum' },
-  optimism: { id: 10, name: 'Optimism' }
+// Mock the apiClient
+jest.mock('../../src/services/apiClient', () => ({
+  get: jest.fn(),
+  __esModule: true,
+  default: {
+    get: jest.fn()
+  }
 }));
 
 describe('GasPriceService', () => {
   let gasPriceService;
-  let mockClient;
-  let originalEnv;
 
   beforeEach(() => {
-    // Save original env
-    originalEnv = process.env;
-    process.env = { ...originalEnv, REACT_APP_ALCHEMY_API_KEY: 'test-key' };
-
-    // Reset all mocks
     jest.clearAllMocks();
-
-    // Create mock client
-    mockClient = {
-      getGasPrice: jest.fn(),
-      getFeeHistory: jest.fn(),
-      chain: { id: 1 }
-    };
-
-    // Mock createPublicClient to return our mock client
-    const { createPublicClient } = require('viem');
-    createPublicClient.mockReturnValue(mockClient);
-
     gasPriceService = new GasPriceService();
-  });
-
-  afterEach(() => {
-    process.env = originalEnv;
   });
 
   describe('constructor', () => {
     it('should initialize with correct properties', () => {
       expect(gasPriceService.cache).toBeInstanceOf(Map);
-      expect(gasPriceService.cacheTimeout).toBe(1800000); // 30 minutes
-      expect(gasPriceService.retryDelays).toBeInstanceOf(Map);
-      expect(gasPriceService.clients).toBeDefined();
-    });
-
-    it('should create clients for all supported networks', () => {
-      const { createPublicClient } = require('viem');
-      expect(createPublicClient).toHaveBeenCalledTimes(5); // 5 networks
-    });
-
-    it('should throw error if REACT_APP_ALCHEMY_API_KEY is missing', () => {
-      process.env.REACT_APP_ALCHEMY_API_KEY = '';
-      expect(() => new GasPriceService()).toThrow('REACT_APP_ALCHEMY_API_KEY is missing');
+      expect(gasPriceService.cacheTimeout).toBe(60000); // 1 minute
     });
   });
 
@@ -119,33 +71,33 @@ describe('GasPriceService', () => {
       const fallbackPrices = GasPriceService.getFallbackGasPrices();
 
       expect(fallbackPrices.ethereum).toEqual({
-        SafeGasPrice: '15 gwei',
-        ProposeGasPrice: '18 gwei',
-        FastGasPrice: '22 gwei'
+        SafeGasPrice: '15',
+        ProposeGasPrice: '18',
+        FastGasPrice: '22'
       });
 
       expect(fallbackPrices.polygon).toEqual({
-        SafeGasPrice: '2 gwei',
-        ProposeGasPrice: '3 gwei',
-        FastGasPrice: '4 gwei'
+        SafeGasPrice: '2',
+        ProposeGasPrice: '3',
+        FastGasPrice: '4'
       });
 
       expect(fallbackPrices.bsc).toEqual({
-        SafeGasPrice: '5 gwei',
-        ProposeGasPrice: '6 gwei',
-        FastGasPrice: '8 gwei'
+        SafeGasPrice: '5',
+        ProposeGasPrice: '6',
+        FastGasPrice: '8'
       });
 
       expect(fallbackPrices.arbitrum).toEqual({
-        SafeGasPrice: '0.5 gwei',
-        ProposeGasPrice: '0.6 gwei',
-        FastGasPrice: '0.8 gwei'
+        SafeGasPrice: '0.5',
+        ProposeGasPrice: '0.6',
+        FastGasPrice: '0.8'
       });
 
       expect(fallbackPrices.optimism).toEqual({
-        SafeGasPrice: '0.1 gwei',
-        ProposeGasPrice: '0.15 gwei',
-        FastGasPrice: '0.2 gwei'
+        SafeGasPrice: '0.1',
+        ProposeGasPrice: '0.15',
+        FastGasPrice: '0.2'
       });
     });
   });
@@ -168,7 +120,7 @@ describe('GasPriceService', () => {
       // Test with expired cache
       gasPriceService.cache.set(networkKey, {
         data: { gasPrice: '20' },
-        timestamp: now - 2000000 // 2 minutes ago (older than 30 min timeout)
+        timestamp: now - 120000 // 2 minutes ago (older than 1 min timeout)
       });
       expect(gasPriceService.isCacheValid(networkKey)).toBe(false);
     });
@@ -221,57 +173,10 @@ describe('GasPriceService', () => {
     });
   });
 
-  describe('delay', () => {
-    it('should delay for specified milliseconds', async () => {
-      const start = Date.now();
-      await gasPriceService.delay(100);
-      const end = Date.now();
-
-      expect(end - start).toBeGreaterThanOrEqual(95); // Allow for small timing variations
-    });
-  });
-
-  describe('retry delay management', () => {
-    it('should get retry delay', () => {
-      const networkKey = 'ethereum';
-
-      // Test initial delay
-      expect(gasPriceService.getRetryDelay(networkKey)).toBe(10000);
-
-      // Test exponential backoff
-      gasPriceService.retryDelays.set(networkKey, 2000);
-      expect(gasPriceService.getRetryDelay(networkKey)).toBe(2000);
-    });
-
-    it('should reset retry delay', () => {
-      const networkKey = 'ethereum';
-      gasPriceService.retryDelays.set(networkKey, 5000);
-
-      gasPriceService.resetRetryDelay(networkKey);
-
-      expect(gasPriceService.retryDelays.has(networkKey)).toBe(false);
-    });
-  });
-
   describe('fetchGasPrice', () => {
-    beforeEach(() => {
-      // Ensure mock client is properly set up for each test
-      gasPriceService.clients.ethereum = mockClient;
-      gasPriceService.clients.polygon = mockClient;
-      gasPriceService.clients.bsc = mockClient;
-      gasPriceService.clients.arbitrum = mockClient;
-      gasPriceService.clients.optimism = mockClient;
-      
-      // Mock the delay function to prevent actual delays in tests
-      jest.spyOn(gasPriceService, 'delay').mockResolvedValue();
-      
-      // Clear retry delays to prevent rate limit waits
-      gasPriceService.retryDelays.clear();
-    });
-
     it('should return cached data if valid', async () => {
       const networkKey = 'ethereum';
-      const cachedData = { gasPrice: '20' };
+      const cachedData = { SafeGasPrice: '20', ProposeGasPrice: '25', FastGasPrice: '30' };
 
       gasPriceService.cache.set(networkKey, {
         data: cachedData,
@@ -280,166 +185,166 @@ describe('GasPriceService', () => {
 
       const result = await gasPriceService.fetchGasPrice(networkKey);
       expect(result).toEqual(cachedData);
+      expect(apiClient.get).not.toHaveBeenCalled();
     });
 
-    it('should fetch new data if cache is invalid', async () => {
+    it('should fetch from backend API when cache is invalid', async () => {
       const networkKey = 'ethereum';
-      const mockGasPrice = '20000000000'; // 20 gwei
+      const mockResponse = {
+        gasPrices: {
+          slow: { gwei: 15 },
+          standard: { gwei: 20 },
+          fast: { gwei: 25 }
+        },
+        source: 'etherscan'
+      };
 
-      mockClient.getGasPrice.mockResolvedValue(mockGasPrice);
-      mockClient.getFeeHistory.mockResolvedValue({
-        reward: [['15000000000', '20000000000', '25000000000']]
-      });
+      apiClient.get.mockResolvedValueOnce(mockResponse);
 
       const result = await gasPriceService.fetchGasPrice(networkKey);
 
-      expect(mockClient.getGasPrice).toHaveBeenCalled();
+      expect(apiClient.get).toHaveBeenCalledWith('/api/gas-prices/ethereum');
       expect(result).toEqual({
-        SafeGasPrice: '15000000000 gwei',
-        ProposeGasPrice: '20000000000 gwei',
-        FastGasPrice: '25000000000 gwei',
-        currentGasPrice: '20000000000 gwei'
+        SafeGasPrice: '15',
+        ProposeGasPrice: '20',
+        FastGasPrice: '25',
+        currentGasPrice: '20',
+        source: 'etherscan'
       });
     });
 
-    it('should handle client errors and return fallback data', async () => {
+    it('should return fallback data on API error', async () => {
       const networkKey = 'ethereum';
-
-      mockClient.getGasPrice.mockRejectedValue(new Error('Network error'));
-      mockClient.getFeeHistory.mockRejectedValue(new Error('Network error'));
+      
+      apiClient.get.mockRejectedValueOnce(new Error('Network error'));
 
       const result = await gasPriceService.fetchGasPrice(networkKey);
 
       expect(result).toEqual({
-        SafeGasPrice: '15 gwei',
-        ProposeGasPrice: '18 gwei',
-        FastGasPrice: '22 gwei'
-      });
-    });
-
-    it('should implement exponential backoff on retries', async () => {
-      const networkKey = 'ethereum';
-
-      mockClient.getGasPrice.mockRejectedValue(new Error('Network error'));
-      mockClient.getFeeHistory.mockRejectedValue(new Error('Network error'));
-
-      const result = await gasPriceService.fetchGasPrice(networkKey);
-
-      expect(mockClient.getGasPrice).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({
-        SafeGasPrice: '15 gwei',
-        ProposeGasPrice: '18 gwei',
-        FastGasPrice: '22 gwei'
+        SafeGasPrice: '15',
+        ProposeGasPrice: '18',
+        FastGasPrice: '22',
+        source: 'fallback'
       });
     });
   });
 
   describe('static fetchConnectedWalletGasPrice', () => {
-    it('should fetch gas price for connected wallet', async () => {
-      const mockClient = {
-        getGasPrice: jest.fn().mockResolvedValue('20000000000'),
-        getFeeHistory: jest.fn().mockResolvedValue({
-          reward: [['15000000000', '20000000000', '25000000000']]
-        }),
-        chain: { id: 1 }
+    it('should fetch gas price for connected wallet via backend', async () => {
+      const mockClient = { chain: { id: 1 } };
+      const mockResponse = {
+        gasPrices: {
+          slow: { gwei: 15 },
+          standard: { gwei: 20 },
+          fast: { gwei: 25 }
+        }
       };
+
+      apiClient.get.mockResolvedValueOnce(mockResponse);
 
       const result = await GasPriceService.fetchConnectedWalletGasPrice(mockClient);
 
-      expect(mockClient.getGasPrice).toHaveBeenCalled();
+      expect(apiClient.get).toHaveBeenCalledWith('/api/gas-prices/ethereum');
       expect(result).toEqual({
-        SafeGasPrice: '15000000000 gwei',
-        ProposeGasPrice: '20000000000 gwei',
-        FastGasPrice: '25000000000 gwei',
-        currentGasPrice: '20000000000 gwei'
+        SafeGasPrice: '15',
+        ProposeGasPrice: '20',
+        FastGasPrice: '25',
+        currentGasPrice: '20'
       });
     });
 
-    it('should handle client errors', async () => {
-      const mockClient = {
-        getGasPrice: jest.fn().mockRejectedValue(new Error('Network error')),
-        getFeeHistory: jest.fn().mockRejectedValue(new Error('Network error')),
-        chain: { id: 1 }
+    it('should map chain ID to correct network', async () => {
+      const mockClient = { chain: { id: 137 } }; // Polygon
+      const mockResponse = {
+        gasPrices: {
+          slow: { gwei: 2 },
+          standard: { gwei: 3 },
+          fast: { gwei: 4 }
+        }
       };
 
-      await expect(GasPriceService.fetchConnectedWalletGasPrice(mockClient)).rejects.toThrow('Network error');
+      apiClient.get.mockResolvedValueOnce(mockResponse);
+
+      await GasPriceService.fetchConnectedWalletGasPrice(mockClient);
+
+      expect(apiClient.get).toHaveBeenCalledWith('/api/gas-prices/polygon');
+    });
+
+    it('should handle API errors', async () => {
+      const mockClient = { chain: { id: 1 } };
+      
+      apiClient.get.mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(GasPriceService.fetchConnectedWalletGasPrice(mockClient))
+        .rejects.toThrow('Network error');
     });
   });
 
   describe('fetchMultipleGasPrices', () => {
-    beforeEach(() => {
-      // Ensure mock client is properly set up for each test
-      gasPriceService.clients.ethereum = mockClient;
-      gasPriceService.clients.polygon = mockClient;
-      gasPriceService.clients.bsc = mockClient;
-      gasPriceService.clients.arbitrum = mockClient;
-      gasPriceService.clients.optimism = mockClient;
-      
-      // Mock the delay function to prevent actual delays in tests
-      jest.spyOn(gasPriceService, 'delay').mockResolvedValue();
-      
-      // Clear retry delays to prevent rate limit waits
-      gasPriceService.retryDelays.clear();
-    });
-
     it('should fetch gas prices for multiple networks', async () => {
       const networkKeys = ['ethereum', 'polygon'];
-      const mockGasPrices = ['20000000000', '3000000000'];
+      const mockResponse = {
+        networks: {
+          ethereum: {
+            gasPrices: {
+              slow: { gwei: 15 },
+              standard: { gwei: 20 },
+              fast: { gwei: 25 }
+            },
+            source: 'etherscan'
+          },
+          polygon: {
+            gasPrices: {
+              slow: { gwei: 2 },
+              standard: { gwei: 3 },
+              fast: { gwei: 4 }
+            },
+            source: 'polygon'
+          }
+        }
+      };
 
-      mockClient.getGasPrice
-        .mockResolvedValueOnce(mockGasPrices[0])
-        .mockResolvedValueOnce(mockGasPrices[1]);
-      mockClient.getFeeHistory
-        .mockResolvedValueOnce({
-          reward: [['15000000000', '20000000000', '25000000000']]
-        })
-        .mockResolvedValueOnce({
-          reward: [['2000000000', '3000000000', '4000000000']]
-        });
+      apiClient.get.mockResolvedValueOnce(mockResponse);
 
       const results = await gasPriceService.fetchMultipleGasPrices(networkKeys);
 
-      expect(results).toEqual({
-        ethereum: {
-          SafeGasPrice: '15000000000 gwei',
-          ProposeGasPrice: '20000000000 gwei',
-          FastGasPrice: '25000000000 gwei',
-          currentGasPrice: '20000000000 gwei'
-        },
-        polygon: {
-          SafeGasPrice: '2000000000 gwei',
-          ProposeGasPrice: '3000000000 gwei',
-          FastGasPrice: '4000000000 gwei',
-          currentGasPrice: '3000000000 gwei'
-        }
+      expect(apiClient.get).toHaveBeenCalledWith('/api/gas-prices', {
+        networks: 'ethereum,polygon'
+      });
+      expect(results.ethereum).toEqual({
+        SafeGasPrice: '15',
+        ProposeGasPrice: '20',
+        FastGasPrice: '25',
+        currentGasPrice: '20',
+        source: 'etherscan'
+      });
+      expect(results.polygon).toEqual({
+        SafeGasPrice: '2',
+        ProposeGasPrice: '3',
+        FastGasPrice: '4',
+        currentGasPrice: '3',
+        source: 'polygon'
       });
     });
 
-    it('should handle errors for individual networks', async () => {
+    it('should return fallback data on API error', async () => {
       const networkKeys = ['ethereum', 'polygon'];
-
-      mockClient.getGasPrice
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockResolvedValueOnce('3000000000');
-      mockClient.getFeeHistory
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockResolvedValueOnce({
-          reward: [['2000000000', '3000000000', '4000000000']]
-        });
+      
+      apiClient.get.mockRejectedValueOnce(new Error('Network error'));
 
       const results = await gasPriceService.fetchMultipleGasPrices(networkKeys);
 
-      expect(results).toEqual({
-        ethereum: {
-          SafeGasPrice: '15 gwei',
-          ProposeGasPrice: '18 gwei',
-          FastGasPrice: '22 gwei'
-        },
-        polygon: {
-          SafeGasPrice: '2 gwei',
-          ProposeGasPrice: '3 gwei',
-          FastGasPrice: '4 gwei'
-        }
+      expect(results.ethereum).toEqual({
+        SafeGasPrice: '15',
+        ProposeGasPrice: '18',
+        FastGasPrice: '22',
+        source: 'fallback'
+      });
+      expect(results.polygon).toEqual({
+        SafeGasPrice: '2',
+        ProposeGasPrice: '3',
+        FastGasPrice: '4',
+        source: 'fallback'
       });
     });
   });
@@ -447,56 +352,45 @@ describe('GasPriceService', () => {
   describe('static getDisplayGasPrice', () => {
     it('should format gas price for display', () => {
       const gasData = { SafeGasPrice: '20', ProposeGasPrice: '25', FastGasPrice: '30' };
-
-      const result = GasPriceService.getDisplayGasPrice(gasData);
-
-      expect(result).toBe('20 gwei');
+      expect(GasPriceService.getDisplayGasPrice(gasData)).toBe('20 gwei');
     });
 
-    it('should handle string gas prices', () => {
-      const gasData = { SafeGasPrice: '15' };
-
-      const result = GasPriceService.getDisplayGasPrice(gasData);
-
-      expect(result).toBe('15 gwei');
+    it('should return N/A for null data', () => {
+      expect(GasPriceService.getDisplayGasPrice(null)).toBe('N/A');
     });
 
-    it('should handle fallback data', () => {
-      const gasData = { SafeGasPrice: '15' };
-
-      const result = GasPriceService.getDisplayGasPrice(gasData);
-
-      expect(result).toBe('15 gwei');
+    it('should fallback to ProposeGasPrice if SafeGasPrice is missing', () => {
+      const gasData = { ProposeGasPrice: '25', FastGasPrice: '30' };
+      expect(GasPriceService.getDisplayGasPrice(gasData)).toBe('25 gwei');
     });
   });
 
   describe('static getNetworkStatus', () => {
-    it('should return network status based on gas price', () => {
-      // Test with valid gas data
-      const validGasData = { SafeGasPrice: '15' };
-      expect(GasPriceService.getNetworkStatus(validGasData)).toBe('online');
+    it('should return online for valid gas data', () => {
+      const gasData = { SafeGasPrice: '15' };
+      expect(GasPriceService.getNetworkStatus(gasData)).toBe('online');
+    });
 
-      // Test with invalid gas data
-      const invalidGasData = { gasPrice: '15' };
-      expect(GasPriceService.getNetworkStatus(invalidGasData)).toBe('offline');
-
-      // Test with null gas data
+    it('should return offline for null gas data', () => {
       expect(GasPriceService.getNetworkStatus(null)).toBe('offline');
+    });
+
+    it('should return offline for missing SafeGasPrice', () => {
+      const gasData = { ProposeGasPrice: '15' };
+      expect(GasPriceService.getNetworkStatus(gasData)).toBe('offline');
     });
   });
 
   describe('static getNetworkInfo', () => {
     it('should return network info for valid chain ID', () => {
-      const ethereumInfo = GasPriceService.getNetworkInfo(1);
-      expect(ethereumInfo).toEqual({
+      expect(GasPriceService.getNetworkInfo(1)).toEqual({
         name: 'Ethereum',
         color: '#627eea',
         chainId: 1,
         nativeCurrency: { symbol: 'ETH', decimals: 18 }
       });
 
-      const polygonInfo = GasPriceService.getNetworkInfo(137);
-      expect(polygonInfo).toEqual({
+      expect(GasPriceService.getNetworkInfo(137)).toEqual({
         name: 'Polygon',
         color: '#8247e5',
         chainId: 137,
@@ -504,9 +398,8 @@ describe('GasPriceService', () => {
       });
     });
 
-    it('should return default network info for invalid chain ID', () => {
-      const result = GasPriceService.getNetworkInfo(999);
-      expect(result).toEqual({
+    it('should return default info for unknown chain ID', () => {
+      expect(GasPriceService.getNetworkInfo(999)).toEqual({
         name: 'Unknown',
         color: '#666666',
         chainId: 999,
@@ -514,4 +407,4 @@ describe('GasPriceService', () => {
       });
     });
   });
-}); 
+});

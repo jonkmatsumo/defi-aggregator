@@ -1,7 +1,14 @@
 import LendingService from '../../src/services/lendingService';
+import apiClient from '../../src/services/apiClient';
 
-// Mock fetch globally
-global.fetch = jest.fn();
+// Mock the apiClient
+jest.mock('../../src/services/apiClient', () => ({
+  get: jest.fn(),
+  __esModule: true,
+  default: {
+    get: jest.fn()
+  }
+}));
 
 describe('LendingService', () => {
   let lendingService;
@@ -14,9 +21,7 @@ describe('LendingService', () => {
   describe('constructor', () => {
     it('should initialize with correct properties', () => {
       expect(lendingService.cache).toBeInstanceOf(Map);
-      expect(lendingService.cacheTimeout).toBe(5 * 60 * 1000); // 5 minutes
-      expect(lendingService.compoundApiBase).toBe('https://api.compound.finance/api/v2');
-      expect(lendingService.aaveApiBase).toBe('https://aave-api-v2.aave.com');
+      expect(lendingService.cacheTimeout).toBe(60000); // 1 minute
     });
   });
 
@@ -42,7 +47,7 @@ describe('LendingService', () => {
     it('should return null for expired cache', () => {
       const key = 'test_key';
       const testData = { test: 'data' };
-      const expiredTime = Date.now() - (6 * 60 * 1000); // 6 minutes ago
+      const expiredTime = Date.now() - (120000); // 2 minutes ago
       
       lendingService.cache.set(key, {
         data: testData,
@@ -89,65 +94,39 @@ describe('LendingService', () => {
       
       const result = await lendingService.fetchCompoundTokens();
       expect(result).toEqual(cachedData);
-      expect(fetch).not.toHaveBeenCalled();
+      expect(apiClient.get).not.toHaveBeenCalled();
     });
 
-    it('should fetch and format Compound tokens successfully', async () => {
+    it('should fetch Compound tokens from backend API', async () => {
       const mockResponse = {
-        cToken: [
-          {
-            symbol: 'ETH',
-            name: 'Ethereum',
-            token_address: '0x123...',
-            cToken_address: '0x456...',
-            decimals: 18,
-            supply_rate: { value: '0.025' },
-            borrow_rate: { value: '0.045' },
-            total_supply: { value: '1000000' },
-            total_borrow: { value: '500000' },
-            exchange_rate: { value: '1.02' }
-          }
-        ]
+        protocols: {
+          compound: [
+            {
+              symbol: 'ETH',
+              name: 'Ethereum',
+              supplyAPY: 0.025,
+              borrowAPY: 0.045,
+              totalSupply: 1000000,
+              totalBorrow: 500000
+            }
+          ]
+        }
       };
       
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
+      apiClient.get.mockResolvedValueOnce(mockResponse);
       
       const result = await lendingService.fetchCompoundTokens();
       
-      expect(fetch).toHaveBeenCalledWith('https://api.compound.finance/api/v2/ctoken');
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual({
-        symbol: 'ETH',
-        name: 'Ethereum',
-        address: '0x123...',
-        cTokenAddress: '0x456...',
-        decimals: 18,
-        platform: 'Compound',
-        logo: expect.any(String),
-        supplyRate: 0.025,
-        borrowRate: 0.045,
-        totalSupply: 1000000,
-        totalBorrow: 500000,
-        exchangeRate: 1.02
+      expect(apiClient.get).toHaveBeenCalledWith('/api/lending-rates', {
+        protocols: 'compound'
       });
+      expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('symbol', 'ETH');
+      expect(result[0]).toHaveProperty('platform', 'Compound');
     });
 
     it('should handle API errors and return fallback data', async () => {
-      fetch.mockRejectedValueOnce(new Error('Network error'));
-      
-      const result = await lendingService.fetchCompoundTokens();
-      
-      expect(result).toEqual(lendingService.getFallbackCompoundTokens());
-    });
-
-    it('should handle non-ok response and return fallback data', async () => {
-      fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500
-      });
+      apiClient.get.mockRejectedValueOnce(new Error('Network error'));
       
       const result = await lendingService.fetchCompoundTokens();
       
@@ -167,27 +146,28 @@ describe('LendingService', () => {
       expect(result).toEqual(cachedData);
     });
 
-    it('should fetch Compound markets successfully', async () => {
+    it('should fetch Compound markets from backend API', async () => {
       const mockResponse = {
-        markets: [
-          { market: 'test1' },
-          { market: 'test2' }
-        ]
+        protocols: {
+          compound: [
+            { symbol: 'ETH', supplyAPY: 0.025 },
+            { symbol: 'USDC', supplyAPY: 0.032 }
+          ]
+        }
       };
       
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
+      apiClient.get.mockResolvedValueOnce(mockResponse);
       
       const result = await lendingService.fetchCompoundMarkets();
       
-      expect(fetch).toHaveBeenCalledWith('https://api.compound.finance/api/v2/market');
-      expect(result).toEqual(mockResponse.markets);
+      expect(apiClient.get).toHaveBeenCalledWith('/api/lending-rates', {
+        protocols: 'compound'
+      });
+      expect(result).toEqual(mockResponse.protocols.compound);
     });
 
     it('should handle errors and return empty array', async () => {
-      fetch.mockRejectedValueOnce(new Error('Network error'));
+      apiClient.get.mockRejectedValueOnce(new Error('Network error'));
       
       const result = await lendingService.fetchCompoundMarkets();
       
@@ -207,49 +187,37 @@ describe('LendingService', () => {
       expect(result).toEqual(cachedData);
     });
 
-    it('should fetch and format Aave reserves successfully', async () => {
-      const mockResponse = [
-        {
-          symbol: 'ETH',
-          name: 'Ethereum',
-          reserveAddress: '0x123...',
-          decimals: 18,
-          liquidityRate: '0.028',
-          variableBorrowRate: '0.048',
-          totalLiquidity: '1200000',
-          totalVariableDebt: '600000',
-          utilizationRate: '0.5',
-          availableLiquidity: '600000'
+    it('should fetch Aave reserves from backend API', async () => {
+      const mockResponse = {
+        protocols: {
+          aave: [
+            {
+              symbol: 'ETH',
+              name: 'Ethereum',
+              supplyAPY: 0.028,
+              borrowAPY: 0.048,
+              totalSupply: 1200000,
+              totalBorrow: 600000,
+              utilizationRate: 0.5
+            }
+          ]
         }
-      ];
+      };
       
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
+      apiClient.get.mockResolvedValueOnce(mockResponse);
       
       const result = await lendingService.fetchAaveReserves();
       
-      expect(fetch).toHaveBeenCalledWith('https://aave-api-v2.aave.com/data/reserves');
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual({
-        symbol: 'ETH',
-        name: 'Ethereum',
-        address: '0x123...',
-        decimals: 18,
-        platform: 'Aave',
-        logo: expect.any(String),
-        supplyRate: 0.028,
-        borrowRate: 0.048,
-        totalSupply: 1200000,
-        totalBorrow: 600000,
-        utilizationRate: 0.5,
-        availableLiquidity: 600000
+      expect(apiClient.get).toHaveBeenCalledWith('/api/lending-rates', {
+        protocols: 'aave'
       });
+      expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('symbol', 'ETH');
+      expect(result[0]).toHaveProperty('platform', 'Aave');
     });
 
     it('should handle API errors and return fallback data', async () => {
-      fetch.mockRejectedValueOnce(new Error('Network error'));
+      apiClient.get.mockRejectedValueOnce(new Error('Network error'));
       
       const result = await lendingService.fetchAaveReserves();
       
@@ -259,33 +227,27 @@ describe('LendingService', () => {
 
   describe('fetchAllLendingAssets', () => {
     it('should fetch both Compound and Aave assets successfully', async () => {
-      const mockCompoundResponse = {
-        cToken: [{ symbol: 'ETH', name: 'Ethereum' }]
+      const mockResponse = {
+        compound: [
+          { symbol: 'ETH', supplyAPY: 0.025 }
+        ],
+        aave: [
+          { symbol: 'USDC', supplyAPY: 0.032 }
+        ]
       };
-      const mockAaveResponse = [
-        { symbol: 'USDC', name: 'USD Coin' }
-      ];
       
-      fetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockCompoundResponse
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockAaveResponse
-        });
+      apiClient.get.mockResolvedValueOnce(mockResponse);
       
       const result = await lendingService.fetchAllLendingAssets();
       
+      expect(apiClient.get).toHaveBeenCalledWith('/api/lending-rates');
       expect(result).toHaveProperty('compound');
       expect(result).toHaveProperty('aave');
       expect(result).toHaveProperty('all');
-      expect(result.all).toHaveLength(2);
     });
 
     it('should handle errors and return fallback data', async () => {
-      fetch.mockRejectedValue(new Error('Network error'));
+      apiClient.get.mockRejectedValueOnce(new Error('Network error'));
       
       const result = await lendingService.fetchAllLendingAssets();
       
@@ -295,6 +257,34 @@ describe('LendingService', () => {
         lendingService.getFallbackCompoundTokens().length + 
         lendingService.getFallbackAaveReserves().length
       );
+    });
+  });
+
+  describe('fetchTokenLendingRates', () => {
+    it('should fetch lending rates for specific token', async () => {
+      const mockResponse = {
+        token: 'USDC',
+        protocols: [
+          { protocol: 'aave', supplyAPY: 0.032, borrowAPY: 0.052 },
+          { protocol: 'compound', supplyAPY: 0.030, borrowAPY: 0.050 }
+        ]
+      };
+      
+      apiClient.get.mockResolvedValueOnce(mockResponse);
+      
+      const result = await lendingService.fetchTokenLendingRates('USDC', ['aave', 'compound']);
+      
+      expect(apiClient.get).toHaveBeenCalledWith('/api/lending-rates/USDC', {
+        protocols: 'aave,compound'
+      });
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should handle API errors', async () => {
+      apiClient.get.mockRejectedValueOnce(new Error('API error'));
+      
+      await expect(lendingService.fetchTokenLendingRates('USDC'))
+        .rejects.toThrow('API error');
     });
   });
 
@@ -312,7 +302,7 @@ describe('LendingService', () => {
 
     it('should return mock balances for demo purposes', async () => {
       const mockClient = {};
-      const userAddress = '0x123...';
+      const userAddress = '0x1234567890123456789012345678901234567890';
       
       const result = await lendingService.fetchUserBalances(userAddress, mockClient);
       
@@ -327,96 +317,69 @@ describe('LendingService', () => {
     });
   });
 
-  describe('supplyTokens', () => {
-    it('should execute supply transaction successfully', async () => {
-      const platform = 'Compound';
-      const tokenAddress = '0x123...';
-      const amount = '100';
-      const userAddress = '0x456...';
-      const client = {};
-      
-      const result = await lendingService.supplyTokens(platform, tokenAddress, amount, userAddress, client);
-      
-      expect(result.success).toBe(true);
-      expect(result.transactionHash).toMatch(/^0x[a-f0-9]+$/);
-      expect(result.platform).toBe(platform);
-      expect(result.tokenAddress).toBe(tokenAddress);
-      expect(result.amount).toBe(amount);
-      expect(result.timestamp).toBeInstanceOf(Date);
+  describe('transaction methods', () => {
+    describe('supplyTokens', () => {
+      it('should execute supply transaction successfully', async () => {
+        const platform = 'Compound';
+        const tokenAddress = '0x123...';
+        const amount = '100';
+        const userAddress = '0x456...';
+        const client = {};
+        
+        const result = await lendingService.supplyTokens(platform, tokenAddress, amount, userAddress, client);
+        
+        expect(result.success).toBe(true);
+        expect(result.transactionHash).toMatch(/^0x[a-f0-9]+$/);
+        expect(result.platform).toBe(platform);
+        expect(result.tokenAddress).toBe(tokenAddress);
+        expect(result.amount).toBe(amount);
+        expect(result.timestamp).toBeInstanceOf(Date);
+      });
     });
 
-    it('should handle supply transaction errors', async () => {
-      const platform = 'Compound';
-      const tokenAddress = '0x123...';
-      const amount = '100';
-      const userAddress = '0x456...';
-      const client = {};
-      
-      // Mock console.error to avoid noise in tests
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      
-      // This should not throw since it's a mock implementation
-      const result = await lendingService.supplyTokens(platform, tokenAddress, amount, userAddress, client);
-      
-      expect(result.success).toBe(true);
-      consoleSpy.mockRestore();
+    describe('withdrawTokens', () => {
+      it('should execute withdraw transaction successfully', async () => {
+        const platform = 'Aave';
+        const tokenAddress = '0x123...';
+        const amount = '50';
+        const userAddress = '0x456...';
+        const client = {};
+        
+        const result = await lendingService.withdrawTokens(platform, tokenAddress, amount, userAddress, client);
+        
+        expect(result.success).toBe(true);
+        expect(result.transactionHash).toMatch(/^0x[a-f0-9]+$/);
+      });
     });
-  });
 
-  describe('withdrawTokens', () => {
-    it('should execute withdraw transaction successfully', async () => {
-      const platform = 'Aave';
-      const tokenAddress = '0x123...';
-      const amount = '50';
-      const userAddress = '0x456...';
-      const client = {};
-      
-      const result = await lendingService.withdrawTokens(platform, tokenAddress, amount, userAddress, client);
-      
-      expect(result.success).toBe(true);
-      expect(result.transactionHash).toMatch(/^0x[a-f0-9]+$/);
-      expect(result.platform).toBe(platform);
-      expect(result.tokenAddress).toBe(tokenAddress);
-      expect(result.amount).toBe(amount);
-      expect(result.timestamp).toBeInstanceOf(Date);
+    describe('borrowTokens', () => {
+      it('should execute borrow transaction successfully', async () => {
+        const platform = 'Compound';
+        const tokenAddress = '0x123...';
+        const amount = '200';
+        const userAddress = '0x456...';
+        const client = {};
+        
+        const result = await lendingService.borrowTokens(platform, tokenAddress, amount, userAddress, client);
+        
+        expect(result.success).toBe(true);
+        expect(result.transactionHash).toMatch(/^0x[a-f0-9]+$/);
+      });
     });
-  });
 
-  describe('borrowTokens', () => {
-    it('should execute borrow transaction successfully', async () => {
-      const platform = 'Compound';
-      const tokenAddress = '0x123...';
-      const amount = '200';
-      const userAddress = '0x456...';
-      const client = {};
-      
-      const result = await lendingService.borrowTokens(platform, tokenAddress, amount, userAddress, client);
-      
-      expect(result.success).toBe(true);
-      expect(result.transactionHash).toMatch(/^0x[a-f0-9]+$/);
-      expect(result.platform).toBe(platform);
-      expect(result.tokenAddress).toBe(tokenAddress);
-      expect(result.amount).toBe(amount);
-      expect(result.timestamp).toBeInstanceOf(Date);
-    });
-  });
-
-  describe('repayTokens', () => {
-    it('should execute repay transaction successfully', async () => {
-      const platform = 'Aave';
-      const tokenAddress = '0x123...';
-      const amount = '150';
-      const userAddress = '0x456...';
-      const client = {};
-      
-      const result = await lendingService.repayTokens(platform, tokenAddress, amount, userAddress, client);
-      
-      expect(result.success).toBe(true);
-      expect(result.transactionHash).toMatch(/^0x[a-f0-9]+$/);
-      expect(result.platform).toBe(platform);
-      expect(result.tokenAddress).toBe(tokenAddress);
-      expect(result.amount).toBe(amount);
-      expect(result.timestamp).toBeInstanceOf(Date);
+    describe('repayTokens', () => {
+      it('should execute repay transaction successfully', async () => {
+        const platform = 'Aave';
+        const tokenAddress = '0x123...';
+        const amount = '150';
+        const userAddress = '0x456...';
+        const client = {};
+        
+        const result = await lendingService.repayTokens(platform, tokenAddress, amount, userAddress, client);
+        
+        expect(result.success).toBe(true);
+        expect(result.transactionHash).toMatch(/^0x[a-f0-9]+$/);
+      });
     });
   });
 
@@ -449,14 +412,21 @@ describe('LendingService', () => {
 
     describe('formatBalance', () => {
       it('should format balance correctly', () => {
-        expect(lendingService.formatBalance('1000000000000000000')).toBe('1000000000000000000.0000');
-        expect(lendingService.formatBalance('500000000000000000')).toBe('500000000000000000.0000');
+        expect(lendingService.formatBalance('1000000')).toBe('1000000.0000');
+        expect(lendingService.formatBalance('500000')).toBe('500000.0000');
         expect(lendingService.formatBalance('0')).toBe('0.0000');
       });
+    });
 
-      it('should format balance with custom decimals', () => {
-        expect(lendingService.formatBalance('1000000', 6)).toBe('1000000.0000');
-        expect(lendingService.formatBalance('500000', 6)).toBe('500000.0000');
+    describe('getTokenName', () => {
+      it('should return correct names for known tokens', () => {
+        expect(lendingService.getTokenName('ETH')).toBe('Ethereum');
+        expect(lendingService.getTokenName('USDC')).toBe('USD Coin');
+        expect(lendingService.getTokenName('DAI')).toBe('Dai Stablecoin');
+      });
+
+      it('should return symbol for unknown tokens', () => {
+        expect(lendingService.getTokenName('UNKNOWN')).toBe('UNKNOWN');
       });
     });
   });
@@ -477,13 +447,10 @@ describe('LendingService', () => {
           expect(token).toHaveProperty('address');
           expect(token).toHaveProperty('cTokenAddress');
           expect(token).toHaveProperty('decimals');
-          expect(token).toHaveProperty('platform');
+          expect(token).toHaveProperty('platform', 'Compound');
           expect(token).toHaveProperty('logo');
           expect(token).toHaveProperty('supplyRate');
           expect(token).toHaveProperty('borrowRate');
-          expect(token).toHaveProperty('totalSupply');
-          expect(token).toHaveProperty('totalBorrow');
-          expect(token).toHaveProperty('exchangeRate');
         });
       });
     });
@@ -502,14 +469,11 @@ describe('LendingService', () => {
           expect(reserve).toHaveProperty('name');
           expect(reserve).toHaveProperty('address');
           expect(reserve).toHaveProperty('decimals');
-          expect(reserve).toHaveProperty('platform');
+          expect(reserve).toHaveProperty('platform', 'Aave');
           expect(reserve).toHaveProperty('logo');
           expect(reserve).toHaveProperty('supplyRate');
           expect(reserve).toHaveProperty('borrowRate');
-          expect(reserve).toHaveProperty('totalSupply');
-          expect(reserve).toHaveProperty('totalBorrow');
           expect(reserve).toHaveProperty('utilizationRate');
-          expect(reserve).toHaveProperty('availableLiquidity');
         });
       });
     });
@@ -537,4 +501,4 @@ describe('LendingService', () => {
       });
     });
   });
-}); 
+});

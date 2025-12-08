@@ -1,45 +1,22 @@
-// Viem Gas Price Service for fetching real-time gas prices using viem and wagmi
+/**
+ * Gas Price Service - Frontend Client
+ * 
+ * Fetches gas prices from backend API instead of directly from blockchain RPCs.
+ * This eliminates CORS issues and centralizes rate limiting/caching on the server.
+ */
 
-import { createPublicClient, http, formatGwei } from 'viem';
-import { mainnet, polygon, bsc, arbitrum, optimism } from 'viem/chains';
+import apiClient from './apiClient';
 
 class GasPriceService {
   constructor() {
     this.cache = new Map();
-    this.cacheTimeout = 1800000; // 30 minutes (increased from 10 minutes)
-    this.retryDelays = new Map(); // Track retry delays for exponential backoff
-
-    const alchemyKey = process.env.REACT_APP_ALCHEMY_API_KEY;
-    if (!alchemyKey) {
-      throw new Error('REACT_APP_ALCHEMY_API_KEY is missing. Please add it to your .env file.');
-    }
-
-    // Create public clients for each supported network
-    this.clients = {
-      ethereum: createPublicClient({
-        chain: mainnet,
-        transport: http(`https://eth-mainnet.g.alchemy.com/v2/${alchemyKey}`)
-      }),
-      polygon: createPublicClient({
-        chain: polygon,
-        transport: http('https://polygon-rpc.com')
-      }),
-      bsc: createPublicClient({
-        chain: bsc,
-        transport: http('https://bsc-dataseed.binance.org')
-      }),
-      arbitrum: createPublicClient({
-        chain: arbitrum,
-        transport: http('https://arb1.arbitrum.io/rpc')
-      }),
-      optimism: createPublicClient({
-        chain: optimism,
-        transport: http('https://mainnet.optimism.io')
-      })
-    };
+    this.cacheTimeout = 60000; // 1 minute local cache (backend has its own cache)
   }
 
-  // Supported networks configuration
+  /**
+   * Get supported networks configuration
+   * @returns {Object} Network configurations
+   */
   static getSupportedNetworks() {
     return {
       ethereum: {
@@ -75,32 +52,46 @@ class GasPriceService {
     };
   }
 
-  // Fallback gas prices for demo/error cases
+  /**
+   * Fallback gas prices for offline/error cases
+   * @returns {Object} Fallback gas prices by network
+   */
   static getFallbackGasPrices() {
     return {
-      ethereum: { SafeGasPrice: '15 gwei', ProposeGasPrice: '18 gwei', FastGasPrice: '22 gwei' },
-      polygon: { SafeGasPrice: '2 gwei', ProposeGasPrice: '3 gwei', FastGasPrice: '4 gwei' },
-      bsc: { SafeGasPrice: '5 gwei', ProposeGasPrice: '6 gwei', FastGasPrice: '8 gwei' },
-      arbitrum: { SafeGasPrice: '0.5 gwei', ProposeGasPrice: '0.6 gwei', FastGasPrice: '0.8 gwei' },
-      optimism: { SafeGasPrice: '0.1 gwei', ProposeGasPrice: '0.15 gwei', FastGasPrice: '0.2 gwei' }
+      ethereum: { SafeGasPrice: '15', ProposeGasPrice: '18', FastGasPrice: '22' },
+      polygon: { SafeGasPrice: '2', ProposeGasPrice: '3', FastGasPrice: '4' },
+      bsc: { SafeGasPrice: '5', ProposeGasPrice: '6', FastGasPrice: '8' },
+      arbitrum: { SafeGasPrice: '0.5', ProposeGasPrice: '0.6', FastGasPrice: '0.8' },
+      optimism: { SafeGasPrice: '0.1', ProposeGasPrice: '0.15', FastGasPrice: '0.2' }
     };
   }
 
-  // Check if cached data is still valid
+  /**
+   * Check if local cache is still valid
+   * @param {string} networkKey - Network identifier
+   * @returns {boolean} True if cache is valid
+   */
   isCacheValid(networkKey) {
     const cached = this.cache.get(networkKey);
     if (!cached) return false;
-
     return Date.now() - cached.timestamp < this.cacheTimeout;
   }
 
-  // Get cached data
+  /**
+   * Get cached data for a network
+   * @param {string} networkKey - Network identifier
+   * @returns {Object|null} Cached data or null
+   */
   getCachedData(networkKey) {
     const cached = this.cache.get(networkKey);
     return cached ? cached.data : null;
   }
 
-  // Set cached data
+  /**
+   * Store data in local cache
+   * @param {string} networkKey - Network identifier
+   * @param {Object} data - Data to cache
+   */
   setCachedData(networkKey, data) {
     this.cache.set(networkKey, {
       data,
@@ -108,195 +99,171 @@ class GasPriceService {
     });
   }
 
-  // Exponential backoff delay
-  async delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  // Get retry delay for a network (exponential backoff)
-  getRetryDelay(networkKey) {
-    const currentDelay = this.retryDelays.get(networkKey) || 10000; // Start with 10 seconds
-    const maxDelay = 600000; // Max 10 minutes
-    const nextDelay = Math.min(currentDelay * 2, maxDelay);
-    this.retryDelays.set(networkKey, nextDelay);
-    return currentDelay;
-  }
-
-  // Reset retry delay on successful request
-  resetRetryDelay(networkKey) {
-    this.retryDelays.delete(networkKey);
-  }
-
-  // Fetch gas price for a specific network using viem with exponential backoff
+  /**
+   * Fetch gas prices for a specific network from backend API
+   * @param {string} networkKey - Network identifier (ethereum, polygon, etc.)
+   * @returns {Promise<Object>} Gas price data
+   */
   async fetchGasPrice(networkKey) {
-    // Check cache first
+    // Check local cache first
     if (this.isCacheValid(networkKey)) {
       return this.getCachedData(networkKey);
     }
 
-    const client = this.clients[networkKey];
-    if (!client) {
-      throw new Error(`No client available for ${networkKey}`);
-    }
-
-    // Check if we should wait due to rate limiting
-    const retryDelay = this.getRetryDelay(networkKey);
-    if (retryDelay > 5000) { // Wait if delay is more than 5 seconds
-      console.log(`Rate limited for ${networkKey}, waiting ${retryDelay}ms before retry`);
-      await this.delay(retryDelay);
-    }
-
     try {
-      // Get current gas price
-      const gasPrice = await client.getGasPrice();
-      const gasPriceGwei = formatGwei(gasPrice);
-
-      // Get fee history for more detailed gas price estimation
-      const feeHistory = await client.getFeeHistory({
-        blockCount: 4,
-        rewardPercentiles: [25, 75]
-      });
-
-      // Calculate gas price estimates
-      const recentFees = feeHistory.reward;
-      const sortedFees = recentFees.flat().sort((a, b) => Number(a) - Number(b));
-
-      const safeGasPrice = formatGwei(sortedFees[Math.floor(sortedFees.length * 0.25)]);
-      const proposeGasPrice = formatGwei(sortedFees[Math.floor(sortedFees.length * 0.5)]);
-      const fastGasPrice = formatGwei(sortedFees[Math.floor(sortedFees.length * 0.75)]);
-
+      const result = await apiClient.get(`/api/gas-prices/${networkKey}`);
+      
+      // Transform backend response to match expected format
       const gasData = {
-        SafeGasPrice: safeGasPrice,
-        ProposeGasPrice: proposeGasPrice,
-        FastGasPrice: fastGasPrice,
-        currentGasPrice: gasPriceGwei
+        SafeGasPrice: String(result.gasPrices?.slow?.gwei || result.slow?.gwei || '15'),
+        ProposeGasPrice: String(result.gasPrices?.standard?.gwei || result.standard?.gwei || '18'),
+        FastGasPrice: String(result.gasPrices?.fast?.gwei || result.fast?.gwei || '22'),
+        currentGasPrice: String(result.gasPrices?.standard?.gwei || result.standard?.gwei || '18'),
+        source: result.source || 'backend'
       };
 
       this.setCachedData(networkKey, gasData);
-      this.resetRetryDelay(networkKey); // Reset delay on success
       return gasData;
 
     } catch (error) {
-      console.warn(`Failed to fetch gas price for ${networkKey}:`, error);
-
-      // Check if it's a rate limit error (429)
-      if (error.message && (error.message.includes('429') || error.message.includes('rate limit'))) {
-        console.warn(`Rate limited for ${networkKey}, will retry with exponential backoff`);
-        // Don't cache rate limit errors, let them retry
-        throw error;
-      }
-
-      // Return fallback data on other errors
+      console.warn(`Failed to fetch gas price for ${networkKey} from backend:`, error.message);
+      
+      // Return fallback data on error
       const fallbackData = GasPriceService.getFallbackGasPrices()[networkKey];
-      this.setCachedData(networkKey, fallbackData);
-      return fallbackData;
+      if (fallbackData) {
+        this.setCachedData(networkKey, { ...fallbackData, source: 'fallback' });
+        return { ...fallbackData, source: 'fallback' };
+      }
+      
+      throw error;
     }
   }
 
-  // Fetch gas price using wagmi's useGasPrice hook (for connected wallet)
+  /**
+   * Fetch gas prices using connected wallet client (delegates to backend)
+   * @param {Object} client - Wallet client (ignored, kept for API compatibility)
+   * @returns {Promise<Object>} Gas price data
+   */
   static async fetchConnectedWalletGasPrice(client) {
-    if (!client) {
-      throw new Error('No client available');
-    }
-
-    // Check if client has the required methods
-    if (typeof client.getGasPrice !== 'function') {
-      throw new Error('Client does not have getGasPrice method');
-    }
-
-    if (typeof client.getFeeHistory !== 'function') {
-      throw new Error('Client does not have getFeeHistory method');
-    }
-
+    // Get chain ID from client if available, default to ethereum
+    const chainId = client?.chain?.id || 1;
+    
+    // Map chain ID to network key
+    const chainToNetwork = {
+      1: 'ethereum',
+      137: 'polygon',
+      56: 'bsc',
+      42161: 'arbitrum',
+      10: 'optimism'
+    };
+    
+    const networkKey = chainToNetwork[chainId] || 'ethereum';
+    
     try {
-      // Get current gas price from the connected network
-      const gasPrice = await client.getGasPrice();
-      const gasPriceGwei = formatGwei(gasPrice);
-
-      // Get fee history for more detailed gas price estimation
-      const feeHistory = await client.getFeeHistory({
-        blockCount: 4,
-        rewardPercentiles: [25, 75]
-      });
-
-      // Calculate gas price estimates
-      const recentFees = feeHistory.reward;
-      const sortedFees = recentFees.flat().sort((a, b) => Number(a) - Number(b));
-
-      const safeGasPrice = formatGwei(sortedFees[Math.floor(sortedFees.length * 0.25)]);
-      const proposeGasPrice = formatGwei(sortedFees[Math.floor(sortedFees.length * 0.5)]);
-      const fastGasPrice = formatGwei(sortedFees[Math.floor(sortedFees.length * 0.75)]);
-
+      const result = await apiClient.get(`/api/gas-prices/${networkKey}`);
+      
       return {
-        SafeGasPrice: safeGasPrice,
-        ProposeGasPrice: proposeGasPrice,
-        FastGasPrice: fastGasPrice,
-        currentGasPrice: gasPriceGwei
+        SafeGasPrice: String(result.gasPrices?.slow?.gwei || '15'),
+        ProposeGasPrice: String(result.gasPrices?.standard?.gwei || '18'),
+        FastGasPrice: String(result.gasPrices?.fast?.gwei || '22'),
+        currentGasPrice: String(result.gasPrices?.standard?.gwei || '18')
       };
-
     } catch (error) {
       console.warn('Failed to fetch connected wallet gas price:', error);
       throw error;
     }
   }
 
-  // Fetch gas prices for multiple networks with retry logic
+  /**
+   * Fetch gas prices for multiple networks
+   * @param {string[]} networkKeys - Array of network identifiers
+   * @returns {Promise<Object>} Gas prices by network
+   */
   async fetchMultipleGasPrices(networkKeys) {
-    const gasPricePromises = networkKeys.map(async (networkKey) => {
-      try {
-        return await this.fetchGasPrice(networkKey);
-      } catch (error) {
-        // If it's a rate limit error, return fallback data
-        if (error.message && error.message.includes('429')) {
-          console.warn(`Rate limited for ${networkKey}, using fallback data`);
-          return GasPriceService.getFallbackGasPrices()[networkKey];
+    try {
+      // Try to fetch from backend in one request
+      const result = await apiClient.get('/api/gas-prices', {
+        networks: networkKeys.join(',')
+      });
+
+      const gasPrices = {};
+      
+      // Transform response to expected format
+      for (const networkKey of networkKeys) {
+        const networkData = result.networks?.[networkKey] || result[networkKey];
+        
+        if (networkData) {
+          gasPrices[networkKey] = {
+            SafeGasPrice: String(networkData.gasPrices?.slow?.gwei || networkData.slow?.gwei || '15'),
+            ProposeGasPrice: String(networkData.gasPrices?.standard?.gwei || networkData.standard?.gwei || '18'),
+            FastGasPrice: String(networkData.gasPrices?.fast?.gwei || networkData.fast?.gwei || '22'),
+            currentGasPrice: String(networkData.gasPrices?.standard?.gwei || networkData.standard?.gwei || '18'),
+            source: networkData.source || 'backend'
+          };
+          this.setCachedData(networkKey, gasPrices[networkKey]);
+        } else {
+          // Use fallback for missing networks
+          gasPrices[networkKey] = {
+            ...GasPriceService.getFallbackGasPrices()[networkKey],
+            source: 'fallback'
+          };
         }
-        throw error;
       }
-    });
 
-    const results = await Promise.allSettled(gasPricePromises);
+      return gasPrices;
 
-    const gasPrices = {};
-    networkKeys.forEach((networkKey, index) => {
-      if (results[index].status === 'fulfilled' && results[index].value) {
-        gasPrices[networkKey] = results[index].value;
-      } else {
-        // Use fallback if API call failed
-        gasPrices[networkKey] = GasPriceService.getFallbackGasPrices()[networkKey];
+    } catch (error) {
+      console.warn('Failed to fetch multiple gas prices, using fallback:', error.message);
+      
+      // Return fallback data for all networks
+      const gasPrices = {};
+      const fallbackPrices = GasPriceService.getFallbackGasPrices();
+      
+      for (const networkKey of networkKeys) {
+        gasPrices[networkKey] = {
+          ...fallbackPrices[networkKey],
+          source: 'fallback'
+        };
       }
-    });
-
-    return gasPrices;
+      
+      return gasPrices;
+    }
   }
 
-  // Get display gas price (use SafeGasPrice as default)
+  /**
+   * Get display gas price string
+   * @param {Object} gasData - Gas price data
+   * @returns {string} Formatted gas price
+   */
   static getDisplayGasPrice(gasData) {
     if (!gasData) return 'N/A';
-
-    // Prefer SafeGasPrice, fallback to ProposeGasPrice, then FastGasPrice
     const price = gasData.SafeGasPrice || gasData.ProposeGasPrice || gasData.FastGasPrice;
     return price ? `${price} gwei` : 'N/A';
   }
 
-  // Get network status based on gas price availability
+  /**
+   * Get network status based on gas price data
+   * @param {Object} gasData - Gas price data
+   * @returns {string} Network status ('online' or 'offline')
+   */
   static getNetworkStatus(gasData) {
     if (!gasData || !gasData.SafeGasPrice) return 'offline';
     return 'online';
   }
 
-  // Get network information using wagmi hooks (to be used in components)
+  /**
+   * Get network information by chain ID
+   * @param {number} chainId - Chain ID
+   * @returns {Object} Network information
+   */
   static getNetworkInfo(chainId) {
     const networks = GasPriceService.getSupportedNetworks();
-
-    // Find network by chainId
     const network = Object.values(networks).find(net => net.chainId === chainId);
-
+    
     if (network) {
       return network;
     }
-
-    // Return default network info
+    
     return {
       name: 'Unknown',
       color: '#666666',
@@ -305,17 +272,20 @@ class GasPriceService {
     };
   }
 
-  // Clear cache
+  /**
+   * Clear all cached data
+   */
   clearCache() {
     this.cache.clear();
-    this.retryDelays.clear(); // Also clear retry delays
   }
 
-  // Clear cache for specific network
+  /**
+   * Clear cache for a specific network
+   * @param {string} networkKey - Network identifier
+   */
   clearCacheForNetwork(networkKey) {
     this.cache.delete(networkKey);
-    this.retryDelays.delete(networkKey);
   }
 }
 
-export default GasPriceService; 
+export default GasPriceService;
