@@ -10,6 +10,8 @@ import { createLLMInterface } from './llm/interface.js';
 import { ToolRegistry } from './tools/registry.js';
 import { ComponentIntentGenerator } from './components/intentGenerator.js';
 import { SystemPromptManager } from './prompts/systemPromptManager.js';
+import { IntentAnalyzer } from './nlp/intentAnalyzer.js';
+import { EducationalGenerator } from './content/educationalGenerator.js';
 import { serviceContainer, GasPriceAPIService, LendingAPIService, PriceFeedAPIService, TokenBalanceAPIService } from './services/index.js';
 import { createServiceRoutes } from './routes/serviceRoutes.js';
 
@@ -246,11 +248,13 @@ export async function createServer(config) {
     includeToolExamples: true,
     includeEducationalGuidance: true
   });
+  const intentAnalyzer = new IntentAnalyzer();
+  const educationalGenerator = new EducationalGenerator();
   const conversationManager = new ConversationManager(
     llmInterface,
     toolRegistry,
     componentIntentGenerator,
-    { systemPromptManager }
+    { systemPromptManager, intentAnalyzer, educationalGenerator }
   );
 
   // Store reference to conversationManager for cleanup

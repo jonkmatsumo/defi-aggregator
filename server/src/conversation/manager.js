@@ -3,6 +3,7 @@ import { logger, logError } from '../utils/logger.js';
 import { ConversationError, classifyError } from '../utils/errors.js';
 import { agentResponseFormatter } from '../utils/agentResponseFormatter.js';
 import { IntentAnalyzer } from '../nlp/intentAnalyzer.js';
+import { EducationalGenerator } from '../content/educationalGenerator.js';
 
 export class ConversationManager {
   constructor(llmInterface, toolRegistry, componentIntentGenerator, options = {}) {
@@ -11,6 +12,7 @@ export class ConversationManager {
     this.componentIntentGenerator = componentIntentGenerator;
     this.systemPromptManager = options.systemPromptManager || null;
     this.intentAnalyzer = options.intentAnalyzer || new IntentAnalyzer();
+    this.educationalGenerator = options.educationalGenerator || new EducationalGenerator();
     this.sessions = new Map(); // sessionId -> ConversationSession
     this.toolResultCache = new Map(); // cacheKey -> { result, cachedAt }
     
@@ -156,6 +158,11 @@ export class ConversationManager {
         ? agentResponseFormatter.formatToolResults(toolResults)
         : undefined;
 
+      // Generate educational tips if we have tool results
+      const educationalContent = toolResults.length > 0
+        ? this.educationalGenerator.buildEducationalTips(toolResults)
+        : null;
+
       // Create final assistant response
       const assistantResponse = {
         id: uuidv4(),
@@ -168,7 +175,8 @@ export class ConversationManager {
         streaming: false,
         context: {
           intent: intentAnalysis,
-          toolsUsed: toolResults.map(tr => tr.toolName)
+          toolsUsed: toolResults.map(tr => tr.toolName),
+          educationalContent: educationalContent || undefined
         }
       };
 
