@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger, logError } from '../utils/logger.js';
 import { ConversationError, classifyError } from '../utils/errors.js';
 import { agentResponseFormatter } from '../utils/agentResponseFormatter.js';
+import { IntentAnalyzer } from '../nlp/intentAnalyzer.js';
 
 export class ConversationManager {
   constructor(llmInterface, toolRegistry, componentIntentGenerator, options = {}) {
@@ -9,6 +10,7 @@ export class ConversationManager {
     this.toolRegistry = toolRegistry;
     this.componentIntentGenerator = componentIntentGenerator;
     this.systemPromptManager = options.systemPromptManager || null;
+    this.intentAnalyzer = options.intentAnalyzer || new IntentAnalyzer();
     this.sessions = new Map(); // sessionId -> ConversationSession
     this.toolResultCache = new Map(); // cacheKey -> { result, cachedAt }
     
@@ -66,7 +68,7 @@ export class ConversationManager {
       const messages = this.prepareMessagesForLLM(session, messageHistory);
 
       // Analyze user intent to inform downstream handling
-      const intentAnalysis = this.analyzeUserIntent(userMessage);
+      const intentAnalysis = this.intentAnalyzer.analyze(userMessage);
 
       // Get available tools
       const availableTools = this.toolRegistry.getToolDefinitions();
