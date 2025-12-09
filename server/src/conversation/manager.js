@@ -10,18 +10,22 @@ export class ConversationManager {
     this.componentIntentGenerator = componentIntentGenerator;
     this.systemPromptManager = options.systemPromptManager || null;
     this.sessions = new Map(); // sessionId -> ConversationSession
+    this.toolResultCache = new Map(); // cacheKey -> { result, cachedAt }
     
     // Configuration options
     this.options = {
       maxHistoryLength: options.maxHistoryLength || 100,
       sessionTimeoutMs: options.sessionTimeoutMs || 30 * 60 * 1000, // 30 minutes
       cleanupIntervalMs: options.cleanupIntervalMs || 5 * 60 * 1000, // 5 minutes
+      toolResultTTL: options.toolResultTTL || 2 * 60 * 1000, // 2 minutes
+      maxToolResults: options.maxToolResults || 50,
       ...options
     };
 
     // Start periodic cleanup
     this.cleanupInterval = setInterval(() => {
       this.cleanupExpiredSessions();
+      this.cleanupExpiredToolResults();
     }, this.options.cleanupIntervalMs);
 
     logger.info('ConversationManager initialized', {
@@ -60,6 +64,9 @@ export class ConversationManager {
 
       // Prepare messages for LLM (combine session history with provided history)
       const messages = this.prepareMessagesForLLM(session, messageHistory);
+
+      // Analyze user intent to inform downstream handling
+      const intentAnalysis = this.analyzeUserIntent(userMessage);
 
       // Get available tools
       const availableTools = this.toolRegistry.getToolDefinitions();
@@ -156,7 +163,11 @@ export class ConversationManager {
         uiIntents: uiIntents || undefined,
         toolResults: toolResults.length > 0 ? toolResults : undefined,
         formattedResults: formattedToolResults,
-        streaming: false
+        streaming: false,
+        context: {
+          intent: intentAnalysis,
+          toolsUsed: toolResults.map(tr => tr.toolName)
+        }
       };
 
       // Add assistant response to session history
@@ -220,11 +231,31 @@ export class ConversationManager {
 
     for (const toolCall of toolCalls) {
       try {
+        const parameters = toolCall.parameters || {};
+        const cacheKey = this.generateToolCacheKey(sessionId, toolCall.name, parameters);
+
+        // Serve from cache if fresh
+        const cached = this.toolResultCache.get(cacheKey);
+        if (cached && Date.now() - cached.cachedAt < this.options.toolResultTTL) {
+          logger.debug('Using cached tool result', { sessionId, toolName: toolCall.name });
+          results.push({
+            ...cached.result,
+            fromCache: true,
+            dataFreshness: 'cached'
+          });
+          continue;
+        }
+
         const result = await this.toolRegistry.executeTool(
           toolCall.name,
-          toolCall.parameters || {}
+          parameters
         );
         results.push(result);
+
+        if (result.success) {
+          this.toolResultCache.set(cacheKey, { result, cachedAt: Date.now() });
+          this.enforceToolCacheLimit();
+        }
 
         logger.debug('Tool executed', {
           sessionId,
@@ -277,20 +308,11 @@ export class ConversationManager {
     // Sort by timestamp to maintain chronological order
     allMessages.sort((a, b) => a.timestamp - b.timestamp);
 
-    // Limit history length to prevent token overflow
-    if (allMessages.length > this.options.maxHistoryLength) {
-      const excess = allMessages.length - this.options.maxHistoryLength;
-      allMessages.splice(0, excess);
-      
-      logger.debug('Trimmed conversation history', {
-        sessionId: session.sessionId,
-        removedMessages: excess,
-        remainingMessages: allMessages.length
-      });
-    }
+    // Intelligent truncation: drop oldest non-tool messages first
+    const trimmedMessages = this.trimMessages(allMessages, this.options.maxHistoryLength, session.sessionId);
 
     // Convert to LLM format (include tool calls and results for context)
-    return allMessages.map(msg => {
+    return trimmedMessages.map(msg => {
       const llmMessage = {
         role: msg.role,
         content: msg.content,
@@ -414,6 +436,75 @@ export class ConversationManager {
 
   getMetrics() {
     return this.getSessionStats();
+  }
+
+  trimMessages(messages, limit, sessionId) {
+    if (messages.length <= limit) return messages;
+
+    const trimmed = [...messages];
+    while (trimmed.length > limit) {
+      const idx = trimmed.findIndex(m => m.role !== 'tool' && !(m.toolCalls && m.toolCalls.length > 0));
+      if (idx === -1) {
+        trimmed.shift();
+      } else {
+        trimmed.splice(idx, 1);
+      }
+    }
+
+    logger.debug('Trimmed conversation history', {
+      sessionId,
+      removedMessages: messages.length - trimmed.length,
+      remainingMessages: trimmed.length
+    });
+
+    return trimmed;
+  }
+
+  generateToolCacheKey(sessionId, toolName, parameters) {
+    return `${sessionId}:${toolName}:${JSON.stringify(parameters)}`;
+  }
+
+  enforceToolCacheLimit() {
+    if (this.toolResultCache.size <= this.options.maxToolResults) return;
+    const excess = this.toolResultCache.size - this.options.maxToolResults;
+    for (let i = 0; i < excess; i++) {
+      const oldestKey = this.toolResultCache.keys().next().value;
+      if (oldestKey) this.toolResultCache.delete(oldestKey);
+    }
+  }
+
+  cleanupExpiredToolResults() {
+    const now = Date.now();
+    let removed = 0;
+    for (const [key, value] of this.toolResultCache.entries()) {
+      if (now - value.cachedAt > this.options.toolResultTTL) {
+        this.toolResultCache.delete(key);
+        removed++;
+      }
+    }
+    if (removed > 0) {
+      logger.debug('Cleaned expired tool results', { removed, remaining: this.toolResultCache.size });
+    }
+  }
+
+  analyzeUserIntent(userMessage) {
+    const lower = (userMessage || '').toLowerCase();
+    const intents = {
+      price_query: /price|cost|value|worth|btc|eth|\$/.test(lower),
+      gas_query: /gas|fee|gwei|transaction fee|network fee/.test(lower),
+      lending_query: /lend|borrow|apy|yield|interest|rate/.test(lower),
+      swap_query: /swap|trade|exchange|dex/.test(lower)
+    };
+
+    const primary = Object.entries(intents).find(([_, matched]) => matched)?.[0] || 'general_info';
+    const confidence = primary === 'general_info' ? 0.3 : 0.8;
+    const suggested_tools = [];
+    if (primary === 'price_query') suggested_tools.push('get_crypto_price');
+    if (primary === 'gas_query') suggested_tools.push('get_gas_prices');
+    if (primary === 'lending_query') suggested_tools.push('get_lending_rates');
+    if (primary === 'swap_query') suggested_tools.push('get_crypto_price', 'get_gas_prices');
+
+    return { primary, confidence, suggested_tools };
   }
 
   /**

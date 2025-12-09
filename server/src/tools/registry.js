@@ -6,6 +6,12 @@ export class ToolRegistry {
   constructor() {
     this.tools = new Map(); // toolName -> ToolDefinition
     this.initializeDefaultTools();
+
+    // Retry configuration for transient tool failures
+    this.retryConfig = {
+      maxRetries: 2,
+      baseDelayMs: 200
+    };
   }
 
   /**
@@ -89,6 +95,18 @@ export class ToolRegistry {
         'Check required parameters and their formats.',
         'Verify enum values (symbols, networks, protocols) are supported.',
         'Ensure addresses are valid hex strings with 0x prefix.'
+      ];
+    case 'RATE_LIMIT':
+      return [
+        'Wait a few seconds and retry.',
+        'Reduce request frequency.',
+        'If the problem persists, try again later.'
+      ];
+    case 'NETWORK_ERROR':
+      return [
+        'Check network connectivity.',
+        'Retry after a short delay.',
+        'If the problem persists, try a different network.'
       ];
     case 'TOOL_ERROR':
     default:
@@ -338,9 +356,9 @@ export class ToolRegistry {
     try {
       logger.debug('Executing tool', { toolName: name, parameters });
       const startTime = Date.now();
-      
-      const result = await tool.execute(parameters);
-      
+
+      const result = await this._executeWithRetry(tool, parameters, name);
+
       const executionTime = Date.now() - startTime;
       logger.info('Tool executed successfully', { 
         toolName: name, 
@@ -375,6 +393,43 @@ export class ToolRegistry {
         recoverySuggestions: this.getRecoverySuggestions(errorCode)
       };
     }
+  }
+
+  async _executeWithRetry(tool, parameters, toolName) {
+    let attempt = 0;
+    let lastError;
+
+    while (attempt <= this.retryConfig.maxRetries) {
+      try {
+        return await tool.execute(parameters);
+      } catch (err) {
+        lastError = err;
+        if (!this._isRetryableError(err) || attempt === this.retryConfig.maxRetries) {
+          throw err;
+        }
+        const delay = this.retryConfig.baseDelayMs * Math.pow(2, attempt);
+        logger.warn('Retrying tool execution', { toolName, attempt: attempt + 1, delay, error: err.message });
+        await this._sleep(delay);
+        attempt++;
+      }
+    }
+
+    throw lastError;
+  }
+
+  _isRetryableError(error) {
+    const code = (error.code || '').toUpperCase();
+    if (code === 'NETWORK_ERROR' || code === 'RATE_LIMIT' || code === 'SERVICE_UNAVAILABLE') {
+      return true;
+    }
+    if (typeof error.status === 'number' && (error.status === 429 || error.status >= 500)) {
+      return true;
+    }
+    return false;
+  }
+
+  _sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   getToolDefinitions() {
