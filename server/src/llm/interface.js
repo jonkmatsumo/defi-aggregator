@@ -14,7 +14,7 @@ export class LLMInterface {
       maxSystemPromptLength: 16000,
       ...config
     };
-    
+
     // Initialize circuit breaker for error recovery
     this.circuitBreaker = new CircuitBreaker({
       failureThreshold: 5,
@@ -38,45 +38,45 @@ export class LLMInterface {
   async _retryWithBackoff(operation, context = {}) {
     return this.circuitBreaker.execute(async () => {
       let lastError;
-      
+
       for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
         try {
           logger.debug('LLM API attempt', { attempt: attempt + 1, ...context });
           return await operation();
         } catch (error) {
           lastError = error;
-          
+
           // Log error with classification
           const errorClassification = classifyError(error);
-          logError(error, { 
-            ...context, 
+          logError(error, {
+            ...context,
             attempt: attempt + 1,
             classification: errorClassification
           });
-          
+
           // Don't retry on authentication or invalid request errors
           if (this._isNonRetryableError(error)) {
             logger.error('Non-retryable LLM error', { error: error.message, ...context });
             throw new LLMError(`LLM API error: ${error.message}`, this.config.provider);
           }
-          
+
           if (attempt < this.config.maxRetries - 1) {
             const delay = this.config.retryDelay * Math.pow(2, attempt);
-            logger.warn('LLM API retry', { 
-              attempt: attempt + 1, 
-              delay, 
+            logger.warn('LLM API retry', {
+              attempt: attempt + 1,
+              delay,
               error: error.message,
-              ...context 
+              ...context
             });
             await this._sleep(delay);
           }
         }
       }
-      
-      logger.error('LLM API max retries exceeded', { 
-        maxRetries: this.config.maxRetries, 
+
+      logger.error('LLM API max retries exceeded', {
+        maxRetries: this.config.maxRetries,
         error: lastError.message,
-        ...context 
+        ...context
       });
       throw new LLMError(`LLM API failed after ${this.config.maxRetries} attempts: ${lastError.message}`, this.config.provider);
     });
@@ -121,10 +121,27 @@ export class LLMInterface {
   }
 
   _formatMessages(messages) {
-    return messages.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }));
+    return messages.map(msg => {
+      const formatted = {
+        role: msg.role,
+        content: msg.content
+      };
+
+      if (msg.tool_calls) {
+        formatted.tool_calls = msg.tool_calls;
+      }
+
+      if (msg.tool_call_id) {
+        formatted.tool_call_id = msg.tool_call_id;
+      }
+
+      // OpenAI requires content to be null (not undefined) if it's empty but tools are present
+      if (!formatted.content && formatted.tool_calls) {
+        formatted.content = null;
+      }
+
+      return formatted;
+    });
   }
 
   _formatTools(tools) {
@@ -142,23 +159,23 @@ export class LLMInterface {
 export class OpenAILLM extends LLMInterface {
   constructor(config) {
     super(config);
-    
+
     if (!config.apiKey) {
       throw new LLMError('OpenAI API key is required');
     }
-    
+
     this.client = new OpenAI({
       apiKey: config.apiKey,
       timeout: this.config.timeout
     });
-    
+
     this.model = config.model || 'gpt-4';
     logger.info('OpenAI LLM interface initialized', { model: this.model });
   }
 
   async generateResponse(messages, tools = [], options = {}) {
     const context = { messageCount: messages.length, toolCount: tools.length };
-    
+
     return this._retryWithBackoff(async () => {
       // Prepare messages with system prompt if provided
       let formattedMessages = this._formatMessages(messages);
@@ -171,7 +188,7 @@ export class OpenAILLM extends LLMInterface {
         ];
         context.systemPromptLength = options.systemPrompt.length;
       }
-      
+
       const requestParams = {
         model: this.model,
         messages: formattedMessages,
@@ -185,29 +202,29 @@ export class OpenAILLM extends LLMInterface {
       }
 
       logger.debug('OpenAI API request', { ...context, model: this.model });
-      
+
       const response = await this.client.chat.completions.create(requestParams);
-      
+
       const result = {
         content: response.choices[0].message.content || '',
         toolCalls: response.choices[0].message.tool_calls || [],
         usage: response.usage
       };
-      
-      logger.info('OpenAI response generated', { 
-        ...context, 
+
+      logger.info('OpenAI response generated', {
+        ...context,
         responseLength: result.content.length,
         toolCallCount: result.toolCalls.length,
         usage: result.usage
       });
-      
+
       return result;
     }, context);
   }
 
   async generateStreamingResponse(messages, tools = [], onChunk, options = {}) {
     const context = { messageCount: messages.length, toolCount: tools.length, streaming: true };
-    
+
     return this._retryWithBackoff(async () => {
       // Prepare messages with system prompt if provided
       let formattedMessages = this._formatMessages(messages);
@@ -220,7 +237,7 @@ export class OpenAILLM extends LLMInterface {
         ];
         context.systemPromptLength = options.systemPrompt.length;
       }
-      
+
       const requestParams = {
         model: this.model,
         messages: formattedMessages,
@@ -235,16 +252,16 @@ export class OpenAILLM extends LLMInterface {
       }
 
       logger.debug('OpenAI streaming request', { ...context, model: this.model });
-      
+
       const stream = await this.client.chat.completions.create(requestParams);
-      
+
       let fullContent = '';
       const toolCalls = [];
-      
+
       try {
         for await (const chunk of stream) {
           const delta = chunk.choices[0]?.delta;
-          
+
           if (delta?.content) {
             fullContent += delta.content;
             onChunk({
@@ -253,11 +270,11 @@ export class OpenAILLM extends LLMInterface {
               done: false
             });
           }
-          
+
           if (delta?.tool_calls) {
             toolCalls.push(...delta.tool_calls);
           }
-          
+
           // Check if stream is done
           if (chunk.choices[0]?.finish_reason) {
             onChunk({
@@ -269,32 +286,32 @@ export class OpenAILLM extends LLMInterface {
             break;
           }
         }
-        
-        logger.info('OpenAI streaming completed', { 
-          ...context, 
+
+        logger.info('OpenAI streaming completed', {
+          ...context,
           responseLength: fullContent.length,
           toolCallCount: toolCalls.length
         });
-        
+
         return {
           content: fullContent,
           toolCalls,
           streaming: true
         };
-        
+
       } catch (streamError) {
-        logger.error('OpenAI streaming error', { 
-          ...context, 
-          error: streamError.message 
+        logger.error('OpenAI streaming error', {
+          ...context,
+          error: streamError.message
         });
-        
+
         // Send error to client
         onChunk({
           type: 'error',
           error: streamError.message,
           done: true
         });
-        
+
         throw streamError;
       }
     }, context);
@@ -304,27 +321,27 @@ export class OpenAILLM extends LLMInterface {
 export class AnthropicLLM extends LLMInterface {
   constructor(config) {
     super(config);
-    
+
     if (!config.apiKey) {
       throw new LLMError('Anthropic API key is required');
     }
-    
+
     this.client = new Anthropic({
       apiKey: config.apiKey,
       timeout: this.config.timeout
     });
-    
+
     this.model = config.model || 'claude-3-sonnet-20240229';
     logger.info('Anthropic LLM interface initialized', { model: this.model });
   }
 
   async generateResponse(messages, tools = [], options = {}) {
     const context = { messageCount: messages.length, toolCount: tools.length };
-    
+
     return this._retryWithBackoff(async () => {
       // Convert messages to Anthropic format
       const anthropicMessages = this._formatAnthropicMessages(messages);
-      
+
       const requestParams = {
         model: this.model,
         messages: anthropicMessages,
@@ -344,32 +361,32 @@ export class AnthropicLLM extends LLMInterface {
       }
 
       logger.debug('Anthropic API request', { ...context, model: this.model });
-      
+
       const response = await this.client.messages.create(requestParams);
-      
+
       const result = {
         content: response.content[0]?.text || '',
         toolCalls: response.content.filter(c => c.type === 'tool_use') || [],
         usage: response.usage
       };
-      
-      logger.info('Anthropic response generated', { 
-        ...context, 
+
+      logger.info('Anthropic response generated', {
+        ...context,
         responseLength: result.content.length,
         toolCallCount: result.toolCalls.length,
         usage: result.usage
       });
-      
+
       return result;
     }, context);
   }
 
   async generateStreamingResponse(messages, tools = [], onChunk, options = {}) {
     const context = { messageCount: messages.length, toolCount: tools.length, streaming: true };
-    
+
     return this._retryWithBackoff(async () => {
       const anthropicMessages = this._formatAnthropicMessages(messages);
-      
+
       const requestParams = {
         model: this.model,
         messages: anthropicMessages,
@@ -390,12 +407,12 @@ export class AnthropicLLM extends LLMInterface {
       }
 
       logger.debug('Anthropic streaming request', { ...context, model: this.model });
-      
+
       const stream = await this.client.messages.create(requestParams);
-      
+
       let fullContent = '';
       const toolCalls = [];
-      
+
       try {
         for await (const chunk of stream) {
           if (chunk.type === 'content_block_delta' && chunk.delta?.text) {
@@ -406,11 +423,11 @@ export class AnthropicLLM extends LLMInterface {
               done: false
             });
           }
-          
+
           if (chunk.type === 'content_block_start' && chunk.content_block?.type === 'tool_use') {
             toolCalls.push(chunk.content_block);
           }
-          
+
           if (chunk.type === 'message_stop') {
             onChunk({
               type: 'done',
@@ -421,31 +438,31 @@ export class AnthropicLLM extends LLMInterface {
             break;
           }
         }
-        
-        logger.info('Anthropic streaming completed', { 
-          ...context, 
+
+        logger.info('Anthropic streaming completed', {
+          ...context,
           responseLength: fullContent.length,
           toolCallCount: toolCalls.length
         });
-        
+
         return {
           content: fullContent,
           toolCalls,
           streaming: true
         };
-        
+
       } catch (streamError) {
-        logger.error('Anthropic streaming error', { 
-          ...context, 
-          error: streamError.message 
+        logger.error('Anthropic streaming error', {
+          ...context,
+          error: streamError.message
         });
-        
+
         onChunk({
           type: 'error',
           error: streamError.message,
           done: true
         });
-        
+
         throw streamError;
       }
     }, context);
@@ -469,11 +486,11 @@ export class AnthropicLLM extends LLMInterface {
 
 export function createLLMInterface(config) {
   switch (config.provider) {
-  case 'openai':
-    return new OpenAILLM(config);
-  case 'anthropic':
-    return new AnthropicLLM(config);
-  default:
-    throw new LLMError(`Unsupported LLM provider: ${config.provider}`);
+    case 'openai':
+      return new OpenAILLM(config);
+    case 'anthropic':
+      return new AnthropicLLM(config);
+    default:
+      throw new LLMError(`Unsupported LLM provider: ${config.provider}`);
   }
 }

@@ -17,14 +17,14 @@ export class TokenBalanceAPIService extends BaseService {
     this.serviceConfig = new ServiceConfig({
       networks: {
         ethereum: {
-          rpcUrl: 'https://eth-mainnet.g.alchemy.com/v2',
+          rpcUrl: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY || ''}`,
           chainId: 1,
           nativeSymbol: 'ETH',
           nativeName: 'Ether',
           nativeDecimals: 18
         },
         polygon: {
-          rpcUrl: 'https://polygon-mainnet.g.alchemy.com/v2',
+          rpcUrl: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY || ''}`,
           chainId: 137,
           nativeSymbol: 'MATIC',
           nativeName: 'MATIC',
@@ -127,37 +127,37 @@ export class TokenBalanceAPIService extends BaseService {
     this.erc20Abi = [
       {
         'constant': true,
-        'inputs': [{'name': '_owner', 'type': 'address'}],
+        'inputs': [{ 'name': '_owner', 'type': 'address' }],
         'name': 'balanceOf',
-        'outputs': [{'name': 'balance', 'type': 'uint256'}],
+        'outputs': [{ 'name': 'balance', 'type': 'uint256' }],
         'type': 'function'
       },
       {
         'constant': true,
         'inputs': [],
         'name': 'decimals',
-        'outputs': [{'name': '', 'type': 'uint8'}],
+        'outputs': [{ 'name': '', 'type': 'uint8' }],
         'type': 'function'
       },
       {
         'constant': true,
         'inputs': [],
         'name': 'symbol',
-        'outputs': [{'name': '', 'type': 'string'}],
+        'outputs': [{ 'name': '', 'type': 'string' }],
         'type': 'function'
       },
       {
         'constant': true,
         'inputs': [],
         'name': 'name',
-        'outputs': [{'name': '', 'type': 'string'}],
+        'outputs': [{ 'name': '', 'type': 'string' }],
         'type': 'function'
       },
       {
         'constant': true,
         'inputs': [],
         'name': 'totalSupply',
-        'outputs': [{'name': '', 'type': 'uint256'}],
+        'outputs': [{ 'name': '', 'type': 'uint256' }],
         'type': 'function'
       }
     ];
@@ -235,7 +235,7 @@ export class TokenBalanceAPIService extends BaseService {
       this.validateNetwork(network);
 
       const cacheKey = `native_balance_${network}_${address}`;
-      
+
       // Check cache first
       if (this.config.cache.enabled) {
         const cached = this.getCachedData(cacheKey);
@@ -278,9 +278,9 @@ export class TokenBalanceAPIService extends BaseService {
         this.setCachedData(cacheKey, result);
       }
 
-      logger.debug('Native balance fetched successfully', { 
-        address: address.slice(0, 10) + '...', 
-        network, 
+      logger.debug('Native balance fetched successfully', {
+        address: address.slice(0, 10) + '...',
+        network,
         balance: balance.slice(0, 10) + '...',
         symbol: networkConfig.nativeSymbol
       });
@@ -307,15 +307,15 @@ export class TokenBalanceAPIService extends BaseService {
       this.validateNetwork(network);
 
       const cacheKey = `token_balance_${network}_${tokenAddress}_${address}`;
-      
+
       // Check cache first
       if (this.config.cache.enabled) {
         const cached = this.getCachedData(cacheKey);
         if (cached) {
-          logger.debug('Token balance cache hit', { 
-            address: address.slice(0, 10) + '...', 
-            tokenAddress: tokenAddress.slice(0, 10) + '...', 
-            network 
+          logger.debug('Token balance cache hit', {
+            address: address.slice(0, 10) + '...',
+            tokenAddress: tokenAddress.slice(0, 10) + '...',
+            network
           });
           return cached;
         }
@@ -328,7 +328,7 @@ export class TokenBalanceAPIService extends BaseService {
       }
 
       const networkConfig = this.config.networks[network];
-      
+
       // Fetch token metadata and balance concurrently
       const [metadata, balance] = await Promise.all([
         this.getTokenMetadata(tokenAddress, network),
@@ -339,16 +339,16 @@ export class TokenBalanceAPIService extends BaseService {
 
       // If balance is 0, return null
       if (!balance || balance === '0' || parseFloat(balance) === 0) {
-        logger.debug('Token balance is 0, returning null', { 
-          address: address.slice(0, 10) + '...', 
-          tokenAddress: tokenAddress.slice(0, 10) + '...', 
-          network 
+        logger.debug('Token balance is 0, returning null', {
+          address: address.slice(0, 10) + '...',
+          tokenAddress: tokenAddress.slice(0, 10) + '...',
+          network
         });
         return null;
       }
 
       const formattedBalance = this.formatBalance(balance, metadata.decimals);
-      
+
       const result = {
         address,
         tokenAddress,
@@ -366,9 +366,9 @@ export class TokenBalanceAPIService extends BaseService {
         this.setCachedData(cacheKey, result);
       }
 
-      logger.debug('Token balance fetched successfully', { 
-        address: address.slice(0, 10) + '...', 
-        tokenAddress: tokenAddress.slice(0, 10) + '...', 
+      logger.debug('Token balance fetched successfully', {
+        address: address.slice(0, 10) + '...',
+        tokenAddress: tokenAddress.slice(0, 10) + '...',
         network,
         balance: formattedBalance.slice(0, 10) + '...',
         symbol: metadata.symbol
@@ -377,10 +377,10 @@ export class TokenBalanceAPIService extends BaseService {
       return result;
 
     } catch (error) {
-      this.handleError(error, 'getTokenBalance', { 
-        address: address?.slice(0, 10) + '...', 
-        tokenAddress: tokenAddress?.slice(0, 10) + '...', 
-        network 
+      this.handleError(error, 'getTokenBalance', {
+        address: address?.slice(0, 10) + '...',
+        tokenAddress: tokenAddress?.slice(0, 10) + '...',
+        network
       });
     }
   }
@@ -400,7 +400,7 @@ export class TokenBalanceAPIService extends BaseService {
 
       const { includeZero = false, includeUSDValues = true } = options;
       const cacheKey = `all_balances_${network}_${address}_${includeZero}`;
-      
+
       // Check cache first
       if (this.config.cache.enabled) {
         const cached = this.getCachedData(cacheKey);
@@ -435,9 +435,9 @@ export class TokenBalanceAPIService extends BaseService {
           }
           return null;
         } catch (error) {
-          logger.warn('Failed to fetch token balance', { 
-            tokenAddress: tokenAddress.slice(0, 10) + '...', 
-            error: error.message 
+          logger.warn('Failed to fetch token balance', {
+            tokenAddress: tokenAddress.slice(0, 10) + '...',
+            error: error.message
           });
           return null;
         }
@@ -459,8 +459,8 @@ export class TokenBalanceAPIService extends BaseService {
         this.setCachedData(cacheKey, result);
       }
 
-      logger.debug('All token balances fetched successfully', { 
-        address: address.slice(0, 10) + '...', 
+      logger.debug('All token balances fetched successfully', {
+        address: address.slice(0, 10) + '...',
         network,
         tokenCount: balances.length,
         totalUSD: result.totalUSD
@@ -486,7 +486,7 @@ export class TokenBalanceAPIService extends BaseService {
       this.validateNetwork(network);
 
       const cacheKey = `token_metadata_${network}_${tokenAddress}`;
-      
+
       // Check cache first
       if (this.config.cache.enabled) {
         const cached = this.getCachedData(cacheKey);
@@ -500,12 +500,12 @@ export class TokenBalanceAPIService extends BaseService {
       const commonTokens = this.config.commonTokens[network] || {};
       if (commonTokens[tokenAddress]) {
         const metadata = commonTokens[tokenAddress];
-        
+
         // Cache the result
         if (this.config.cache.enabled) {
           this.setCachedData(cacheKey, metadata);
         }
-        
+
         return metadata;
       }
 
@@ -520,8 +520,8 @@ export class TokenBalanceAPIService extends BaseService {
         this.setCachedData(cacheKey, metadata);
       }
 
-      logger.debug('Token metadata fetched from RPC', { 
-        tokenAddress: tokenAddress.slice(0, 10) + '...', 
+      logger.debug('Token metadata fetched from RPC', {
+        tokenAddress: tokenAddress.slice(0, 10) + '...',
         network,
         symbol: metadata.symbol
       });
@@ -543,7 +543,7 @@ export class TokenBalanceAPIService extends BaseService {
     try {
       // Validate inputs
       this.validateAddress(address);
-      
+
       if (!Array.isArray(networks) || networks.length === 0) {
         throw new ServiceError('Networks must be a non-empty array');
       }
@@ -551,7 +551,7 @@ export class TokenBalanceAPIService extends BaseService {
       networks.forEach(network => this.validateNetwork(network));
 
       const cacheKey = `portfolio_${address}_${networks.join('_')}`;
-      
+
       // Check cache first
       if (this.config.cache.enabled) {
         const cached = this.getCachedData(cacheKey);
@@ -566,7 +566,7 @@ export class TokenBalanceAPIService extends BaseService {
         try {
           const balances = await this.getAllTokenBalances(address, network, { includeUSDValues: true });
           const networkValue = parseFloat(balances.totalUSD || '0');
-          
+
           return {
             network,
             valueUSD: networkValue,
@@ -601,8 +601,8 @@ export class TokenBalanceAPIService extends BaseService {
         this.setCachedData(cacheKey, result);
       }
 
-      logger.debug('Portfolio value calculated successfully', { 
-        address: address.slice(0, 10) + '...', 
+      logger.debug('Portfolio value calculated successfully', {
+        address: address.slice(0, 10) + '...',
         networks,
         totalUSD: result.totalUSD
       });
@@ -715,11 +715,11 @@ export class TokenBalanceAPIService extends BaseService {
         decimals: parseInt(decimals, 16) || 18
       };
     } catch (error) {
-      logger.warn('Failed to fetch token metadata from RPC, using fallback', { 
-        tokenAddress: tokenAddress.slice(0, 10) + '...', 
-        error: error.message 
+      logger.warn('Failed to fetch token metadata from RPC, using fallback', {
+        tokenAddress: tokenAddress.slice(0, 10) + '...',
+        error: error.message
       });
-      
+
       return {
         symbol: tokenAddress.slice(0, 6).toUpperCase(),
         name: 'Unknown Token',
@@ -765,14 +765,14 @@ export class TokenBalanceAPIService extends BaseService {
    */
   decodeString(hex) {
     if (!hex || hex === '0x') return '';
-    
+
     try {
       // Remove 0x prefix
       const cleanHex = hex.slice(2);
-      
+
       // Skip the first 64 characters (offset and length)
       const dataHex = cleanHex.slice(128);
-      
+
       // Convert hex to string
       let result = '';
       for (let i = 0; i < dataHex.length; i += 2) {
@@ -781,7 +781,7 @@ export class TokenBalanceAPIService extends BaseService {
           result += String.fromCharCode(byte);
         }
       }
-      
+
       return result.trim();
     } catch (error) {
       logger.warn('Failed to decode string from hex', { hex, error: error.message });
@@ -797,25 +797,25 @@ export class TokenBalanceAPIService extends BaseService {
    */
   formatBalance(balance, decimals) {
     if (!balance || balance === '0x0' || balance === '0') return '0';
-    
+
     try {
       // Convert hex to decimal if needed
       const balanceInt = balance.startsWith('0x') ? BigInt(balance) : BigInt(balance);
       const divisor = BigInt(10 ** decimals);
       const wholePart = balanceInt / divisor;
       const fractionalPart = balanceInt % divisor;
-      
+
       if (fractionalPart === 0n) {
         return wholePart.toString();
       }
-      
+
       const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
       const trimmedFractional = fractionalStr.replace(/0+$/, '');
-      
+
       if (trimmedFractional === '') {
         return wholePart.toString();
       }
-      
+
       return `${wholePart}.${trimmedFractional}`;
     } catch (error) {
       logger.warn('Failed to format balance', { balance, decimals, error: error.message });
@@ -848,7 +848,7 @@ export class TokenBalanceAPIService extends BaseService {
     if (!address || typeof address !== 'string') {
       throw new ServiceError('Address must be a non-empty string');
     }
-    
+
     if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
       throw new ServiceError('Invalid Ethereum address format');
     }
@@ -862,7 +862,7 @@ export class TokenBalanceAPIService extends BaseService {
     if (!network || typeof network !== 'string') {
       throw new ServiceError('Network must be a non-empty string');
     }
-    
+
     if (!this.config.networks[network]) {
       throw new ServiceError(`Unsupported network: ${network}. Supported networks: ${Object.keys(this.config.networks).join(', ')}`);
     }

@@ -4,6 +4,7 @@ import { ConversationError, classifyError } from '../utils/errors.js';
 import { agentResponseFormatter } from '../utils/agentResponseFormatter.js';
 import { IntentAnalyzer } from '../nlp/intentAnalyzer.js';
 import { EducationalGenerator } from '../content/educationalGenerator.js';
+import { ToolCallValidator } from '../validation/toolCallValidator.js';
 
 export class ConversationManager {
   constructor(llmInterface, toolRegistry, componentIntentGenerator, options = {}) {
@@ -15,7 +16,7 @@ export class ConversationManager {
     this.educationalGenerator = options.educationalGenerator || new EducationalGenerator();
     this.sessions = new Map(); // sessionId -> ConversationSession
     this.toolResultCache = new Map(); // cacheKey -> { result, cachedAt }
-    
+
     // Configuration options
     this.options = {
       maxHistoryLength: options.maxHistoryLength || 100,
@@ -40,8 +41,8 @@ export class ConversationManager {
 
   async processMessage(sessionId, userMessage, messageHistory = []) {
     try {
-      logger.info('Processing message', { 
-        sessionId, 
+      logger.info('Processing message', {
+        sessionId,
         messageLength: userMessage.length,
         historyLength: messageHistory.length
       });
@@ -93,7 +94,7 @@ export class ConversationManager {
         { sessionId, systemPrompt }
       );
 
-      logger.debug('LLM response received', { 
+      logger.debug('LLM response received', {
         sessionId,
         hasToolCalls: !!(llmResponse.toolCalls && llmResponse.toolCalls.length > 0),
         responseLength: llmResponse.content?.length || 0
@@ -102,48 +103,59 @@ export class ConversationManager {
       // Execute tool calls if present
       let toolResults = [];
       let finalResponse = llmResponse;
-      
+
       if (llmResponse.toolCalls && llmResponse.toolCalls.length > 0) {
-        toolResults = await this.executeToolCalls(sessionId, llmResponse.toolCalls);
-        
-        // Add tool call message to session history
-        const toolCallMessage = {
-          id: uuidv4(),
-          role: 'assistant',
-          content: llmResponse.content,
-          timestamp: Date.now(),
-          toolCalls: llmResponse.toolCalls
-        };
-        this.addMessageToSession(session, toolCallMessage);
+        // Validate tool calls first
+        const validToolCalls = ToolCallValidator.validate(llmResponse.toolCalls);
 
-        // Add tool results as tool messages
-        for (const toolResult of toolResults) {
-          const toolMessage = {
+        if (validToolCalls.length > 0) {
+          toolResults = await this.executeToolCalls(sessionId, validToolCalls);
+
+          // Add tool call message to session history
+          // OpenAI requires the exact tool calls array from the assistant message
+          const toolCallMessage = {
             id: uuidv4(),
-            role: 'tool',
-            content: JSON.stringify(toolResult.result),
+            role: 'assistant',
+            content: llmResponse.content,
             timestamp: Date.now(),
-            tool_call_id: toolResult.toolName, // Use tool name as ID
-            name: toolResult.toolName
+            toolCalls: validToolCalls // Use validated calls
           };
-          this.addMessageToSession(session, toolMessage);
+          this.addMessageToSession(session, toolCallMessage);
+
+          // Add tool results as tool messages
+          // OpenAI requires each tool result to be a separate message with role 'tool' and matching tool_call_id
+          for (const toolResult of toolResults) {
+            const toolMessage = {
+              id: uuidv4(),
+              role: 'tool',
+              content: JSON.stringify(toolResult.result), // Content must be string
+              timestamp: Date.now(),
+              tool_call_id: toolResult.toolCallId, // MUST match the id from the tool call
+              name: toolResult.toolName
+            };
+            this.addMessageToSession(session, toolMessage);
+          }
+
+          // Get updated messages for follow-up LLM call
+          const updatedMessages = this.prepareMessagesForLLM(session, messageHistory);
+
+          // Call LLM again with tool results to get final response
+          finalResponse = await this.llmInterface.generateResponse(
+            updatedMessages,
+            availableTools,
+            { sessionId, followUp: true, systemPrompt }
+          );
+
+          logger.debug('Follow-up LLM response after tool execution', {
+            sessionId,
+            toolCount: toolResults.length,
+            finalResponseLength: finalResponse.content?.length || 0
+          });
+        } else {
+          logger.warn('All tool calls were invalid', { sessionId, rawToolCalls: llmResponse.toolCalls });
+          // Optionally add a message to the user saying we failed to execute tools?
+          // For now, we just proceed with the original response content (which might be empty if it was just tool calls)
         }
-
-        // Get updated messages for follow-up LLM call
-        const updatedMessages = this.prepareMessagesForLLM(session, messageHistory);
-        
-        // Call LLM again with tool results to get final response
-        finalResponse = await this.llmInterface.generateResponse(
-          updatedMessages,
-          availableTools,
-          { sessionId, followUp: true, systemPrompt }
-        );
-
-        logger.debug('Follow-up LLM response after tool execution', {
-          sessionId,
-          toolCount: toolResults.length,
-          finalResponseLength: finalResponse.content?.length || 0
-        });
       }
 
       // Generate component intents based on final response
@@ -154,7 +166,7 @@ export class ConversationManager {
       );
 
       // Format tool results for user-friendly display
-      const formattedToolResults = toolResults.length > 0 
+      const formattedToolResults = toolResults.length > 0
         ? agentResponseFormatter.formatToolResults(toolResults)
         : undefined;
 
@@ -204,7 +216,7 @@ export class ConversationManager {
 
       // Create user-friendly error response
       const userFriendlyMessage = this.getUserFriendlyErrorMessage(error, errorClassification);
-      
+
       const errorResponse = {
         id: uuidv4(),
         role: 'assistant',
@@ -233,23 +245,42 @@ export class ConversationManager {
   async executeToolCalls(sessionId, toolCalls) {
     const results = [];
 
-    logger.debug('Executing tool calls', { 
-      sessionId, 
+    logger.debug('Executing tool calls', {
+      sessionId,
       toolCount: toolCalls.length,
-      tools: toolCalls.map(tc => tc.name)
+      tools: toolCalls.map(tc => tc.name || tc.function?.name)
     });
 
     for (const toolCall of toolCalls) {
+      // Handle both normalized and raw OpenAI formats
+      const toolName = toolCall.name || toolCall.function?.name;
+      const toolCallId = toolCall.id;
+
+      // Parse parameters if they are a JSON string (OpenAI format)
+      let parameters = toolCall.parameters || toolCall.function?.arguments || {};
+      if (typeof parameters === 'string') {
+        try {
+          parameters = JSON.parse(parameters);
+        } catch (e) {
+          logger.error('Failed to parse tool parameters', { toolName, error: e.message });
+          parameters = {}; // Fallback
+        }
+      }
+
       try {
-        const parameters = toolCall.parameters || {};
-        const cacheKey = this.generateToolCacheKey(sessionId, toolCall.name, parameters);
+        if (!toolName) {
+          throw new Error('Tool name is undefined');
+        }
+
+        const cacheKey = this.generateToolCacheKey(sessionId, toolName, parameters);
 
         // Serve from cache if fresh
         const cached = this.toolResultCache.get(cacheKey);
         if (cached && Date.now() - cached.cachedAt < this.options.toolResultTTL) {
-          logger.debug('Using cached tool result', { sessionId, toolName: toolCall.name });
+          logger.debug('Using cached tool result', { sessionId, toolName });
           results.push({
             ...cached.result,
+            toolCallId, // Ensure ID is passed back
             fromCache: true,
             dataFreshness: 'cached'
           });
@@ -257,19 +288,21 @@ export class ConversationManager {
         }
 
         const result = await this.toolRegistry.executeTool(
-          toolCall.name,
+          toolName,
           parameters
         );
-        results.push(result);
+
+        const resultWithId = { ...result, toolCallId }; // Attach ID
+        results.push(resultWithId);
 
         if (result.success) {
-          this.toolResultCache.set(cacheKey, { result, cachedAt: Date.now() });
+          this.toolResultCache.set(cacheKey, { result: resultWithId, cachedAt: Date.now() });
           this.enforceToolCacheLimit();
         }
 
         logger.debug('Tool executed', {
           sessionId,
-          toolName: toolCall.name,
+          toolName: toolName,
           success: result.success,
           executionTime: result.executionTime
         });
@@ -278,14 +311,15 @@ export class ConversationManager {
         const errorClassification = classifyError(error);
         logError(error, {
           sessionId,
-          toolName: toolCall.name,
-          parameters: toolCall.parameters,
+          toolName: toolName,
+          parameters: parameters,
           classification: errorClassification
         });
 
         results.push({
-          toolName: toolCall.name,
-          parameters: toolCall.parameters || {},
+          toolName: toolName,
+          toolCallId,
+          parameters: parameters || {},
           result: null,
           executionTime: 0,
           success: false,
@@ -300,16 +334,16 @@ export class ConversationManager {
   prepareMessagesForLLM(session, additionalHistory = []) {
     // Combine session history with additional history, avoiding duplicates
     const allMessages = [...additionalHistory];
-    
+
     // Add session messages that aren't already in additional history
     for (const sessionMessage of session.messages) {
-      const isDuplicate = additionalHistory.some(msg => 
-        msg.id === sessionMessage.id || 
-        (msg.content === sessionMessage.content && 
-         msg.role === sessionMessage.role &&
-         Math.abs(msg.timestamp - sessionMessage.timestamp) < 1000)
+      const isDuplicate = additionalHistory.some(msg =>
+        msg.id === sessionMessage.id ||
+        (msg.content === sessionMessage.content &&
+          msg.role === sessionMessage.role &&
+          Math.abs(msg.timestamp - sessionMessage.timestamp) < 1000)
       );
-      
+
       if (!isDuplicate) {
         allMessages.push(sessionMessage);
       }
@@ -322,6 +356,7 @@ export class ConversationManager {
     const trimmedMessages = this.trimMessages(allMessages, this.options.maxHistoryLength, session.sessionId);
 
     // Convert to LLM format (include tool calls and results for context)
+    // Convert to LLM format (include tool calls and results for context)
     return trimmedMessages.map(msg => {
       const llmMessage = {
         role: msg.role,
@@ -329,12 +364,19 @@ export class ConversationManager {
         timestamp: msg.timestamp
       };
 
+      // Pass through tool_call_id and name for tool role messages
+      if (msg.role === 'tool') {
+        if (msg.tool_call_id) llmMessage.tool_call_id = msg.tool_call_id;
+        if (msg.name) llmMessage.name = msg.name;
+      }
+
       // Include tool calls if present (for assistant messages)
       if (msg.toolCalls && msg.toolCalls.length > 0) {
         llmMessage.tool_calls = msg.toolCalls;
       }
 
-      // Include tool results if present (for assistant messages)
+      // Include tool results if present (for assistant messages - distinct from tool role messages)
+      // Note: This seems to be a legacy field or internal usage, but we preserve it.
       if (msg.toolResults && msg.toolResults.length > 0) {
         // Add tool results as system messages for LLM context
         llmMessage.tool_results = msg.toolResults;
@@ -352,7 +394,7 @@ export class ConversationManager {
     if (session.messages.length > this.options.maxHistoryLength) {
       const excess = session.messages.length - this.options.maxHistoryLength;
       session.messages.splice(0, excess);
-      
+
       logger.debug('Trimmed session history', {
         sessionId: session.sessionId,
         removedMessages: excess,
@@ -379,15 +421,15 @@ export class ConversationManager {
       lastActivity: Date.now(),
       toolState: {}
     };
-    
+
     this.sessions.set(sessionId, session);
-    
+
     logger.info('Created conversation session', {
       sessionId,
       userId,
       totalSessions: this.sessions.size
     });
-    
+
     return session;
   }
 
@@ -623,9 +665,9 @@ export class ConversationManager {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
     }
-    
+
     this.sessions.clear();
-    
+
     logger.info('ConversationManager destroyed');
   }
 }

@@ -5,7 +5,7 @@ const configSchema = Joi.object({
   port: Joi.number().port().default(3001),
   host: Joi.string().default('localhost'),
   nodeEnv: Joi.string().valid('development', 'staging', 'production', 'test').default('development'),
-  
+
   llm: Joi.object({
     provider: Joi.string().valid('openai', 'anthropic').required(),
     apiKey: Joi.string().required(),
@@ -30,6 +30,11 @@ const configSchema = Joi.object({
     rateLimit: Joi.number().positive().default(10)
   }).default(),
 
+  apiKeys: Joi.object({
+    etherscan: Joi.string().optional(),
+    alchemy: Joi.string().optional()
+  }).default(),
+
   corsOrigin: Joi.string().default('http://localhost:3000'),
   apiTimeout: Joi.number().positive().default(30000)
 });
@@ -39,11 +44,11 @@ export function validateConfig() {
     port: parseInt(process.env.PORT) || 3001,
     host: process.env.HOST || 'localhost',
     nodeEnv: process.env.NODE_ENV || 'development',
-    
+
     llm: {
       provider: process.env.LLM_PROVIDER || 'openai',
-      apiKey: process.env.LLM_PROVIDER === 'anthropic' 
-        ? process.env.ANTHROPIC_API_KEY 
+      apiKey: process.env.LLM_PROVIDER === 'anthropic'
+        ? process.env.ANTHROPIC_API_KEY
         : process.env.OPENAI_API_KEY,
       model: process.env.LLM_MODEL || 'gpt-4',
       maxTokens: parseInt(process.env.LLM_MAX_TOKENS) || 2048,
@@ -66,13 +71,18 @@ export function validateConfig() {
       rateLimit: parseInt(process.env.TOOLS_RATE_LIMIT) || 10
     },
 
+    apiKeys: {
+      etherscan: process.env.ETHERSCAN_API_KEY,
+      alchemy: process.env.ALCHEMY_API_KEY
+    },
+
     corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
     apiTimeout: parseInt(process.env.API_TIMEOUT) || 30000
   };
 
-  const { error, value } = configSchema.validate(rawConfig, { 
+  const { error, value } = configSchema.validate(rawConfig, {
     abortEarly: false,
-    allowUnknown: false 
+    allowUnknown: false
   });
 
   if (error) {
