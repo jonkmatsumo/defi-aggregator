@@ -78,13 +78,13 @@ export class ServiceConfig {
       if (key.startsWith(prefix)) {
         const configKey = this.envKeyToConfigKey(key, prefix);
         const parsedValue = this.parseEnvironmentValue(value);
-        
+
         this.setNestedValue(config, configKey, parsedValue);
-        
-        logger.debug('Environment variable loaded', { 
-          envKey: key, 
-          configKey, 
-          valueType: typeof parsedValue 
+
+        logger.debug('Environment variable loaded', {
+          envKey: key,
+          configKey,
+          valueType: typeof parsedValue
         });
       }
     }
@@ -126,8 +126,8 @@ export class ServiceConfig {
     }
 
     // Handle JSON values
-    if ((value.startsWith('{') && value.endsWith('}')) || 
-        (value.startsWith('[') && value.endsWith(']'))) {
+    if ((value.startsWith('{') && value.endsWith('}')) ||
+      (value.startsWith('[') && value.endsWith(']'))) {
       try {
         return JSON.parse(value);
       } catch (error) {
@@ -211,9 +211,9 @@ export class ServiceConfig {
 
     if (error) {
       const errorMessage = `Configuration validation failed: ${error.details.map(d => d.message).join(', ')}`;
-      logger.error('Configuration validation error', { 
+      logger.error('Configuration validation error', {
         error: errorMessage,
-        details: error.details 
+        details: error.details
       });
       throw new ServiceError(errorMessage);
     }
@@ -245,14 +245,14 @@ export class ServiceConfig {
    */
   merge(additionalConfig) {
     this.config = this.deepMerge(this.config, additionalConfig);
-    
+
     // Re-validate if schema is set
     if (this.validationSchema) {
       this.validateConfiguration(this.config);
     }
 
-    logger.debug('Configuration merged', { 
-      additionalKeys: Object.keys(additionalConfig) 
+    logger.debug('Configuration merged', {
+      additionalKeys: Object.keys(additionalConfig)
     });
   }
 
@@ -296,7 +296,7 @@ export class ServiceConfig {
    */
   static createAPIServiceSchema() {
     return Joi.object({
-      apiKey: Joi.string().required(),
+      apiKey: Joi.string().trim().min(1).required(),
       baseURL: Joi.string().uri().required(),
       timeout: Joi.number().positive().default(30000),
       retryAttempts: Joi.number().min(0).max(10).default(3),

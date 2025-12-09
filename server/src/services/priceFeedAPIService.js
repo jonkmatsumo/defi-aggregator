@@ -120,9 +120,9 @@ export class PriceFeedAPIService extends BaseService {
     // Set up API credentials
     this.setupAPICredentials();
 
-    logger.info('PriceFeedAPIService initialized', { 
+    logger.info('PriceFeedAPIService initialized', {
       supportedSymbols: Object.keys(this.supportedSymbols),
-      cacheTimeout: this.config.cacheTimeout 
+      cacheTimeout: this.config.cacheTimeout
     });
   }
 
@@ -174,19 +174,19 @@ export class PriceFeedAPIService extends BaseService {
       // Cache the result
       this.setCachedData(cacheKey, priceData);
 
-      logger.info('Cryptocurrency price fetched successfully', { 
-        symbol, 
+      logger.info('Cryptocurrency price fetched successfully', {
+        symbol,
         currency,
-        price: priceData.price 
+        price: priceData.price
       });
 
       return priceData;
 
     } catch (error) {
-      logger.error('Failed to fetch cryptocurrency price', { 
-        symbol, 
+      logger.error('Failed to fetch cryptocurrency price', {
+        symbol,
         currency,
-        error: error.message 
+        error: error.message
       });
 
       // Return fallback data on error
@@ -204,7 +204,7 @@ export class PriceFeedAPIService extends BaseService {
    */
   async getMultiplePrices(symbols, currency = 'USD') {
     const validSymbols = symbols.filter(symbol => this.supportedSymbols[symbol]);
-    
+
     if (validSymbols.length === 0) {
       throw new ServiceError('No valid cryptocurrency symbols specified');
     }
@@ -214,14 +214,14 @@ export class PriceFeedAPIService extends BaseService {
         const priceData = await this.getCryptocurrencyPrice(symbol, currency);
         return { symbol, data: priceData, success: true };
       } catch (error) {
-        logger.warn('Failed to fetch price for symbol', { 
-          symbol, 
-          error: error.message 
+        logger.warn('Failed to fetch price for symbol', {
+          symbol,
+          error: error.message
         });
-        return { 
-          symbol, 
-          data: this.getFallbackPrice(symbol, currency), 
-          success: false 
+        return {
+          symbol,
+          data: this.getFallbackPrice(symbol, currency),
+          success: false
         };
       }
     });
@@ -273,21 +273,21 @@ export class PriceFeedAPIService extends BaseService {
       // Cache with longer TTL for historical data
       this.setCachedData(cacheKey, historyData);
 
-      logger.info('Price history fetched successfully', { 
-        symbol, 
+      logger.info('Price history fetched successfully', {
+        symbol,
         timeframe,
         interval,
-        dataPoints: historyData.data.length 
+        dataPoints: historyData.data.length
       });
 
       return historyData;
 
     } catch (error) {
-      logger.error('Failed to fetch price history', { 
-        symbol, 
+      logger.error('Failed to fetch price history', {
+        symbol,
         timeframe,
         interval,
-        error: error.message 
+        error: error.message
       });
 
       // Generate mock historical data as fallback
@@ -323,17 +323,17 @@ export class PriceFeedAPIService extends BaseService {
       // Cache the result
       this.setCachedData(cacheKey, marketData);
 
-      logger.info('Market data fetched successfully', { 
+      logger.info('Market data fetched successfully', {
         symbol,
-        marketCap: marketData.market_cap 
+        marketCap: marketData.market_cap
       });
 
       return marketData;
 
     } catch (error) {
-      logger.error('Failed to fetch market data', { 
+      logger.error('Failed to fetch market data', {
         symbol,
-        error: error.message 
+        error: error.message
       });
 
       // Return fallback market data
@@ -351,7 +351,7 @@ export class PriceFeedAPIService extends BaseService {
    */
   subscribeToRealTimePrices(symbols, callback) {
     const validSymbols = symbols.filter(symbol => this.supportedSymbols[symbol]);
-    
+
     if (validSymbols.length === 0) {
       throw new ServiceError('No valid cryptocurrency symbols specified for subscription');
     }
@@ -375,7 +375,7 @@ export class PriceFeedAPIService extends BaseService {
         const subscribers = this.wsSubscribers.get(symbol);
         if (subscribers) {
           subscribers.delete(callback);
-          
+
           // Close WebSocket if no more subscribers
           if (subscribers.size === 0) {
             this.disconnectWebSocket(symbol);
@@ -402,7 +402,7 @@ export class PriceFeedAPIService extends BaseService {
       ws.on('open', () => {
         logger.info('WebSocket connected for symbol', { symbol });
         this.wsReconnectAttempts.set(symbol, 0);
-        
+
         // Notify subscribers of connection
         this.notifyWebSocketSubscribers(symbol, {
           type: 'connection',
@@ -422,7 +422,7 @@ export class PriceFeedAPIService extends BaseService {
 
       ws.on('close', (code, reason) => {
         logger.warn('WebSocket disconnected', { symbol, code, reason: reason.toString() });
-        
+
         // Notify subscribers of disconnection
         this.notifyWebSocketSubscribers(symbol, {
           type: 'connection',
@@ -467,7 +467,7 @@ export class PriceFeedAPIService extends BaseService {
    */
   attemptWebSocketReconnect(symbol) {
     const attempts = this.wsReconnectAttempts.get(symbol) || 0;
-    
+
     if (attempts >= this.maxReconnectAttempts) {
       logger.error('Max WebSocket reconnection attempts reached', { symbol });
       this.notifyWebSocketSubscribers(symbol, {
@@ -479,13 +479,13 @@ export class PriceFeedAPIService extends BaseService {
     }
 
     const delay = Math.min(this.reconnectDelay * Math.pow(2, attempts), 30000);
-    
-    logger.info('Attempting WebSocket reconnection', { 
-      symbol, 
-      attempt: attempts + 1, 
-      delay 
+
+    logger.info('Attempting WebSocket reconnection', {
+      symbol,
+      attempt: attempts + 1,
+      delay
     });
-    
+
     setTimeout(() => {
       this.wsReconnectAttempts.set(symbol, attempts + 1);
       this.connectWebSocket(symbol);
@@ -521,9 +521,9 @@ export class PriceFeedAPIService extends BaseService {
       }
 
     } catch (error) {
-      logger.error('Error processing WebSocket price data', { 
-        symbol, 
-        error: error.message 
+      logger.error('Error processing WebSocket price data', {
+        symbol,
+        error: error.message
       });
     }
   }
@@ -540,9 +540,9 @@ export class PriceFeedAPIService extends BaseService {
         try {
           callback(data);
         } catch (error) {
-          logger.error('Error in WebSocket subscriber callback', { 
-            symbol, 
-            error: error.message 
+          logger.error('Error in WebSocket subscriber callback', {
+            symbol,
+            error: error.message
           });
         }
       });
@@ -557,30 +557,30 @@ export class PriceFeedAPIService extends BaseService {
    * @returns {Object} Price data
    */
   async fetchPriceFromAPI(symbol, currency, includeMarketData) {
-    
+
     try {
       // Try CoinGecko first
       return await this.fetchFromCoinGecko(symbol, currency, includeMarketData);
     } catch (error) {
-      logger.warn('CoinGecko API failed, trying Binance', { 
-        symbol, 
-        error: error.message 
+      logger.warn('CoinGecko API failed, trying Binance', {
+        symbol,
+        error: error.message
       });
-      
+
       try {
         // Fallback to Binance
         return await this.fetchFromBinance(symbol, currency, includeMarketData);
       } catch (binanceError) {
-        logger.warn('Binance API also failed', { 
-          symbol, 
-          error: binanceError.message 
+        logger.warn('Binance API also failed', {
+          symbol,
+          error: binanceError.message
         });
-        
+
         // Try CoinMarketCap if available
         if (this.apiClient.hasCredentials('coinMarketCap')) {
           return await this.fetchFromCoinMarketCap(symbol, currency, includeMarketData);
         }
-        
+
         throw error; // Throw original CoinGecko error
       }
     }
@@ -592,10 +592,10 @@ export class PriceFeedAPIService extends BaseService {
   async fetchFromCoinGecko(symbol, currency, includeMarketData) {
     const symbolConfig = this.supportedSymbols[symbol];
     const currencyLower = currency.toLowerCase();
-    
+
     let url = `${this.apiEndpoints.coinGecko.baseURL}${this.apiEndpoints.coinGecko.simplePrice}`;
     url += `?ids=${symbolConfig.coinGeckoId}&vs_currencies=${currencyLower}`;
-    
+
     if (includeMarketData) {
       url += '&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true';
     }
@@ -627,7 +627,7 @@ export class PriceFeedAPIService extends BaseService {
    */
   async fetchFromBinance(symbol, currency, _includeMarketData) {
     const symbolConfig = this.supportedSymbols[symbol];
-    
+
     const url = `${this.apiEndpoints.binance.baseURL}${this.apiEndpoints.binance.ticker24hr}`;
     const params = `?symbol=${symbolConfig.binanceSymbol}`;
 
@@ -657,7 +657,7 @@ export class PriceFeedAPIService extends BaseService {
    */
   async fetchFromCoinMarketCap(symbol, currency, _includeMarketData) {
     const credentials = this.apiClient.getCredentials('coinMarketCap');
-    
+
     const url = `${this.apiEndpoints.coinMarketCap.baseURL}${this.apiEndpoints.coinMarketCap.quotes}`;
     const params = `?symbol=${symbol}&convert=${currency.toUpperCase()}`;
 
@@ -706,7 +706,7 @@ export class PriceFeedAPIService extends BaseService {
   async fetchMarketDataFromAPI(symbol) {
     // Use the same price API but focus on market data
     const priceData = await this.fetchPriceFromAPI(symbol, 'USD', true);
-    
+
     return {
       symbol,
       market_cap: priceData.market_cap,
@@ -725,26 +725,26 @@ export class PriceFeedAPIService extends BaseService {
   generateMockHistoricalData(symbol, timeframe, interval) {
     const fallbackPrice = this.fallbackPrices[symbol]?.price || 100;
     const data = [];
-    
+
     // Calculate number of data points based on timeframe and interval
     const timeframeHours = timeframe === '24h' ? 24 : timeframe === '7d' ? 168 : 720;
     const intervalHours = interval === '1h' ? 1 : interval === '4h' ? 4 : 24;
     const dataPoints = Math.floor(timeframeHours / intervalHours);
-    
+
     const now = Date.now();
-    
+
     for (let i = 0; i < dataPoints; i++) {
       const time = now - (dataPoints - i) * intervalHours * 60 * 60 * 1000;
-      const price = fallbackPrice + Math.sin(i * 0.1) * (fallbackPrice * 0.05) + 
-                   (Math.random() - 0.5) * (fallbackPrice * 0.02);
-      
+      const price = fallbackPrice + Math.sin(i * 0.1) * (fallbackPrice * 0.05) +
+        (Math.random() - 0.5) * (fallbackPrice * 0.02);
+
       data.push({
         timestamp: time,
         price: parseFloat(price.toFixed(2)),
         volume: Math.random() * 1000000
       });
     }
-    
+
     return {
       symbol,
       timeframe,
@@ -802,8 +802,8 @@ export class PriceFeedAPIService extends BaseService {
    */
   validatePriceData(data) {
     if (!data || typeof data !== 'object') return false;
-    if (typeof data.price !== 'number' || data.price <= 0) return false;
-    if (data.timestamp && (typeof data.timestamp !== 'number' || data.timestamp <= 0)) return false;
+    if (typeof data.price !== 'number' || Number.isNaN(data.price) || data.price <= 0) return false;
+    if (data.timestamp && (typeof data.timestamp !== 'number' || Number.isNaN(data.timestamp) || data.timestamp <= 0)) return false;
     return true;
   }
 

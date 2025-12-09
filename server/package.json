@@ -7,8 +7,9 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest --watchAll=false --detectOpenHandles --forceExit",
-    "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --testPathIgnorePatterns=tests/integration --watchAll=false --detectOpenHandles --forceExit",
+    "test:integration": "node --experimental-vm-modules node_modules/.bin/jest tests/integration --watchAll=false --detectOpenHandles --forceExit",
+    "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --testPathIgnorePatterns=tests/integration --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage --watchAll=false",
     "lint": "eslint src/ tests/ --format=compact",
     "lint:fix": "eslint src/ tests/ --fix"

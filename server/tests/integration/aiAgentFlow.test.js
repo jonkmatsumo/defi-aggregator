@@ -175,6 +175,7 @@ describe('AI Agent Integration Tests', () => {
       mockLLM.generateResponse.mockResolvedValueOnce({
         content: 'Let me check the current gas prices for you.',
         toolCalls: [{
+          id: 'call_gas_1',
           name: 'get_gas_prices',
           parameters: { network: 'ethereum' }
         }],
@@ -213,6 +214,7 @@ describe('AI Agent Integration Tests', () => {
         .mockResolvedValueOnce({
           content: 'Let me check the Bitcoin price.',
           toolCalls: [{
+            id: 'call_crypto_1',
             name: 'get_crypto_price',
             parameters: { symbol: 'BTC', currency: 'USD' }
           }],
@@ -239,6 +241,7 @@ describe('AI Agent Integration Tests', () => {
         .mockResolvedValueOnce({
           content: 'I\'ll check the USDC lending rates for you.',
           toolCalls: [{
+            id: 'call_lending_1',
             name: 'get_lending_rates',
             parameters: { token: 'USDC', protocols: ['aave'] }
           }],
@@ -265,8 +268,8 @@ describe('AI Agent Integration Tests', () => {
         .mockResolvedValueOnce({
           content: 'I\'ll get both for you.',
           toolCalls: [
-            { name: 'get_gas_prices', parameters: { network: 'ethereum' } },
-            { name: 'get_crypto_price', parameters: { symbol: 'BTC' } }
+            { id: 'call_multi_1', name: 'get_gas_prices', parameters: { network: 'ethereum' } },
+            { id: 'call_multi_2', name: 'get_crypto_price', parameters: { symbol: 'BTC' } }
           ],
           usage: { total_tokens: 100 }
         })
@@ -301,7 +304,7 @@ describe('AI Agent Integration Tests', () => {
       mockLLM.generateResponse
         .mockResolvedValueOnce({
           content: 'Let me check.',
-          toolCalls: [{ name: 'failing_tool', parameters: {} }],
+          toolCalls: [{ id: 'call_error_1', name: 'failing_tool', parameters: {} }],
           usage: { total_tokens: 50 }
         })
         .mockResolvedValueOnce({
@@ -378,7 +381,7 @@ describe('AI Agent Integration Tests', () => {
       mockLLM.generateResponse
         .mockResolvedValueOnce({
           content: 'Checking gas...',
-          toolCalls: [{ name: 'get_gas_prices', parameters: { network: 'ethereum' } }],
+          toolCalls: [{ id: 'call_history_1', name: 'get_gas_prices', parameters: { network: 'ethereum' } }],
           usage: { total_tokens: 50 }
         })
         .mockResolvedValueOnce({
@@ -389,10 +392,10 @@ describe('AI Agent Integration Tests', () => {
       await manager.processMessage(sessionId, 'What are gas prices?');
 
       const session = manager.getSession(sessionId);
-      
+
       // Should have messages including tool messages
       expect(session.messages.length).toBeGreaterThanOrEqual(4);
-      
+
       const roles = session.messages.map(m => m.role);
       expect(roles).toContain('user');
       expect(roles).toContain('assistant');
@@ -405,7 +408,7 @@ describe('AI Agent Integration Tests', () => {
       mockLLM.generateResponse
         .mockResolvedValueOnce({
           content: 'Let me get that.',
-          toolCalls: [{ name: 'get_gas_prices', parameters: { network: 'ethereum' } }],
+          toolCalls: [{ id: 'call_context_1', name: 'get_gas_prices', parameters: { network: 'ethereum' } }],
           usage: { total_tokens: 60 }
         })
         .mockResolvedValueOnce({
@@ -419,7 +422,7 @@ describe('AI Agent Integration Tests', () => {
       // Second call should include tool results in context
       const secondCall = mockLLM.generateResponse.mock.calls[1];
       const messages = secondCall[0];
-      
+
       expect(messages.some(m => m.role === 'tool')).toBe(true);
     });
   });
@@ -469,14 +472,18 @@ describe('AI Agent Integration Tests', () => {
         ),
         async (toolNames) => {
           const sessionId = 'prop-multi-' + Math.random().toString(36).substr(2, 9);
-          
-          const toolCalls = toolNames.map(name => {
+
+          const toolCalls = toolNames.map((name, index) => {
             const params = {
               'get_gas_prices': { network: 'ethereum' },
               'get_crypto_price': { symbol: 'BTC' },
               'get_lending_rates': { token: 'USDC' }
             };
-            return { name, parameters: params[name] };
+            return {
+              id: `call_prop_${index}_${Math.random().toString(36).substr(2, 5)}`,
+              name,
+              parameters: params[name]
+            };
           });
 
           mockLLM.generateResponse

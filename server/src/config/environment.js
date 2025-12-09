@@ -41,7 +41,7 @@ const configSchema = Joi.object({
 
 export function validateConfig() {
   const rawConfig = {
-    port: parseInt(process.env.PORT) || 3001,
+    port: process.env.PORT !== undefined ? parseInt(process.env.PORT) : 3001,
     host: process.env.HOST || 'localhost',
     nodeEnv: process.env.NODE_ENV || 'development',
 
@@ -51,14 +51,14 @@ export function validateConfig() {
         ? process.env.ANTHROPIC_API_KEY
         : process.env.OPENAI_API_KEY,
       model: process.env.LLM_MODEL || 'gpt-4',
-      maxTokens: parseInt(process.env.LLM_MAX_TOKENS) || 2048,
+      maxTokens: process.env.LLM_MAX_TOKENS !== undefined ? parseInt(process.env.LLM_MAX_TOKENS) : 2048,
       temperature: process.env.LLM_TEMPERATURE !== undefined ? parseFloat(process.env.LLM_TEMPERATURE) : 0.7
     },
 
     websocket: {
-      pingInterval: parseInt(process.env.WS_PING_INTERVAL) || 30000,
-      maxConnections: parseInt(process.env.WS_MAX_CONNECTIONS) || 100,
-      messageQueueSize: parseInt(process.env.WS_MESSAGE_QUEUE_SIZE) || 1000
+      pingInterval: process.env.WS_PING_INTERVAL !== undefined ? parseInt(process.env.WS_PING_INTERVAL) : 30000,
+      maxConnections: process.env.WS_MAX_CONNECTIONS !== undefined ? parseInt(process.env.WS_MAX_CONNECTIONS) : 100,
+      messageQueueSize: process.env.WS_MESSAGE_QUEUE_SIZE !== undefined ? parseInt(process.env.WS_MESSAGE_QUEUE_SIZE) : 1000
     },
 
     logging: {
@@ -68,7 +68,7 @@ export function validateConfig() {
 
     tools: {
       enabled: process.env.TOOLS_ENABLED ? process.env.TOOLS_ENABLED.split(',') : ['gas_price'],
-      rateLimit: parseInt(process.env.TOOLS_RATE_LIMIT) || 10
+      rateLimit: process.env.TOOLS_RATE_LIMIT !== undefined ? parseInt(process.env.TOOLS_RATE_LIMIT) : 10
     },
 
     apiKeys: {
@@ -77,7 +77,7 @@ export function validateConfig() {
     },
 
     corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-    apiTimeout: parseInt(process.env.API_TIMEOUT) || 30000
+    apiTimeout: process.env.API_TIMEOUT !== undefined ? parseInt(process.env.API_TIMEOUT) : 30000
   };
 
   const { error, value } = configSchema.validate(rawConfig, {

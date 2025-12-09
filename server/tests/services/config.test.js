@@ -11,7 +11,7 @@ describe('ServiceConfig', () => {
   beforeEach(() => {
     // Save original environment
     originalEnv = { ...process.env };
-    
+
     serviceConfig = new ServiceConfig({
       defaultKey: 'defaultValue',
       nested: {
@@ -87,25 +87,25 @@ describe('ServiceConfig', () => {
     test('Property 21: Environment-based configuration support', () => {
       fc.assert(fc.property(
         fc.record({
-          stringVal: fc.string({ minLength: 1, maxLength: 50 }).filter(s => 
-            s.trim().length > 0 && 
-            !/^\d+$/.test(s) && 
-            !/^\d+\.\d+$/.test(s) && 
-            s.toLowerCase() !== 'true' && 
+          stringVal: fc.string({ minLength: 1, maxLength: 50 }).filter(s =>
+            s.trim().length > 0 &&
+            !/^\d+$/.test(s) &&
+            !/^\d+\.\d+$/.test(s) &&
+            s.toLowerCase() !== 'true' &&
             s.toLowerCase() !== 'false' &&
             !s.includes(',')
           ),
           intVal: fc.integer({ min: 0, max: 10000 }),
-          floatVal: fc.float({ min: 1, max: 100, noNaN: true }).filter(f => 
-            !f.toString().includes('e') && 
+          floatVal: fc.float({ min: 1, max: 100, noNaN: true }).filter(f =>
+            !f.toString().includes('e') &&
             /^\d+\.\d+$/.test(f.toString())
           ),
           boolVal: fc.boolean(),
-          arrayVal: fc.array(fc.string({ minLength: 1, maxLength: 20 }).filter(s => 
-            s.trim().length > 0 && 
+          arrayVal: fc.array(fc.string({ minLength: 1, maxLength: 20 }).filter(s =>
+            s.trim().length > 0 &&
             !s.includes(',') &&
             !/^\d+$/.test(s) &&
-            s.toLowerCase() !== 'true' && 
+            s.toLowerCase() !== 'true' &&
             s.toLowerCase() !== 'false'
           ), { minLength: 2, maxLength: 5 })
         }),
@@ -152,20 +152,20 @@ describe('ServiceConfig', () => {
       fc.assert(fc.property(
         fc.string({ minLength: 1, maxLength: 10 }).map(s => s.toUpperCase().replace(/[^A-Z]/g, 'A') + '_'),
         fc.record({
-          key1: fc.string({ minLength: 1, maxLength: 20 }).filter(s => 
-            s.trim().length > 0 && 
+          key1: fc.string({ minLength: 1, maxLength: 20 }).filter(s =>
+            s.trim().length > 0 &&
             !s.includes(',') &&
             !/^\d+$/.test(s) &&
             !/^\d+\.\d+$/.test(s) &&
-            s.toLowerCase() !== 'true' && 
+            s.toLowerCase() !== 'true' &&
             s.toLowerCase() !== 'false'
           ),
-          key2: fc.string({ minLength: 1, maxLength: 20 }).filter(s => 
-            s.trim().length > 0 && 
+          key2: fc.string({ minLength: 1, maxLength: 20 }).filter(s =>
+            s.trim().length > 0 &&
             !s.includes(',') &&
             !/^\d+$/.test(s) &&
             !/^\d+\.\d+$/.test(s) &&
-            s.toLowerCase() !== 'true' && 
+            s.toLowerCase() !== 'true' &&
             s.toLowerCase() !== 'false'
           )
         }),
@@ -180,7 +180,7 @@ describe('ServiceConfig', () => {
           // Set environment variables with test prefix
           process.env[`${prefix}KEY1`] = testValues.key1;
           process.env[`${prefix}KEY2`] = testValues.key2;
-          
+
           // Set environment variables with different prefix
           process.env.OTHER_KEY1 = 'other-value1';
           process.env.OTHER_KEY2 = 'other-value2';
@@ -208,7 +208,7 @@ describe('ServiceConfig', () => {
       // Should have default values
       expect(config.defaultKey).toBe('defaultValue');
       expect(config.nested.key).toBe('nestedDefault');
-      
+
       // Should have environment values
       expect(config.api.key).toBe('env-api-key');
       expect(config.new.key).toBe('new-value');
@@ -249,7 +249,7 @@ describe('ServiceConfig', () => {
 
     test('should merge additional configuration', () => {
       const config = serviceConfig.load();
-      
+
       serviceConfig.merge({
         newKey: 'newValue',
         nested: {
@@ -312,7 +312,7 @@ describe('ServiceConfig', () => {
       });
 
       const schema = ServiceConfig.createServiceSchema('myService', serviceSchema);
-      
+
       const { error, value } = schema.validate({
         myService: {
           apiKey: 'test-key'
@@ -326,7 +326,7 @@ describe('ServiceConfig', () => {
 
     test('should create API service schema', () => {
       const schema = ServiceConfig.createAPIServiceSchema();
-      
+
       const { error, value } = schema.validate({
         apiKey: 'test-key',
         baseURL: 'https://api.example.com'
@@ -340,229 +340,229 @@ describe('ServiceConfig', () => {
   });
 });
 
-  describe('Configuration Validation Accuracy', () => {
-    // **Feature: service-migration-to-backend, Property 22: Configuration validation accuracy**
-    test('Property 22: Configuration validation accuracy', () => {
-      fc.assert(fc.property(
-        fc.record({
-          validConfig: fc.record({
+describe('Configuration Validation Accuracy', () => {
+  // **Feature: service-migration-to-backend, Property 22: Configuration validation accuracy**
+  test('Property 22: Configuration validation accuracy', () => {
+    fc.assert(fc.property(
+      fc.record({
+        validConfig: fc.record({
+          apiKey: fc.string({ minLength: 10, maxLength: 50 }),
+          timeout: fc.integer({ min: 1000, max: 60000 }),
+          enabled: fc.boolean(),
+          retryAttempts: fc.integer({ min: 1, max: 10 })
+        }),
+        invalidConfigs: fc.array(fc.oneof(
+          // Missing required field
+          fc.record({
+            timeout: fc.integer({ min: 1000, max: 60000 }),
+            enabled: fc.boolean()
+          }),
+          // Invalid type for apiKey
+          fc.record({
+            apiKey: fc.integer(),
+            timeout: fc.integer({ min: 1000, max: 60000 })
+          }),
+          // Invalid range for timeout
+          fc.record({
+            apiKey: fc.string({ minLength: 10, maxLength: 50 }),
+            timeout: fc.integer({ min: -1000, max: 0 })
+          }),
+          // Invalid type for boolean
+          fc.record({
             apiKey: fc.string({ minLength: 10, maxLength: 50 }),
             timeout: fc.integer({ min: 1000, max: 60000 }),
-            enabled: fc.boolean(),
-            retryAttempts: fc.integer({ min: 1, max: 10 })
-          }),
-          invalidConfigs: fc.array(fc.oneof(
-            // Missing required field
-            fc.record({
-              timeout: fc.integer({ min: 1000, max: 60000 }),
-              enabled: fc.boolean()
-            }),
-            // Invalid type for apiKey
-            fc.record({
-              apiKey: fc.integer(),
-              timeout: fc.integer({ min: 1000, max: 60000 })
-            }),
-            // Invalid range for timeout
-            fc.record({
-              apiKey: fc.string({ minLength: 10, maxLength: 50 }),
-              timeout: fc.integer({ min: -1000, max: 0 })
-            }),
-            // Invalid type for boolean
-            fc.record({
-              apiKey: fc.string({ minLength: 10, maxLength: 50 }),
-              timeout: fc.integer({ min: 1000, max: 60000 }),
-              enabled: fc.string()
-            })
-          ), { minLength: 1, maxLength: 5 })
-        }),
-        ({ validConfig, invalidConfigs }) => {
-          const schema = Joi.object({
+            enabled: fc.string()
+          })
+        ), { minLength: 1, maxLength: 5 })
+      }),
+      ({ validConfig, invalidConfigs }) => {
+        const schema = Joi.object({
+          apiKey: Joi.string().min(5).required(),
+          timeout: Joi.number().positive().required(),
+          enabled: Joi.boolean().default(true),
+          retryAttempts: Joi.number().min(1).max(10).default(3)
+        });
+
+        const config = new ServiceConfig();
+        config.setValidationSchema(schema);
+
+        // Valid configuration should pass validation
+        const loadedValidConfig = config.load(validConfig);
+        expect(loadedValidConfig.apiKey).toBe(validConfig.apiKey);
+        expect(loadedValidConfig.timeout).toBe(validConfig.timeout);
+        expect(loadedValidConfig.enabled).toBe(validConfig.enabled);
+
+        // Invalid configurations should fail validation
+        invalidConfigs.forEach((invalidConfig, index) => {
+          const testConfig = new ServiceConfig();
+          testConfig.setValidationSchema(schema);
+
+          expect(() => {
+            testConfig.load(invalidConfig);
+          }).toThrow(ServiceError);
+        });
+      }
+    ), { numRuns: 100 });
+  });
+
+  test('Property 22: Validation error message clarity', () => {
+    fc.assert(fc.property(
+      fc.record({
+        missingField: fc.constantFrom('apiKey', 'baseURL', 'timeout'),
+        invalidValue: fc.oneof(
+          fc.constant(null),
+          fc.constant(undefined),
+          fc.constant(''),
+          fc.integer({ min: -1000, max: 0 })
+        )
+      }),
+      ({ missingField, invalidValue }) => {
+        const schema = Joi.object({
+          apiKey: Joi.string().required(),
+          baseURL: Joi.string().uri().required(),
+          timeout: Joi.number().positive().required()
+        });
+
+        const config = new ServiceConfig();
+        config.setValidationSchema(schema);
+
+        // Test missing required field
+        const incompleteConfig = {
+          apiKey: 'test-key',
+          baseURL: 'https://api.example.com',
+          timeout: 5000
+        };
+        delete incompleteConfig[missingField];
+
+        let thrownError;
+        try {
+          config.load(incompleteConfig);
+        } catch (error) {
+          thrownError = error;
+        }
+
+        expect(thrownError).toBeInstanceOf(ServiceError);
+        expect(thrownError.message).toContain('Configuration validation failed');
+        expect(thrownError.message).toContain(missingField);
+
+        // Test invalid value type/range
+        const invalidConfig = {
+          apiKey: 'test-key',
+          baseURL: 'https://api.example.com',
+          timeout: invalidValue
+        };
+
+        let thrownError2;
+        try {
+          const config2 = new ServiceConfig();
+          config2.setValidationSchema(schema);
+          config2.load(invalidConfig);
+        } catch (error) {
+          thrownError2 = error;
+        }
+
+        expect(thrownError2).toBeInstanceOf(ServiceError);
+        expect(thrownError2.message).toContain('Configuration validation failed');
+      }
+    ), { numRuns: 100 });
+  });
+
+  test('Property 22: Schema validation consistency', () => {
+    fc.assert(fc.property(
+      fc.array(fc.record({
+        serviceName: fc.string({ minLength: 3, maxLength: 20 }).filter(s => /^[a-zA-Z][a-zA-Z0-9]*$/.test(s)),
+        config: fc.record({
+          apiKey: fc.string({ minLength: 10, maxLength: 50 }),
+          timeout: fc.integer({ min: 1000, max: 60000 }),
+          retryAttempts: fc.integer({ min: 1, max: 5 })
+        })
+      }), { minLength: 1, maxLength: 3 }),
+      (serviceConfigs) => {
+        // Create schemas for each service
+        const schemas = serviceConfigs.map(({ serviceName }) => ({
+          serviceName,
+          schema: ServiceConfig.createServiceSchema(serviceName, Joi.object({
             apiKey: Joi.string().min(5).required(),
             timeout: Joi.number().positive().required(),
-            enabled: Joi.boolean().default(true),
             retryAttempts: Joi.number().min(1).max(10).default(3)
-          });
+          }))
+        }));
 
-          const config = new ServiceConfig();
-          config.setValidationSchema(schema);
+        // Test each service configuration
+        serviceConfigs.forEach(({ serviceName, config: serviceConfig }, index) => {
+          const { schema } = schemas[index];
+          const testConfig = new ServiceConfig();
+          testConfig.setValidationSchema(schema);
 
-          // Valid configuration should pass validation
-          const loadedValidConfig = config.load(validConfig);
-          expect(loadedValidConfig.apiKey).toBe(validConfig.apiKey);
-          expect(loadedValidConfig.timeout).toBe(validConfig.timeout);
-          expect(loadedValidConfig.enabled).toBe(validConfig.enabled);
+          const fullConfig = {
+            [serviceName]: serviceConfig
+          };
 
-          // Invalid configurations should fail validation
-          invalidConfigs.forEach((invalidConfig, index) => {
-            const testConfig = new ServiceConfig();
-            testConfig.setValidationSchema(schema);
-            
-            expect(() => {
-              testConfig.load(invalidConfig);
-            }).toThrow(ServiceError);
-          });
-        }
-      ), { numRuns: 100 });
-    });
+          // Should validate successfully
+          const loadedConfig = testConfig.load(fullConfig);
+          expect(loadedConfig[serviceName].apiKey).toBe(serviceConfig.apiKey);
+          expect(loadedConfig[serviceName].timeout).toBe(serviceConfig.timeout);
+          expect(loadedConfig[serviceName].retryAttempts).toBe(serviceConfig.retryAttempts);
 
-    test('Property 22: Validation error message clarity', () => {
-      fc.assert(fc.property(
-        fc.record({
-          missingField: fc.constantFrom('apiKey', 'baseURL', 'timeout'),
-          invalidValue: fc.oneof(
-            fc.constant(null),
-            fc.constant(undefined),
-            fc.constant(''),
-            fc.integer({ min: -1000, max: 0 })
-          )
+          // Should fail validation with missing service config
+          const testConfig2 = new ServiceConfig();
+          testConfig2.setValidationSchema(schema);
+
+          expect(() => {
+            testConfig2.load({ [serviceName]: {} }); // Empty service config should fail
+          }).toThrow(ServiceError);
+        });
+      }
+    ), { numRuns: 100 });
+  });
+
+  test('Property 22: API service schema validation', () => {
+    fc.assert(fc.property(
+      fc.record({
+        validAPIConfig: fc.record({
+          apiKey: fc.hexaString({ minLength: 10, maxLength: 100 }),
+          baseURL: fc.constant('https://api.example.com'),
+          timeout: fc.integer({ min: 1000, max: 60000 }),
+          retryAttempts: fc.integer({ min: 1, max: 10 })
         }),
-        ({ missingField, invalidValue }) => {
-          const schema = Joi.object({
-            apiKey: Joi.string().required(),
-            baseURL: Joi.string().uri().required(),
-            timeout: Joi.number().positive().required()
-          });
-
-          const config = new ServiceConfig();
-          config.setValidationSchema(schema);
-
-          // Test missing required field
-          const incompleteConfig = {
-            apiKey: 'test-key',
-            baseURL: 'https://api.example.com',
-            timeout: 5000
-          };
-          delete incompleteConfig[missingField];
-
-          let thrownError;
-          try {
-            config.load(incompleteConfig);
-          } catch (error) {
-            thrownError = error;
-          }
-
-          expect(thrownError).toBeInstanceOf(ServiceError);
-          expect(thrownError.message).toContain('Configuration validation failed');
-          expect(thrownError.message).toContain(missingField);
-
-          // Test invalid value type/range
-          const invalidConfig = {
-            apiKey: 'test-key',
-            baseURL: 'https://api.example.com',
-            timeout: invalidValue
-          };
-
-          let thrownError2;
-          try {
-            const config2 = new ServiceConfig();
-            config2.setValidationSchema(schema);
-            config2.load(invalidConfig);
-          } catch (error) {
-            thrownError2 = error;
-          }
-
-          expect(thrownError2).toBeInstanceOf(ServiceError);
-          expect(thrownError2.message).toContain('Configuration validation failed');
-        }
-      ), { numRuns: 100 });
-    });
-
-    test('Property 22: Schema validation consistency', () => {
-      fc.assert(fc.property(
-        fc.array(fc.record({
-          serviceName: fc.string({ minLength: 3, maxLength: 20 }).filter(s => /^[a-zA-Z][a-zA-Z0-9]*$/.test(s)),
-          config: fc.record({
-            apiKey: fc.string({ minLength: 10, maxLength: 50 }),
-            timeout: fc.integer({ min: 1000, max: 60000 }),
-            retryAttempts: fc.integer({ min: 1, max: 5 })
-          })
-        }), { minLength: 1, maxLength: 3 }),
-        (serviceConfigs) => {
-          // Create schemas for each service
-          const schemas = serviceConfigs.map(({ serviceName }) => ({
-            serviceName,
-            schema: ServiceConfig.createServiceSchema(serviceName, Joi.object({
-              apiKey: Joi.string().min(5).required(),
-              timeout: Joi.number().positive().required(),
-              retryAttempts: Joi.number().min(1).max(10).default(3)
-            }))
-          }));
-
-          // Test each service configuration
-          serviceConfigs.forEach(({ serviceName, config: serviceConfig }, index) => {
-            const { schema } = schemas[index];
-            const testConfig = new ServiceConfig();
-            testConfig.setValidationSchema(schema);
-
-            const fullConfig = {
-              [serviceName]: serviceConfig
-            };
-
-            // Should validate successfully
-            const loadedConfig = testConfig.load(fullConfig);
-            expect(loadedConfig[serviceName].apiKey).toBe(serviceConfig.apiKey);
-            expect(loadedConfig[serviceName].timeout).toBe(serviceConfig.timeout);
-            expect(loadedConfig[serviceName].retryAttempts).toBe(serviceConfig.retryAttempts);
-
-            // Should fail validation with missing service config
-            const testConfig2 = new ServiceConfig();
-            testConfig2.setValidationSchema(schema);
-            
-            expect(() => {
-              testConfig2.load({ [serviceName]: {} }); // Empty service config should fail
-            }).toThrow(ServiceError);
-          });
-        }
-      ), { numRuns: 100 });
-    });
-
-    test('Property 22: API service schema validation', () => {
-      fc.assert(fc.property(
-        fc.record({
-          validAPIConfig: fc.record({
+        invalidAPIConfigs: fc.array(fc.oneof(
+          // Missing required apiKey
+          fc.record({
+            baseURL: fc.webUrl(),
+            timeout: fc.integer({ min: 1000, max: 60000 })
+          }),
+          // Invalid URL format
+          fc.record({
+            apiKey: fc.string({ minLength: 10, maxLength: 100 }),
+            baseURL: fc.string({ minLength: 5, maxLength: 20 }).filter(s => !s.startsWith('http')),
+            timeout: fc.integer({ min: 1000, max: 60000 })
+          }),
+          // Invalid timeout (negative)
+          fc.record({
             apiKey: fc.string({ minLength: 10, maxLength: 100 }),
             baseURL: fc.webUrl(),
-            timeout: fc.integer({ min: 1000, max: 60000 }),
-            retryAttempts: fc.integer({ min: 1, max: 10 })
-          }),
-          invalidAPIConfigs: fc.array(fc.oneof(
-            // Missing required apiKey
-            fc.record({
-              baseURL: fc.webUrl(),
-              timeout: fc.integer({ min: 1000, max: 60000 })
-            }),
-            // Invalid URL format
-            fc.record({
-              apiKey: fc.string({ minLength: 10, maxLength: 100 }),
-              baseURL: fc.string({ minLength: 5, maxLength: 20 }).filter(s => !s.startsWith('http')),
-              timeout: fc.integer({ min: 1000, max: 60000 })
-            }),
-            // Invalid timeout (negative)
-            fc.record({
-              apiKey: fc.string({ minLength: 10, maxLength: 100 }),
-              baseURL: fc.webUrl(),
-              timeout: fc.integer({ min: -5000, max: 0 })
-            })
-          ), { minLength: 1, maxLength: 3 })
-        }),
-        ({ validAPIConfig, invalidAPIConfigs }) => {
-          const schema = ServiceConfig.createAPIServiceSchema();
-          
-          // Valid API configuration should pass
-          const { error: validError, value: validValue } = schema.validate(validAPIConfig);
-          expect(validError).toBeFalsy();
-          expect(validValue.apiKey).toBe(validAPIConfig.apiKey);
-          expect(validValue.baseURL).toBe(validAPIConfig.baseURL);
-          expect(validValue.timeout).toBe(validAPIConfig.timeout);
+            timeout: fc.integer({ min: -5000, max: 0 })
+          })
+        ), { minLength: 1, maxLength: 3 })
+      }),
+      ({ validAPIConfig, invalidAPIConfigs }) => {
+        const schema = ServiceConfig.createAPIServiceSchema();
 
-          // Invalid configurations should fail
-          invalidAPIConfigs.forEach((invalidConfig) => {
-            const { error } = schema.validate(invalidConfig);
-            expect(error).toBeTruthy();
-            expect(error.details).toBeDefined();
-            expect(error.details.length).toBeGreaterThan(0);
-          });
-        }
-      ), { numRuns: 100 });
-    });
+        // Valid API configuration should pass
+        const { error: validError, value: validValue } = schema.validate(validAPIConfig);
+        expect(validError).toBeFalsy();
+        expect(validValue.apiKey).toBe(validAPIConfig.apiKey);
+        expect(validValue.baseURL).toBe(validAPIConfig.baseURL);
+        expect(validValue.timeout).toBe(validAPIConfig.timeout);
+
+        // Invalid configurations should fail
+        invalidAPIConfigs.forEach((invalidConfig) => {
+          const { error } = schema.validate(invalidConfig);
+          expect(error).toBeTruthy();
+          expect(error.details).toBeDefined();
+          expect(error.details.length).toBeGreaterThan(0);
+        });
+      }
+    ), { numRuns: 100 });
   });
+});

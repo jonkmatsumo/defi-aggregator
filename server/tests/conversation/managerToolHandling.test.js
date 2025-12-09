@@ -23,6 +23,12 @@ describe('ConversationManager Integration', () => {
         manager = new ConversationManager(mockLLMInterface, mockToolRegistry, { generateIntent: jest.fn() }, mockConfig);
     });
 
+    afterEach(() => {
+        if (manager) {
+            manager.destroy();
+        }
+    });
+
     it('should correctly handle tool calls and preserve tool_call_id', async () => {
         const sessionId = 'test-session';
         const userMessage = 'What is the price of ETH?';
