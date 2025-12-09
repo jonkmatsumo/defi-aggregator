@@ -61,8 +61,9 @@ export class ComponentIntentGenerator {
       component: 'NetworkStatus',
       type: 'RENDER_COMPONENT',
       propsGenerator: (toolResult) => ({
-        prices: toolResult.result?.prices || {},
+        prices: toolResult.result?.gasPrices || toolResult.result?.prices || {},
         network: toolResult.result?.network || 'ethereum',
+        transactionType: toolResult.result?.transaction_type || toolResult.result?.transactionType,
         timestamp: toolResult.result?.timestamp
       })
     });
@@ -71,9 +72,12 @@ export class ComponentIntentGenerator {
       component: 'YourAssets',
       type: 'RENDER_COMPONENT',
       propsGenerator: (toolResult) => ({
-        balances: toolResult.result?.balances || [],
+        balances: toolResult.result?.tokens || toolResult.result?.balances || [],
         address: toolResult.result?.address,
-        timestamp: toolResult.result?.timestamp
+        network: toolResult.result?.network,
+        totalUSD: toolResult.result?.totalUSD,
+        timestamp: toolResult.result?.timestamp,
+        dataFreshness: toolResult.dataFreshness
       })
     });
 
@@ -81,9 +85,25 @@ export class ComponentIntentGenerator {
       component: 'LendingSection',
       type: 'RENDER_COMPONENT',
       propsGenerator: (toolResult) => ({
-        rates: toolResult.result?.rates || [],
+        rates: toolResult.result?.rates || toolResult.result?.protocols || [],
         protocols: toolResult.result?.protocols || [],
+        token: toolResult.result?.token,
         timestamp: toolResult.result?.timestamp
+      })
+    });
+
+    this.toolComponentMap.set('get_crypto_price', {
+      component: 'PriceDisplay',
+      type: 'RENDER_COMPONENT',
+      propsGenerator: (toolResult) => ({
+        symbol: toolResult.result?.symbol,
+        price: toolResult.result?.price,
+        currency: toolResult.result?.currency,
+        change24h: toolResult.result?.change_24h,
+        volume24h: toolResult.result?.volume_24h,
+        marketCap: toolResult.result?.market_cap,
+        timestamp: toolResult.result?.timestamp,
+        source: toolResult.result?.source
       })
     });
 
@@ -110,7 +130,9 @@ export class ComponentIntentGenerator {
           intents.push(intent);
         }
       }
-      
+
+      const contextualIntents = this.generateContextualIntents(userMessage, llmResponse);
+      this.mergeIntents(intents, contextualIntents);
       if (intents.length > 0) {
         logger.debug('Generated intents from tool results', { 
           intentCount: intents.length,
@@ -123,6 +145,8 @@ export class ComponentIntentGenerator {
     // Analyze LLM response for component rendering needs
     const llmBasedIntents = this.analyzeResponseForComponents(llmResponse, userMessage);
     if (llmBasedIntents && llmBasedIntents.length > 0) {
+      const contextualIntents = this.generateContextualIntents(userMessage, llmResponse);
+      this.mergeIntents(llmBasedIntents, contextualIntents);
       logger.debug('Generated intents from LLM response analysis', { 
         intentCount: llmBasedIntents.length,
         components: llmBasedIntents.map(i => i.component)
@@ -270,5 +294,39 @@ export class ComponentIntentGenerator {
     }
 
     return intents.length > 0 ? intents : null;
+  }
+
+  generateContextualIntents(userMessage, llmResponse) {
+    const intents = [];
+    const lowerMsg = (userMessage || '').toLowerCase();
+    const lowerResp = (llmResponse || '').toLowerCase();
+
+    const mentionsSwap = lowerMsg.includes('swap') || lowerResp.includes('swap') || lowerResp.includes('exchange');
+    const mentionsGas = lowerMsg.includes('gas') || lowerResp.includes('gas') || lowerResp.includes('fee');
+    const mentionsLending = lowerMsg.includes('lend') || lowerResp.includes('lend') || lowerResp.includes('apy') || lowerResp.includes('yield');
+    const mentionsPrice = lowerMsg.includes('price') || lowerResp.includes('price') || lowerResp.includes('market');
+
+    if (mentionsSwap) {
+      intents.push({ type: 'RENDER_COMPONENT', component: 'TokenSwap', props: { suggestedFromQuery: userMessage } });
+    }
+    if (mentionsGas) {
+      intents.push({ type: 'RENDER_COMPONENT', component: 'NetworkStatus', props: {} });
+    }
+    if (mentionsLending) {
+      intents.push({ type: 'RENDER_COMPONENT', component: 'LendingSection', props: {} });
+    }
+    if (mentionsPrice) {
+      intents.push({ type: 'RENDER_COMPONENT', component: 'PriceDisplay', props: {} });
+    }
+
+    return intents;
+  }
+
+  mergeIntents(target = [], additions = []) {
+    if (!additions || additions.length === 0) return;
+    for (const intent of additions) {
+      const exists = target.find(i => i.component === intent.component && i.type === intent.type);
+      if (!exists) target.push(intent);
+    }
   }
 }
