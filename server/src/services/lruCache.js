@@ -18,7 +18,7 @@ export class LRUCache {
     // Cache storage
     this.cache = new Map(); // key -> { value, timestamp, ttl, accessCount, lastAccess }
     this.accessOrder = new Map(); // key -> linkedListNode for LRU tracking
-    
+
     // Doubly linked list for LRU tracking
     this.head = { key: null, prev: null, next: null };
     this.tail = { key: null, prev: null, next: null };
@@ -38,15 +38,31 @@ export class LRUCache {
     };
 
     // Start cleanup interval
-    this.cleanupTimer = setInterval(() => {
-      this.cleanup();
-    }, this.config.cleanupInterval);
+    this.startCleanupInterval();
 
-    logger.debug('LRUCache initialized', { 
+    logger.debug('LRUCache initialized', {
       maxSize: this.config.maxSize,
       defaultTTL: this.config.defaultTTL,
       maxMemoryMB: this.config.maxMemoryMB
     });
+  }
+
+  /**
+   * Start the cleanup interval
+   */
+  startCleanupInterval() {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+    }
+
+    this.cleanupTimer = setInterval(() => {
+      this.cleanup();
+    }, this.config.cleanupInterval);
+
+    // Unref the timer so it doesn't prevent process exit if it's the only thing running
+    if (this.cleanupTimer.unref) {
+      this.cleanupTimer.unref();
+    }
   }
 
   /**
@@ -56,7 +72,7 @@ export class LRUCache {
    */
   get(key) {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       this.metrics.misses++;
       return null;
@@ -79,7 +95,7 @@ export class LRUCache {
 
     this.metrics.hits++;
     logger.debug('Cache hit', { key, accessCount: entry.accessCount });
-    
+
     return entry.value;
   }
 
@@ -170,7 +186,7 @@ export class LRUCache {
     const size = this.cache.size;
     this.cache.clear();
     this.accessOrder.clear();
-    
+
     // Reset linked list
     this.head.next = this.tail;
     this.tail.prev = this.head;
@@ -183,8 +199,8 @@ export class LRUCache {
    * @returns {Object} Cache statistics
    */
   getStats() {
-    const hitRate = this.metrics.hits + this.metrics.misses > 0 
-      ? (this.metrics.hits / (this.metrics.hits + this.metrics.misses)) * 100 
+    const hitRate = this.metrics.hits + this.metrics.misses > 0
+      ? (this.metrics.hits / (this.metrics.hits + this.metrics.misses)) * 100
       : 0;
 
     return {
@@ -247,7 +263,7 @@ export class LRUCache {
 
     // Remove from current position
     this.removeNodeFromList(node);
-    
+
     // Add to head
     this.addNodeToHead(node);
   }
@@ -311,9 +327,9 @@ export class LRUCache {
 
     if (expiredCount > 0) {
       this.metrics.cleanups++;
-      logger.debug('Cache cleanup completed', { 
-        expiredEntries: expiredCount, 
-        remainingEntries: this.cache.size 
+      logger.debug('Cache cleanup completed', {
+        expiredEntries: expiredCount,
+        remainingEntries: this.cache.size
       });
     }
   }
@@ -324,14 +340,14 @@ export class LRUCache {
    */
   getMemoryUsage() {
     let totalSize = 0;
-    
+
     for (const entry of this.cache.values()) {
       totalSize += entry.size || 0;
     }
 
     // Add overhead for Map structures and metadata
     const overhead = this.cache.size * 200; // Estimated 200 bytes overhead per entry
-    
+
     return (totalSize + overhead) / (1024 * 1024); // Convert to MB
   }
 

@@ -17,7 +17,7 @@ describe('Server Startup Tests', () => {
       if (server.wsHandler) {
         server.wsHandler.destroy();
       }
-      
+
       await new Promise((resolve) => {
         server.close(() => {
           server = null;
@@ -36,7 +36,7 @@ describe('Server Startup Tests', () => {
       if (server.wsHandler) {
         server.wsHandler.destroy();
       }
-      
+
       await new Promise((resolve) => {
         server.close(() => {
           server = null;
@@ -91,7 +91,7 @@ describe('Server Startup Tests', () => {
 
           // Create server with the configuration
           server = await createServer(config);
-          
+
           // Start server and verify it binds successfully
           await new Promise((resolve, reject) => {
             server.listen(0, host, (error) => {
@@ -107,7 +107,7 @@ describe('Server Startup Tests', () => {
           expect(server.listening).toBe(true);
           expect(server.address().port).toBeGreaterThan(0);
           expect(server.address().port).toBeLessThanOrEqual(65535);
-          
+
           // Verify host binding
           const expectedAddresses = host === 'localhost' ? ['127.0.0.1', '::1'] : [host];
           expect(expectedAddresses).toContain(server.address().address);
@@ -116,7 +116,7 @@ describe('Server Startup Tests', () => {
           if (server.wsHandler) {
             server.wsHandler.destroy();
           }
-          
+
           await new Promise((resolve) => {
             server.close(() => {
               server = null;
@@ -132,17 +132,17 @@ describe('Server Startup Tests', () => {
   test('Server health check endpoint responds correctly', async () => {
     const config = validateConfig();
     server = await createServer(config);
-    
+
     await new Promise((resolve) => {
       server.listen(0, resolve); // Use port 0 for random available port
     });
 
     const port = server.address().port;
-    
+
     // Test health endpoint
     const response = await fetch(`http://localhost:${port}/health`);
     const data = await response.json();
-    
+
     expect(response.status).toBe(200);
     expect(data.status).toBe('healthy');
     expect(data.version).toBe('1.0.0');
@@ -195,17 +195,17 @@ describe('Server Startup Tests', () => {
           };
 
           server = await createServer(config);
-          
+
           await new Promise((resolve) => {
             server.listen(0, resolve);
           });
 
           const port = server.address().port;
-          
+
           // Test health endpoint
           const response = await fetch(`http://localhost:${port}/health`);
           const data = await response.json();
-          
+
           // Verify response structure and content
           expect(response.status).toBe(200);
           expect(data.status).toBe('healthy');
@@ -218,7 +218,7 @@ describe('Server Startup Tests', () => {
           if (server.wsHandler) {
             server.wsHandler.destroy();
           }
-          
+
           await new Promise((resolve) => {
             server.close(() => {
               server = null;
@@ -275,10 +275,10 @@ describe('Server Startup Tests', () => {
           };
 
           let errorOccurred = false;
-          
+
           try {
             server = await createServer(config);
-            
+
             // Test port binding failure
             await new Promise((resolve, reject) => {
               server.listen(config.port, 'localhost', (error) => {
@@ -289,12 +289,12 @@ describe('Server Startup Tests', () => {
                 }
               });
             });
-            
+
           } catch (error) {
             // Expected behavior - server creation or port binding should fail
             errorOccurred = true;
           }
-          
+
           // For invalid ports, we expect an error to occur
           expect(errorOccurred).toBe(true);
 
@@ -303,7 +303,7 @@ describe('Server Startup Tests', () => {
             if (server.wsHandler) {
               server.wsHandler.destroy();
             }
-            
+
             await new Promise((resolve) => {
               server.close(() => {
                 server = null;
@@ -369,7 +369,7 @@ describe('Server Startup Tests', () => {
             // Expected behavior - server creation may fail with invalid LLM config
             // This is also acceptable
           }
-          
+
           // For invalid LLM config, error may occur at server creation or runtime
           // Both behaviors are acceptable, so we just verify no crash occurs
           expect(true).toBe(true); // Test passes if we reach this point without crashing
@@ -379,7 +379,7 @@ describe('Server Startup Tests', () => {
             if (server.wsHandler) {
               server.wsHandler.destroy();
             }
-            
+
             await new Promise((resolve) => {
               server.close(() => {
                 server = null;
@@ -419,7 +419,7 @@ describe('Server Startup Tests', () => {
         async (envVars) => {
           // Store original environment
           const originalEnv = { ...process.env };
-          
+
           try {
             // Set test environment variables
             Object.assign(process.env, envVars);
@@ -453,7 +453,7 @@ describe('Server Startup Tests', () => {
             if (server.wsHandler) {
               server.wsHandler.destroy();
             }
-            
+
             if (server.listening) {
               await new Promise((resolve) => {
                 server.close(() => {
@@ -481,21 +481,25 @@ describe('Server Startup Tests', () => {
   test('Server metrics endpoint responds correctly', async () => {
     const config = validateConfig();
     server = await createServer(config);
-    
+
     await new Promise((resolve) => {
       server.listen(0, resolve);
     });
 
     const port = server.address().port;
-    
+
     // Test metrics endpoint
     const response = await fetch(`http://localhost:${port}/metrics`);
     const data = await response.json();
-    
+
     expect(response.status).toBe(200);
-    expect(data.uptime).toBeGreaterThanOrEqual(0);
-    expect(data.memory).toBeDefined();
-    expect(data.timestamp).toBeDefined();
+    expect(data.success).toBe(true);
+    expect(data.data).toBeDefined();
+
+    const metrics = data.data;
+    expect(metrics.uptime.seconds).toBeGreaterThanOrEqual(0);
+    expect(metrics.system.memory).toBeDefined();
+    expect(metrics.timestamp).toBeDefined();
   });
 });
 
@@ -598,53 +602,53 @@ describe('Conversation Management Tests', () => {
           try {
             // Process each message in sequence
             const responses = [];
-            
+
             for (let i = 0; i < messages.length; i++) {
               const message = messages[i];
               const response = await testConversationManager.processMessage(sessionId, message);
               responses.push(response);
-              
+
               // Verify response structure
               expect(response).toBeDefined();
               expect(response.id).toBeDefined();
               expect(response.role).toBe('assistant');
               expect(response.content).toBeDefined();
               expect(response.timestamp).toBeDefined();
-              
+
               // Check session state after each message
               const currentSession = testConversationManager.getSession(sessionId);
               const expectedLength = (i + 1) * 2;
               expect(currentSession.messages).toHaveLength(expectedLength);
             }
-            
+
             // Final verification: session should contain all messages in chronological order
             const finalSession = testConversationManager.getSession(sessionId);
             expect(finalSession).toBeDefined();
             expect(finalSession.sessionId).toBe(sessionId);
-            
+
             // Should have exactly 2 messages per input message (user + assistant)
             expect(finalSession.messages).toHaveLength(messages.length * 2);
-            
+
             // Verify chronological order (timestamps should be non-decreasing)
             for (let i = 1; i < finalSession.messages.length; i++) {
               expect(finalSession.messages[i].timestamp).toBeGreaterThanOrEqual(
                 finalSession.messages[i - 1].timestamp
               );
             }
-            
+
             // Verify alternating user/assistant pattern
             for (let i = 0; i < finalSession.messages.length; i++) {
               const expectedRole = i % 2 === 0 ? 'user' : 'assistant';
               expect(finalSession.messages[i].role).toBe(expectedRole);
             }
-            
+
             // Verify user messages match input (every even index should be a user message)
             for (let i = 0; i < messages.length; i++) {
               const userMessageIndex = i * 2;
               expect(finalSession.messages[userMessageIndex].content).toBe(messages[i]);
               expect(finalSession.messages[userMessageIndex].role).toBe('user');
             }
-            
+
             // Verify all assistant messages have the expected content
             for (let i = 0; i < messages.length; i++) {
               const assistantMessageIndex = i * 2 + 1;
@@ -664,16 +668,16 @@ describe('Conversation Management Tests', () => {
 
   test('ConversationManager session management', async () => {
     const sessionId = 'test-session-123';
-    
+
     // Initially no session should exist
     expect(conversationManager.getSession(sessionId)).toBeUndefined();
-    
+
     // Process a message should create a session
     const response = await conversationManager.processMessage(sessionId, 'Hello');
-    
+
     expect(response).toBeDefined();
     expect(response.role).toBe('assistant');
-    
+
     // Session should now exist
     const session = conversationManager.getSession(sessionId);
     expect(session).toBeDefined();
@@ -683,20 +687,20 @@ describe('Conversation Management Tests', () => {
 
   test('ConversationManager history trimming', async () => {
     const sessionId = 'test-session-trim';
-    
+
     // Send more messages than maxHistoryLength allows
     const maxHistory = conversationManager.options.maxHistoryLength;
     const messageCount = maxHistory + 5;
-    
+
     for (let i = 0; i < messageCount; i++) {
       await conversationManager.processMessage(sessionId, `Message ${i}`);
     }
-    
+
     const session = conversationManager.getSession(sessionId);
-    
+
     // History should be trimmed to maxHistoryLength
     expect(session.messages.length).toBeLessThanOrEqual(maxHistory);
-    
+
     // Should contain the most recent messages
     const lastMessage = session.messages[session.messages.length - 1];
     expect(lastMessage.role).toBe('assistant');
@@ -704,7 +708,7 @@ describe('Conversation Management Tests', () => {
 
   test('ConversationManager session cleanup', async () => {
     const sessionId = 'test-session-cleanup';
-    
+
     // Create a session with short timeout for testing
     const shortTimeoutManager = new ConversationManager(
       conversationManager.llmInterface,
@@ -715,18 +719,18 @@ describe('Conversation Management Tests', () => {
         cleanupIntervalMs: 50   // 50ms cleanup interval
       }
     );
-    
+
     try {
       // Create a session
       await shortTimeoutManager.processMessage(sessionId, 'Hello');
       expect(shortTimeoutManager.getSession(sessionId)).toBeDefined();
-      
+
       // Wait for session to expire and cleanup to run
       await new Promise(resolve => setTimeout(resolve, 200));
-      
+
       // Session should be cleaned up
       expect(shortTimeoutManager.getSession(sessionId)).toBeUndefined();
-      
+
     } finally {
       shortTimeoutManager.destroy();
     }
@@ -744,7 +748,7 @@ describe('Error Handling and Logging Tests', () => {
       if (server.wsHandler) {
         server.wsHandler.destroy();
       }
-      
+
       await new Promise((resolve) => {
         server.close(() => {
           server = null;
@@ -775,11 +779,11 @@ describe('Error Handling and Logging Tests', () => {
         }),
         async ({ errorType, errorMessage, statusCode, context }) => {
           // Import error utilities
-          const { 
-            ServerError, 
-            LLMError, 
-            ToolError, 
-            WebSocketError, 
+          const {
+            ServerError,
+            LLMError,
+            ToolError,
+            WebSocketError,
             ConversationError,
             ConfigurationError,
             classifyError
@@ -788,28 +792,28 @@ describe('Error Handling and Logging Tests', () => {
           // Create appropriate error type
           let testError;
           switch (errorType) {
-          case 'websocket':
-            testError = new WebSocketError(errorMessage, context.sessionId);
-            break;
-          case 'llm':
-            testError = new LLMError(errorMessage, 'openai');
-            break;
-          case 'tool':
-            testError = new ToolError(errorMessage, 'test_tool');
-            break;
-          case 'conversation':
-            testError = new ConversationError(errorMessage, context.sessionId);
-            break;
-          case 'configuration':
-            testError = new ConfigurationError(errorMessage);
-            break;
-          default:
-            testError = new ServerError(errorMessage, statusCode, 'TEST_ERROR', context);
+            case 'websocket':
+              testError = new WebSocketError(errorMessage, context.sessionId);
+              break;
+            case 'llm':
+              testError = new LLMError(errorMessage, 'openai');
+              break;
+            case 'tool':
+              testError = new ToolError(errorMessage, 'test_tool');
+              break;
+            case 'conversation':
+              testError = new ConversationError(errorMessage, context.sessionId);
+              break;
+            case 'configuration':
+              testError = new ConfigurationError(errorMessage);
+              break;
+            default:
+              testError = new ServerError(errorMessage, statusCode, 'TEST_ERROR', context);
           }
 
           // Test error classification
           const classification = classifyError(testError);
-          
+
           // Verify error classification structure
           expect(classification).toBeDefined();
           expect(classification.category).toBeDefined();
@@ -824,7 +828,7 @@ describe('Error Handling and Logging Tests', () => {
           expect(testError.severity).toBeDefined();
 
           // Verify error severity matches status code
-          const expectedSeverity = testError.statusCode >= 500 ? 'error' : 
+          const expectedSeverity = testError.statusCode >= 500 ? 'error' :
             testError.statusCode >= 400 ? 'warn' : 'info';
           expect(testError.severity).toBe(expectedSeverity);
 
@@ -871,21 +875,21 @@ describe('Error Handling and Logging Tests', () => {
         async ({ logLevel, logFormat, message, metadata }) => {
           // Test the logging configuration structure and functions
           // Since winston creates singletons, we test the structure rather than runtime behavior
-          
+
           // Import logging utilities
           const { logStructured, createRequestLogger } = await import('../src/utils/logger.js');
 
           // Verify logStructured function exists and can be called
           expect(typeof logStructured).toBe('function');
           expect(typeof createRequestLogger).toBe('function');
-          
+
           // Test the structure of what would be logged
           const logEntry = {
             message,
             timestamp: new Date().toISOString(),
             ...metadata
           };
-          
+
           expect(logEntry.message).toBe(message);
           expect(logEntry.timestamp).toBeDefined();
           expect(logEntry.sessionId).toBe(metadata.sessionId);
@@ -902,15 +906,15 @@ describe('Error Handling and Logging Tests', () => {
           // Test log level hierarchy
           const logLevels = ['debug', 'info', 'warn', 'error'];
           const levelIndex = logLevels.indexOf(logLevel);
-          
+
           // Verify level index is valid
           expect(levelIndex).toBeGreaterThanOrEqual(0);
-          
+
           // Test that we can determine which levels should be logged
           for (let i = 0; i < logLevels.length; i++) {
             const testLevel = logLevels[i];
             const shouldLog = i >= levelIndex;
-            
+
             // This property verifies the logging level logic
             expect(typeof shouldLog).toBe('boolean');
             expect(logLevels.includes(testLevel)).toBe(true);
@@ -969,17 +973,17 @@ describe('Error Handling and Logging Tests', () => {
           };
 
           server = await createServer(config);
-          
+
           await new Promise((resolve) => {
             server.listen(0, resolve);
           });
 
           const port = server.address().port;
-          
+
           // Test basic health endpoint
           const healthResponse = await fetch(`http://localhost:${port}/health`);
           const healthData = await healthResponse.json();
-          
+
           expect(healthResponse.status).toBe(200);
           expect(healthData.status).toBe('healthy');
           expect(healthData.version).toBe('1.0.0');
@@ -989,7 +993,7 @@ describe('Error Handling and Logging Tests', () => {
           // Test detailed health endpoint
           const detailedHealthResponse = await fetch(`http://localhost:${port}/health/detailed`);
           const detailedHealthData = await detailedHealthResponse.json();
-          
+
           expect([200, 503]).toContain(detailedHealthResponse.status);
           expect(detailedHealthData.status).toBeDefined();
           expect(['healthy', 'degraded']).toContain(detailedHealthData.status);
@@ -1000,30 +1004,34 @@ describe('Error Handling and Logging Tests', () => {
           // Test metrics endpoint
           const metricsResponse = await fetch(`http://localhost:${port}/metrics`);
           const metricsData = await metricsResponse.json();
-          
+
           expect(metricsResponse.status).toBe(200);
-          expect(metricsData.uptime).toBeGreaterThanOrEqual(0);
-          expect(metricsData.memory).toBeDefined();
-          expect(metricsData.timestamp).toBeDefined();
-          expect(metricsData.system).toBeDefined();
-          expect(metricsData.server).toBeDefined();
-          expect(metricsData.server.environment).toBe(nodeEnv);
-          expect(metricsData.server.logLevel).toBe(logLevel);
+          expect(metricsData.success).toBe(true);
+          expect(metricsData.data).toBeDefined();
+
+          const metrics = metricsData.data;
+          expect(metrics.uptime.seconds).toBeGreaterThanOrEqual(0);
+          expect(metrics.system.memory).toBeDefined();
+          expect(metrics.timestamp).toBeDefined();
+          expect(metrics.system).toBeDefined();
+          expect(metrics.server).toBeDefined();
+          expect(metrics.server.environment).toBe(nodeEnv);
+          expect(metrics.server.logLevel).toBe(logLevel);
 
           // Verify WebSocket metrics are included when available
-          expect(metricsData.websocket?.activeConnections).toBeDefined();
-          expect(metricsData.websocket?.maxConnections).toBe(maxConnections);
-          expect(metricsData.websocket?.connectionUtilization).toBeDefined();
+          expect(metrics.websocket?.activeConnections).toBeDefined();
+          expect(metrics.websocket?.maxConnections).toBe(maxConnections);
+          expect(metrics.websocket?.connectionUtilization).toBeDefined();
 
           // Verify conversation metrics are included when available
-          expect(metricsData.conversations?.activeSessions).toBeDefined();
-          expect(metricsData.conversations?.totalMessages).toBeDefined();
+          expect(metrics.conversations?.activeSessions).toBeDefined();
+          expect(metrics.conversations?.totalMessages).toBeDefined();
 
           // Clean up for next iteration
           if (server.wsHandler) {
             server.wsHandler.destroy();
           }
-          
+
           await new Promise((resolve) => {
             server.close(() => {
               server = null;
@@ -1058,7 +1066,7 @@ describe('WebSocket Connection Tests', () => {
       if (server.wsHandler) {
         server.wsHandler.destroy();
       }
-      
+
       await new Promise((resolve) => {
         server.close(() => {
           server = null;
@@ -1084,7 +1092,7 @@ describe('WebSocket Connection Tests', () => {
       if (server.wsHandler) {
         server.wsHandler.destroy();
       }
-      
+
       await new Promise((resolve) => {
         server.close(() => {
           server = null;
@@ -1107,14 +1115,14 @@ describe('WebSocket Connection Tests', () => {
         async (numConnections) => {
           const config = validateConfig();
           server = await createServer(config);
-          
+
           await new Promise((resolve) => {
             server.listen(0, resolve);
           });
 
           const port = server.address().port;
           const wsUrl = `ws://localhost:${port}`;
-          
+
           const connections = [];
           const sessionIds = new Set();
 
@@ -1122,7 +1130,7 @@ describe('WebSocket Connection Tests', () => {
           for (let i = 0; i < numConnections; i++) {
             const ws = new WebSocket(wsUrl);
             wsClients.push(ws);
-            
+
             const connectionPromise = new Promise((resolve, reject) => {
               const timeout = setTimeout(() => {
                 reject(new Error('Connection timeout'));
@@ -1168,7 +1176,7 @@ describe('WebSocket Connection Tests', () => {
             expect(connection.sessionId).toBeDefined();
             expect(typeof connection.sessionId).toBe('string');
             expect(connection.sessionId.length).toBeGreaterThan(0);
-            
+
             // Check for uniqueness
             expect(sessionIds.has(connection.sessionId)).toBe(false);
             sessionIds.add(connection.sessionId);
@@ -1187,7 +1195,7 @@ describe('WebSocket Connection Tests', () => {
           if (server.wsHandler) {
             server.wsHandler.destroy();
           }
-          
+
           await new Promise((resolve) => {
             server.close(() => {
               server = null;
@@ -1216,17 +1224,17 @@ describe('WebSocket Connection Tests', () => {
         async ({ pingCount, intervalMs }) => {
           const config = validateConfig();
           server = await createServer(config);
-          
+
           await new Promise((resolve) => {
             server.listen(0, resolve);
           });
 
           const port = server.address().port;
           const wsUrl = `ws://localhost:${port}`;
-          
+
           const ws = new WebSocket(wsUrl);
           wsClients.push(ws);
-          
+
           // Wait for connection establishment with shorter timeout
           await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
@@ -1254,7 +1262,7 @@ describe('WebSocket Connection Tests', () => {
 
           // Test ping/pong mechanism with response collection
           const pongResponses = [];
-          
+
           ws.on('message', (data) => {
             try {
               const message = JSON.parse(data.toString());
@@ -1269,7 +1277,7 @@ describe('WebSocket Connection Tests', () => {
           // Send ping messages rapidly without waiting between them
           for (let i = 0; i < pingCount; i++) {
             const pingId = `ping_${i}_${Date.now()}`;
-            
+
             ws.send(JSON.stringify({
               type: 'PING',
               id: pingId,
@@ -1302,7 +1310,7 @@ describe('WebSocket Connection Tests', () => {
           if (server.wsHandler) {
             server.wsHandler.destroy();
           }
-          
+
           await new Promise((resolve) => {
             server.close(() => {
               server = null;
@@ -1323,20 +1331,20 @@ describe('WebSocket Connection Tests', () => {
   test('Property 31: WebSocket error handling - malformed messages', async () => {
     const config = validateConfig();
     server = await createServer(config);
-    
+
     await new Promise((resolve) => {
       server.listen(0, resolve);
     });
 
     const port = server.address().port;
     const wsUrl = `ws://localhost:${port}`;
-    
+
     // Test malformed message handling
     const ws = new WebSocket(wsUrl);
     wsClients.push(ws);
-    
+
     let connectionState;
-    
+
     await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error('Connection timeout'));
@@ -1344,10 +1352,10 @@ describe('WebSocket Connection Tests', () => {
 
       ws.on('open', () => {
         clearTimeout(timeout);
-        
+
         // Send malformed message (not JSON)
         ws.send('this is not valid JSON');
-        
+
         // Reduce wait time for server to process
         setTimeout(() => {
           connectionState = ws.readyState;
@@ -1360,7 +1368,7 @@ describe('WebSocket Connection Tests', () => {
         reject(error);
       });
     });
-    
+
     // Connection should still be open (server handles gracefully)
     expect(connectionState).toBe(WebSocket.OPEN);
   });
@@ -1369,24 +1377,24 @@ describe('WebSocket Connection Tests', () => {
     const config = validateConfig();
     // Set low connection limit for testing
     config.websocket.maxConnections = 2;
-    
+
     server = await createServer(config);
-    
+
     await new Promise((resolve) => {
       server.listen(0, resolve);
     });
 
     const port = server.address().port;
     const wsUrl = `ws://localhost:${port}`;
-    
+
     // Create connections up to the limit with faster timeouts
     const connections = [];
-    
+
     for (let i = 0; i < config.websocket.maxConnections; i++) {
       const ws = new WebSocket(wsUrl);
       wsClients.push(ws);
       connections.push(ws);
-      
+
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Connection timeout'));
@@ -1410,13 +1418,13 @@ describe('WebSocket Connection Tests', () => {
     // Try to create one more connection (should be rejected or handled gracefully)
     const extraWs = new WebSocket(wsUrl);
     wsClients.push(extraWs);
-    
+
     let testCompleted = false;
-    
+
     await new Promise((resolve) => {
       let connectionOpened = false;
       let connectionClosed = false;
-      
+
       const timeout = setTimeout(() => {
         // If neither open nor close occurred, that's acceptable
         if (!connectionOpened && !connectionClosed) {
@@ -1450,7 +1458,7 @@ describe('WebSocket Connection Tests', () => {
         resolve();
       });
     });
-    
+
     // Test should complete without hanging
     expect(testCompleted).toBe(true);
   });

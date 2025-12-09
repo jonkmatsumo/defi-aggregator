@@ -42,42 +42,42 @@ export class ToolRegistry {
 
       // Type validation (lightweight)
       switch (definition.type) {
-      case 'string':
-        if (typeof value !== 'string') {
-          errors.push(`Parameter "${key}" must be a string`);
-        }
-        if (definition.pattern) {
-          const regex = new RegExp(definition.pattern);
-          if (!regex.test(value)) {
-            errors.push(`Parameter "${key}" does not match required pattern`);
+        case 'string':
+          if (typeof value !== 'string') {
+            errors.push(`Parameter "${key}" must be a string`);
           }
-        }
-        if (definition.enum && !definition.enum.includes(value)) {
-          errors.push(`Parameter "${key}" must be one of: ${definition.enum.join(', ')}`);
-        }
-        break;
-      case 'number':
-        if (typeof value !== 'number') {
-          errors.push(`Parameter "${key}" must be a number`);
-        }
-        break;
-      case 'boolean':
-        if (typeof value !== 'boolean') {
-          errors.push(`Parameter "${key}" must be a boolean`);
-        }
-        break;
-      case 'array':
-        if (!Array.isArray(value)) {
-          errors.push(`Parameter "${key}" must be an array`);
-        } else if (definition.items?.enum) {
-          const invalid = value.filter(v => !definition.items.enum.includes(v));
-          if (invalid.length > 0) {
-            errors.push(`Parameter "${key}" has invalid values: ${invalid.join(', ')}. Allowed: ${definition.items.enum.join(', ')}`);
+          if (definition.pattern) {
+            const regex = new RegExp(definition.pattern);
+            if (!regex.test(value)) {
+              errors.push(`Parameter "${key}" does not match required pattern`);
+            }
           }
-        }
-        break;
-      default:
-        break;
+          if (definition.enum && !definition.enum.includes(value)) {
+            errors.push(`Parameter "${key}" must be one of: ${definition.enum.join(', ')}`);
+          }
+          break;
+        case 'number':
+          if (typeof value !== 'number') {
+            errors.push(`Parameter "${key}" must be a number`);
+          }
+          break;
+        case 'boolean':
+          if (typeof value !== 'boolean') {
+            errors.push(`Parameter "${key}" must be a boolean`);
+          }
+          break;
+        case 'array':
+          if (!Array.isArray(value)) {
+            errors.push(`Parameter "${key}" must be an array`);
+          } else if (definition.items?.enum) {
+            const invalid = value.filter(v => !definition.items.enum.includes(v));
+            if (invalid.length > 0) {
+              errors.push(`Parameter "${key}" has invalid values: ${invalid.join(', ')}. Allowed: ${definition.items.enum.join(', ')}`);
+            }
+          }
+          break;
+        default:
+          break;
       }
     }
 
@@ -90,31 +90,31 @@ export class ToolRegistry {
 
   getRecoverySuggestions(errorCode) {
     switch (errorCode) {
-    case 'INVALID_PARAMETERS':
-      return [
-        'Check required parameters and their formats.',
-        'Verify enum values (symbols, networks, protocols) are supported.',
-        'Ensure addresses are valid hex strings with 0x prefix.'
-      ];
-    case 'RATE_LIMIT':
-      return [
-        'Wait a few seconds and retry.',
-        'Reduce request frequency.',
-        'If the problem persists, try again later.'
-      ];
-    case 'NETWORK_ERROR':
-      return [
-        'Check network connectivity.',
-        'Retry after a short delay.',
-        'If the problem persists, try a different network.'
-      ];
-    case 'TOOL_ERROR':
-    default:
-      return [
-        'Retry the request shortly.',
-        'Try with fewer parameters or different inputs.',
-        'If the problem persists, contact support with the error code.'
-      ];
+      case 'INVALID_PARAMETERS':
+        return [
+          'Check required parameters and their formats.',
+          'Verify enum values (symbols, networks, protocols) are supported.',
+          'Ensure addresses are valid hex strings with 0x prefix.'
+        ];
+      case 'RATE_LIMIT':
+        return [
+          'Wait a few seconds and retry.',
+          'Reduce request frequency.',
+          'If the problem persists, try again later.'
+        ];
+      case 'NETWORK_ERROR':
+        return [
+          'Check network connectivity.',
+          'Retry after a short delay.',
+          'If the problem persists, try a different network.'
+        ];
+      case 'TOOL_ERROR':
+      default:
+        return [
+          'Retry the request shortly.',
+          'Try with fewer parameters or different inputs.',
+          'If the problem persists, contact support with the error code.'
+        ];
     }
   }
 
@@ -153,14 +153,14 @@ export class ToolRegistry {
           this.validateParameters(this.tools.get('get_gas_prices')?.parameters, { network, transactionType, includeUSDCosts });
           const gasPriceService = serviceContainer.get('GasPriceAPIService');
           const result = await gasPriceService.getGasPrices(network, { transactionType, includeUSDCosts });
-          
+
           logger.info('Gas price tool executed successfully', { network, transactionType });
           return result;
         } catch (error) {
-          logger.error('Gas price tool execution failed', { 
-            network, 
-            transactionType, 
-            error: error.message 
+          logger.error('Gas price tool execution failed', {
+            network,
+            transactionType,
+            error: error.message
           });
           throw error;
         }
@@ -199,14 +199,14 @@ export class ToolRegistry {
           this.validateParameters(this.tools.get('get_crypto_price')?.parameters, { symbol, currency, includeMarketData });
           const priceFeedService = serviceContainer.get('PriceFeedAPIService');
           const result = await priceFeedService.getCryptocurrencyPrice(symbol, currency, includeMarketData);
-          
+
           logger.info('Crypto price tool executed successfully', { symbol, currency });
           return result;
         } catch (error) {
-          logger.error('Crypto price tool execution failed', { 
-            symbol, 
-            currency, 
-            error: error.message 
+          logger.error('Crypto price tool execution failed', {
+            symbol,
+            currency,
+            error: error.message
           });
           throw error;
         }
@@ -245,14 +245,14 @@ export class ToolRegistry {
           this.validateParameters(this.tools.get('get_lending_rates')?.parameters, { token, protocols, includeUtilization });
           const lendingService = serviceContainer.get('LendingAPIService');
           const result = await lendingService.getLendingRates(token, protocols, { includeUtilization });
-          
+
           logger.info('Lending rates tool executed successfully', { token, protocols });
           return result;
         } catch (error) {
-          logger.error('Lending rates tool execution failed', { 
-            token, 
-            protocols, 
-            error: error.message 
+          logger.error('Lending rates tool execution failed', {
+            token,
+            protocols,
+            error: error.message
           });
           throw error;
         }
@@ -297,24 +297,24 @@ export class ToolRegistry {
         try {
           this.validateParameters(this.tools.get('get_token_balance')?.parameters, { address, network, tokenAddress, includeUSDValues });
           const tokenBalanceService = serviceContainer.get('TokenBalanceAPIService');
-          
+
           let result;
           if (tokenAddress) {
             result = await tokenBalanceService.getTokenBalance(address, tokenAddress, network);
           } else {
             result = await tokenBalanceService.getAllTokenBalances(address, network, { includeUSDValues });
           }
-          
-          logger.info('Token balance tool executed successfully', { 
-            address: address.slice(0, 10) + '...', 
-            network 
+
+          logger.info('Token balance tool executed successfully', {
+            address: address.slice(0, 10) + '...',
+            network
           });
           return result;
         } catch (error) {
-          logger.error('Token balance tool execution failed', { 
-            address: address?.slice(0, 10) + '...', 
-            network, 
-            error: error.message 
+          logger.error('Token balance tool execution failed', {
+            address: address?.slice(0, 10) + '...',
+            network,
+            error: error.message
           });
           throw error;
         }
@@ -360,10 +360,18 @@ export class ToolRegistry {
       const result = await this._executeWithRetry(tool, parameters, name);
 
       const executionTime = Date.now() - startTime;
-      logger.info('Tool executed successfully', { 
-        toolName: name, 
-        executionTime 
+      logger.info('Tool executed successfully', {
+        toolName: name,
+        executionTime
       });
+
+      console.log('DEBUG_REGISTRY_RETURN:', JSON.stringify({
+        toolName: name,
+        parameters,
+        result,
+        executionTime,
+        success: true
+      }));
 
       return {
         toolName: name,
@@ -374,10 +382,10 @@ export class ToolRegistry {
       };
 
     } catch (error) {
-      logger.error('Tool execution failed', { 
-        toolName: name, 
+      logger.error('Tool execution failed', {
+        toolName: name,
         error: error.message,
-        stack: error.stack 
+        stack: error.stack
       });
 
       const errorCode = error.code || 'TOOL_ERROR';
