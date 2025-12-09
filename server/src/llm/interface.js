@@ -11,6 +11,7 @@ export class LLMInterface {
       timeout: 30000,
       maxRetries: 3,
       retryDelay: 1000,
+      maxSystemPromptLength: 16000,
       ...config
     };
     
@@ -20,6 +21,9 @@ export class LLMInterface {
       resetTimeout: 60000, // 1 minute
       monitoringPeriod: 10000 // 10 seconds
     });
+
+    // Simple in-memory cache for system prompts to avoid re-allocation
+    this.systemPromptCache = new Map(); // prompt string -> { role, content }
   }
 
   async generateResponse(messages, _tools = [], _options = {}) {
@@ -87,6 +91,35 @@ export class LLMInterface {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  validateSystemPrompt(systemPrompt) {
+    if (!systemPrompt || typeof systemPrompt !== 'string') {
+      throw new LLMError('System prompt must be a non-empty string', this.config.provider);
+    }
+
+    if (systemPrompt.length > this.config.maxSystemPromptLength) {
+      const error = new LLMError(
+        `System prompt exceeds max length (${systemPrompt.length} > ${this.config.maxSystemPromptLength})`,
+        this.config.provider
+      );
+      error.code = 'SYSTEM_PROMPT_TOO_LARGE';
+      throw error;
+    }
+  }
+
+  getCachedSystemPrompt(systemPrompt) {
+    if (!systemPrompt) return null;
+    const cached = this.systemPromptCache.get(systemPrompt);
+    if (cached) return cached;
+    const entry = { role: 'system', content: systemPrompt };
+    // Keep cache from growing unbounded; simple cap of 20 prompts
+    if (this.systemPromptCache.size >= 20) {
+      const oldestKey = this.systemPromptCache.keys().next().value;
+      this.systemPromptCache.delete(oldestKey);
+    }
+    this.systemPromptCache.set(systemPrompt, entry);
+    return entry;
+  }
+
   _formatMessages(messages) {
     return messages.map(msg => ({
       role: msg.role,
@@ -130,10 +163,13 @@ export class OpenAILLM extends LLMInterface {
       // Prepare messages with system prompt if provided
       let formattedMessages = this._formatMessages(messages);
       if (options.systemPrompt) {
+        this.validateSystemPrompt(options.systemPrompt);
+        const cachedPrompt = this.getCachedSystemPrompt(options.systemPrompt);
         formattedMessages = [
-          { role: 'system', content: options.systemPrompt },
+          cachedPrompt,
           ...formattedMessages
         ];
+        context.systemPromptLength = options.systemPrompt.length;
       }
       
       const requestParams = {
@@ -176,10 +212,13 @@ export class OpenAILLM extends LLMInterface {
       // Prepare messages with system prompt if provided
       let formattedMessages = this._formatMessages(messages);
       if (options.systemPrompt) {
+        this.validateSystemPrompt(options.systemPrompt);
+        const cachedPrompt = this.getCachedSystemPrompt(options.systemPrompt);
         formattedMessages = [
-          { role: 'system', content: options.systemPrompt },
+          cachedPrompt,
           ...formattedMessages
         ];
+        context.systemPromptLength = options.systemPrompt.length;
       }
       
       const requestParams = {
@@ -295,7 +334,9 @@ export class AnthropicLLM extends LLMInterface {
 
       // Add system prompt if provided (Anthropic uses separate system parameter)
       if (options.systemPrompt) {
+        this.validateSystemPrompt(options.systemPrompt);
         requestParams.system = options.systemPrompt;
+        context.systemPromptLength = options.systemPrompt.length;
       }
 
       if (tools.length > 0) {
@@ -339,7 +380,9 @@ export class AnthropicLLM extends LLMInterface {
 
       // Add system prompt if provided (Anthropic uses separate system parameter)
       if (options.systemPrompt) {
+        this.validateSystemPrompt(options.systemPrompt);
         requestParams.system = options.systemPrompt;
+        context.systemPromptLength = options.systemPrompt.length;
       }
 
       if (tools.length > 0) {
