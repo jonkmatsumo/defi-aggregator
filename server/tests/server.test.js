@@ -18,7 +18,7 @@ describe('Server Startup Tests', () => {
         server.wsHandler.destroy();
       }
 
-      await new Promise((resolve) => {
+      await new Promise(resolve => {
         server.close(() => {
           server = null;
           resolve();
@@ -37,7 +37,7 @@ describe('Server Startup Tests', () => {
         server.wsHandler.destroy();
       }
 
-      await new Promise((resolve) => {
+      await new Promise(resolve => {
         server.close(() => {
           server = null;
           resolve();
@@ -57,7 +57,7 @@ describe('Server Startup Tests', () => {
         // Generate different host configurations instead of specific ports
         fc.record({
           host: fc.constantFrom('localhost', '127.0.0.1'),
-          nodeEnv: fc.constantFrom('development', 'test', 'production')
+          nodeEnv: fc.constantFrom('development', 'test', 'production'),
         }),
         async ({ host, nodeEnv }) => {
           // Create valid configuration with port 0 (auto-assign available port)
@@ -70,23 +70,23 @@ describe('Server Startup Tests', () => {
               apiKey: 'test_key',
               model: 'gpt-4',
               maxTokens: 2048,
-              temperature: 0.7
+              temperature: 0.7,
             },
             websocket: {
               pingInterval: 30000,
               maxConnections: 100,
-              messageQueueSize: 1000
+              messageQueueSize: 1000,
             },
             logging: {
               level: 'error',
-              format: 'json'
+              format: 'json',
             },
             tools: {
               enabled: ['gas_price'],
-              rateLimit: 10
+              rateLimit: 10,
             },
             corsOrigin: 'http://localhost:3000',
-            apiTimeout: 30000
+            apiTimeout: 30000,
           };
 
           // Create server with the configuration
@@ -94,7 +94,7 @@ describe('Server Startup Tests', () => {
 
           // Start server and verify it binds successfully
           await new Promise((resolve, reject) => {
-            server.listen(0, host, (error) => {
+            server.listen(0, host, error => {
               if (error) {
                 reject(error);
               } else {
@@ -109,7 +109,8 @@ describe('Server Startup Tests', () => {
           expect(server.address().port).toBeLessThanOrEqual(65535);
 
           // Verify host binding
-          const expectedAddresses = host === 'localhost' ? ['127.0.0.1', '::1'] : [host];
+          const expectedAddresses =
+            host === 'localhost' ? ['127.0.0.1', '::1'] : [host];
           expect(expectedAddresses).toContain(server.address().address);
 
           // Clean up for next iteration
@@ -117,7 +118,7 @@ describe('Server Startup Tests', () => {
             server.wsHandler.destroy();
           }
 
-          await new Promise((resolve) => {
+          await new Promise(resolve => {
             server.close(() => {
               server = null;
               resolve();
@@ -133,7 +134,7 @@ describe('Server Startup Tests', () => {
     const config = validateConfig();
     server = await createServer(config);
 
-    await new Promise((resolve) => {
+    await new Promise(resolve => {
       server.listen(0, resolve); // Use port 0 for random available port
     });
 
@@ -160,9 +161,18 @@ describe('Server Startup Tests', () => {
       fc.asyncProperty(
         // Generate different server configurations
         fc.record({
-          nodeEnv: fc.constantFrom('development', 'staging', 'production', 'test'),
+          nodeEnv: fc.constantFrom(
+            'development',
+            'staging',
+            'production',
+            'test'
+          ),
           logLevel: fc.constantFrom('debug', 'info', 'warn', 'error'),
-          corsOrigin: fc.constantFrom('http://localhost:3000', 'https://example.com', '*')
+          corsOrigin: fc.constantFrom(
+            'http://localhost:3000',
+            'https://example.com',
+            '*'
+          ),
         }),
         async ({ nodeEnv, logLevel, corsOrigin }) => {
           // Create server configuration
@@ -175,28 +185,28 @@ describe('Server Startup Tests', () => {
               apiKey: 'test_key',
               model: 'gpt-4',
               maxTokens: 2048,
-              temperature: 0.7
+              temperature: 0.7,
             },
             websocket: {
               pingInterval: 30000,
               maxConnections: 100,
-              messageQueueSize: 1000
+              messageQueueSize: 1000,
             },
             logging: {
               level: logLevel,
-              format: 'json'
+              format: 'json',
             },
             tools: {
               enabled: ['gas_price'],
-              rateLimit: 10
+              rateLimit: 10,
             },
             corsOrigin,
-            apiTimeout: 30000
+            apiTimeout: 30000,
           };
 
           server = await createServer(config);
 
-          await new Promise((resolve) => {
+          await new Promise(resolve => {
             server.listen(0, resolve);
           });
 
@@ -219,7 +229,7 @@ describe('Server Startup Tests', () => {
             server.wsHandler.destroy();
           }
 
-          await new Promise((resolve) => {
+          await new Promise(resolve => {
             server.close(() => {
               server = null;
               resolve();
@@ -244,7 +254,7 @@ describe('Server Startup Tests', () => {
           fc.integer({ min: -1000, max: -1 }), // Negative ports
           fc.integer({ min: 65536, max: 100000 }) // Ports above valid range
         ),
-        async (invalidPort) => {
+        async invalidPort => {
           // Create config with invalid port
           const config = {
             port: invalidPort,
@@ -255,23 +265,23 @@ describe('Server Startup Tests', () => {
               apiKey: 'test_key',
               model: 'gpt-4',
               maxTokens: 2048,
-              temperature: 0.7
+              temperature: 0.7,
             },
             websocket: {
               pingInterval: 30000,
               maxConnections: 100,
-              messageQueueSize: 1000
+              messageQueueSize: 1000,
             },
             logging: {
               level: 'error',
-              format: 'json'
+              format: 'json',
             },
             tools: {
               enabled: ['gas_price'],
-              rateLimit: 10
+              rateLimit: 10,
             },
             corsOrigin: 'http://localhost:3000',
-            apiTimeout: 30000
+            apiTimeout: 30000,
           };
 
           let errorOccurred = false;
@@ -281,7 +291,7 @@ describe('Server Startup Tests', () => {
 
             // Test port binding failure
             await new Promise((resolve, reject) => {
-              server.listen(config.port, 'localhost', (error) => {
+              server.listen(config.port, 'localhost', error => {
                 if (error) {
                   reject(error);
                 } else {
@@ -289,7 +299,6 @@ describe('Server Startup Tests', () => {
                 }
               });
             });
-
           } catch (error) {
             // Expected behavior - server creation or port binding should fail
             errorOccurred = true;
@@ -304,7 +313,7 @@ describe('Server Startup Tests', () => {
               server.wsHandler.destroy();
             }
 
-            await new Promise((resolve) => {
+            await new Promise(resolve => {
               server.close(() => {
                 server = null;
                 resolve();
@@ -325,15 +334,15 @@ describe('Server Startup Tests', () => {
           fc.record({
             provider: fc.constant('openai'),
             apiKey: fc.constant(''), // Empty API key
-            model: fc.constant('gpt-4')
+            model: fc.constant('gpt-4'),
           }),
           fc.record({
             provider: fc.constantFrom('invalid_provider', 'unknown_llm'),
             apiKey: fc.constant('test_key'),
-            model: fc.constant('gpt-4')
+            model: fc.constant('gpt-4'),
           })
         ),
-        async (invalidLlmConfig) => {
+        async invalidLlmConfig => {
           // Create config with invalid LLM settings
           const config = {
             port: 0,
@@ -342,23 +351,23 @@ describe('Server Startup Tests', () => {
             llm: {
               ...invalidLlmConfig,
               maxTokens: 2048,
-              temperature: 0.7
+              temperature: 0.7,
             },
             websocket: {
               pingInterval: 30000,
               maxConnections: 100,
-              messageQueueSize: 1000
+              messageQueueSize: 1000,
             },
             logging: {
               level: 'error',
-              format: 'json'
+              format: 'json',
             },
             tools: {
               enabled: ['gas_price'],
-              rateLimit: 10
+              rateLimit: 10,
             },
             corsOrigin: 'http://localhost:3000',
-            apiTimeout: 30000
+            apiTimeout: 30000,
           };
 
           try {
@@ -380,7 +389,7 @@ describe('Server Startup Tests', () => {
               server.wsHandler.destroy();
             }
 
-            await new Promise((resolve) => {
+            await new Promise(resolve => {
               server.close(() => {
                 server = null;
                 resolve();
@@ -405,18 +414,33 @@ describe('Server Startup Tests', () => {
         fc.record({
           PORT: fc.integer({ min: 1024, max: 65535 }).map(String),
           HOST: fc.constantFrom('localhost', '127.0.0.1', '0.0.0.0'),
-          NODE_ENV: fc.constantFrom('development', 'staging', 'production', 'test'),
+          NODE_ENV: fc.constantFrom(
+            'development',
+            'staging',
+            'production',
+            'test'
+          ),
           LLM_PROVIDER: fc.constantFrom('openai', 'anthropic'),
-          LLM_MODEL: fc.constantFrom('gpt-4', 'gpt-3.5-turbo', 'claude-3-sonnet'),
+          LLM_MODEL: fc.constantFrom(
+            'gpt-4',
+            'gpt-3.5-turbo',
+            'claude-3-sonnet'
+          ),
           LLM_MAX_TOKENS: fc.integer({ min: 100, max: 4000 }).map(String),
-          LLM_TEMPERATURE: fc.float({ min: 0, max: 2, noNaN: true }).map(n => n.toString()),
+          LLM_TEMPERATURE: fc
+            .float({ min: 0, max: 2, noNaN: true })
+            .map(n => n.toString()),
           LOG_LEVEL: fc.constantFrom('debug', 'info', 'warn', 'error'),
           LOG_FORMAT: fc.constantFrom('json', 'text'),
           WS_PING_INTERVAL: fc.integer({ min: 5000, max: 60000 }).map(String),
           WS_MAX_CONNECTIONS: fc.integer({ min: 10, max: 1000 }).map(String),
-          CORS_ORIGIN: fc.constantFrom('http://localhost:3000', 'https://example.com', '*')
+          CORS_ORIGIN: fc.constantFrom(
+            'http://localhost:3000',
+            'https://example.com',
+            '*'
+          ),
         }),
-        async (envVars) => {
+        async envVars => {
           // Store original environment
           const originalEnv = { ...process.env };
 
@@ -428,7 +452,9 @@ describe('Server Startup Tests', () => {
             process.env.ANTHROPIC_API_KEY = 'test_key';
 
             // Import validateConfig fresh to pick up new env vars
-            const { validateConfig: freshValidateConfig } = await import('../src/config/environment.js?' + Date.now());
+            const { validateConfig: freshValidateConfig } = await import(
+              '../src/config/environment.js?' + Date.now()
+            );
             const config = freshValidateConfig();
 
             // Verify configuration matches environment variables
@@ -438,11 +464,17 @@ describe('Server Startup Tests', () => {
             expect(config.llm.provider).toBe(envVars.LLM_PROVIDER);
             expect(config.llm.model).toBe(envVars.LLM_MODEL);
             expect(config.llm.maxTokens).toBe(parseInt(envVars.LLM_MAX_TOKENS));
-            expect(config.llm.temperature).toBe(parseFloat(envVars.LLM_TEMPERATURE));
+            expect(config.llm.temperature).toBe(
+              parseFloat(envVars.LLM_TEMPERATURE)
+            );
             expect(config.logging.level).toBe(envVars.LOG_LEVEL);
             expect(config.logging.format).toBe(envVars.LOG_FORMAT);
-            expect(config.websocket.pingInterval).toBe(parseInt(envVars.WS_PING_INTERVAL));
-            expect(config.websocket.maxConnections).toBe(parseInt(envVars.WS_MAX_CONNECTIONS));
+            expect(config.websocket.pingInterval).toBe(
+              parseInt(envVars.WS_PING_INTERVAL)
+            );
+            expect(config.websocket.maxConnections).toBe(
+              parseInt(envVars.WS_MAX_CONNECTIONS)
+            );
             expect(config.corsOrigin).toBe(envVars.CORS_ORIGIN);
 
             // Test that server can be created with this configuration
@@ -455,14 +487,13 @@ describe('Server Startup Tests', () => {
             }
 
             if (server.listening) {
-              await new Promise((resolve) => {
+              await new Promise(resolve => {
                 server.close(() => {
                   server = null;
                   resolve();
                 });
               });
             }
-
           } finally {
             // Restore original environment
             Object.keys(process.env).forEach(key => {
@@ -482,7 +513,7 @@ describe('Server Startup Tests', () => {
     const config = validateConfig();
     server = await createServer(config);
 
-    await new Promise((resolve) => {
+    await new Promise(resolve => {
       server.listen(0, resolve);
     });
 
@@ -511,8 +542,8 @@ describe('Conversation Management Tests', () => {
     const mockLLMInterface = {
       generateResponse: jest.fn().mockResolvedValue({
         content: 'Mock LLM response',
-        toolCalls: []
-      })
+        toolCalls: [],
+      }),
     };
 
     const mockToolRegistry = {
@@ -522,12 +553,12 @@ describe('Conversation Management Tests', () => {
         parameters: {},
         result: 'mock result',
         executionTime: 100,
-        success: true
-      })
+        success: true,
+      }),
     };
 
     const mockComponentIntentGenerator = {
-      generateIntent: jest.fn().mockReturnValue(null)
+      generateIntent: jest.fn().mockReturnValue(null),
     };
 
     conversationManager = new ConversationManager(
@@ -537,7 +568,7 @@ describe('Conversation Management Tests', () => {
       {
         maxHistoryLength: 10,
         sessionTimeoutMs: 60000,
-        cleanupIntervalMs: 30000
+        cleanupIntervalMs: 30000,
       }
     );
   });
@@ -559,18 +590,18 @@ describe('Conversation Management Tests', () => {
         // Generate sequences of messages
         fc.record({
           sessionId: fc.string({ minLength: 1, maxLength: 20 }),
-          messages: fc.array(
-            fc.string({ minLength: 1, maxLength: 100 }),
-            { minLength: 1, maxLength: 8 }
-          )
+          messages: fc.array(fc.string({ minLength: 1, maxLength: 100 }), {
+            minLength: 1,
+            maxLength: 8,
+          }),
         }),
         async ({ sessionId, messages }) => {
           // Create a fresh ConversationManager for each test run to avoid state pollution
           const mockLLMInterface = {
             generateResponse: jest.fn().mockResolvedValue({
               content: 'Mock LLM response',
-              toolCalls: []
-            })
+              toolCalls: [],
+            }),
           };
 
           const mockToolRegistry = {
@@ -580,12 +611,12 @@ describe('Conversation Management Tests', () => {
               parameters: {},
               result: 'mock result',
               executionTime: 100,
-              success: true
-            })
+              success: true,
+            }),
           };
 
           const mockComponentIntentGenerator = {
-            generateIntent: jest.fn().mockReturnValue(null)
+            generateIntent: jest.fn().mockReturnValue(null),
           };
 
           const testConversationManager = new ConversationManager(
@@ -595,7 +626,7 @@ describe('Conversation Management Tests', () => {
             {
               maxHistoryLength: 50, // Increase for property testing
               sessionTimeoutMs: 60000,
-              cleanupIntervalMs: 30000
+              cleanupIntervalMs: 30000,
             }
           );
 
@@ -605,7 +636,10 @@ describe('Conversation Management Tests', () => {
 
             for (let i = 0; i < messages.length; i++) {
               const message = messages[i];
-              const response = await testConversationManager.processMessage(sessionId, message);
+              const response = await testConversationManager.processMessage(
+                sessionId,
+                message
+              );
               responses.push(response);
 
               // Verify response structure
@@ -616,7 +650,8 @@ describe('Conversation Management Tests', () => {
               expect(response.timestamp).toBeDefined();
 
               // Check session state after each message
-              const currentSession = testConversationManager.getSession(sessionId);
+              const currentSession =
+                testConversationManager.getSession(sessionId);
               const expectedLength = (i + 1) * 2;
               expect(currentSession.messages).toHaveLength(expectedLength);
             }
@@ -645,17 +680,22 @@ describe('Conversation Management Tests', () => {
             // Verify user messages match input (every even index should be a user message)
             for (let i = 0; i < messages.length; i++) {
               const userMessageIndex = i * 2;
-              expect(finalSession.messages[userMessageIndex].content).toBe(messages[i]);
+              expect(finalSession.messages[userMessageIndex].content).toBe(
+                messages[i]
+              );
               expect(finalSession.messages[userMessageIndex].role).toBe('user');
             }
 
             // Verify all assistant messages have the expected content
             for (let i = 0; i < messages.length; i++) {
               const assistantMessageIndex = i * 2 + 1;
-              expect(finalSession.messages[assistantMessageIndex].role).toBe('assistant');
-              expect(finalSession.messages[assistantMessageIndex].content).toBe('Mock LLM response');
+              expect(finalSession.messages[assistantMessageIndex].role).toBe(
+                'assistant'
+              );
+              expect(finalSession.messages[assistantMessageIndex].content).toBe(
+                'Mock LLM response'
+              );
             }
-
           } finally {
             // Clean up the test conversation manager
             testConversationManager.destroy();
@@ -673,7 +713,10 @@ describe('Conversation Management Tests', () => {
     expect(conversationManager.getSession(sessionId)).toBeUndefined();
 
     // Process a message should create a session
-    const response = await conversationManager.processMessage(sessionId, 'Hello');
+    const response = await conversationManager.processMessage(
+      sessionId,
+      'Hello'
+    );
 
     expect(response).toBeDefined();
     expect(response.role).toBe('assistant');
@@ -716,7 +759,7 @@ describe('Conversation Management Tests', () => {
       conversationManager.componentIntentGenerator,
       {
         sessionTimeoutMs: 100, // 100ms timeout
-        cleanupIntervalMs: 50   // 50ms cleanup interval
+        cleanupIntervalMs: 50, // 50ms cleanup interval
       }
     );
 
@@ -730,7 +773,6 @@ describe('Conversation Management Tests', () => {
 
       // Session should be cleaned up
       expect(shortTimeoutManager.getSession(sessionId)).toBeUndefined();
-
     } finally {
       shortTimeoutManager.destroy();
     }
@@ -749,7 +791,7 @@ describe('Error Handling and Logging Tests', () => {
         server.wsHandler.destroy();
       }
 
-      await new Promise((resolve) => {
+      await new Promise(resolve => {
         server.close(() => {
           server = null;
           resolve();
@@ -768,14 +810,25 @@ describe('Error Handling and Logging Tests', () => {
       fc.asyncProperty(
         // Generate different error scenarios
         fc.record({
-          errorType: fc.constantFrom('websocket', 'llm', 'tool', 'conversation', 'configuration'),
+          errorType: fc.constantFrom(
+            'websocket',
+            'llm',
+            'tool',
+            'conversation',
+            'configuration'
+          ),
           errorMessage: fc.string({ minLength: 5, maxLength: 100 }),
           statusCode: fc.integer({ min: 400, max: 599 }),
           context: fc.record({
             sessionId: fc.string({ minLength: 5, maxLength: 20 }),
             requestId: fc.string({ minLength: 5, maxLength: 20 }),
-            operation: fc.constantFrom('message_processing', 'tool_execution', 'llm_call', 'connection_handling')
-          })
+            operation: fc.constantFrom(
+              'message_processing',
+              'tool_execution',
+              'llm_call',
+              'connection_handling'
+            ),
+          }),
         }),
         async ({ errorType, errorMessage, statusCode, context }) => {
           // Import error utilities
@@ -786,29 +839,37 @@ describe('Error Handling and Logging Tests', () => {
             WebSocketError,
             ConversationError,
             ConfigurationError,
-            classifyError
+            classifyError,
           } = await import('../src/utils/errors.js');
 
           // Create appropriate error type
           let testError;
           switch (errorType) {
-          case 'websocket':
-            testError = new WebSocketError(errorMessage, context.sessionId);
-            break;
-          case 'llm':
-            testError = new LLMError(errorMessage, 'openai');
-            break;
-          case 'tool':
-            testError = new ToolError(errorMessage, 'test_tool');
-            break;
-          case 'conversation':
-            testError = new ConversationError(errorMessage, context.sessionId);
-            break;
-          case 'configuration':
-            testError = new ConfigurationError(errorMessage);
-            break;
-          default:
-            testError = new ServerError(errorMessage, statusCode, 'TEST_ERROR', context);
+            case 'websocket':
+              testError = new WebSocketError(errorMessage, context.sessionId);
+              break;
+            case 'llm':
+              testError = new LLMError(errorMessage, 'openai');
+              break;
+            case 'tool':
+              testError = new ToolError(errorMessage, 'test_tool');
+              break;
+            case 'conversation':
+              testError = new ConversationError(
+                errorMessage,
+                context.sessionId
+              );
+              break;
+            case 'configuration':
+              testError = new ConfigurationError(errorMessage);
+              break;
+            default:
+              testError = new ServerError(
+                errorMessage,
+                statusCode,
+                'TEST_ERROR',
+                context
+              );
           }
 
           // Test error classification
@@ -828,8 +889,12 @@ describe('Error Handling and Logging Tests', () => {
           expect(testError.severity).toBeDefined();
 
           // Verify error severity matches status code
-          const expectedSeverity = testError.statusCode >= 500 ? 'error' :
-            testError.statusCode >= 400 ? 'warn' : 'info';
+          const expectedSeverity =
+            testError.statusCode >= 500
+              ? 'error'
+              : testError.statusCode >= 400
+                ? 'warn'
+                : 'info';
           expect(testError.severity).toBe(expectedSeverity);
 
           // Test that error can be logged (this would normally call winston)
@@ -840,7 +905,7 @@ describe('Error Handling and Logging Tests', () => {
             code: testError.code,
             statusCode: testError.statusCode,
             timestamp: testError.timestamp,
-            context
+            context,
           };
 
           expect(logData.message).toBeDefined();
@@ -868,16 +933,21 @@ describe('Error Handling and Logging Tests', () => {
           message: fc.string({ minLength: 5, maxLength: 100 }),
           metadata: fc.record({
             sessionId: fc.string({ minLength: 5, maxLength: 20 }),
-            operation: fc.constantFrom('startup', 'message_processing', 'cleanup'),
-            duration: fc.integer({ min: 1, max: 5000 })
-          })
+            operation: fc.constantFrom(
+              'startup',
+              'message_processing',
+              'cleanup'
+            ),
+            duration: fc.integer({ min: 1, max: 5000 }),
+          }),
         }),
         async ({ logLevel, logFormat, message, metadata }) => {
           // Test the logging configuration structure and functions
           // Since winston creates singletons, we test the structure rather than runtime behavior
 
           // Import logging utilities
-          const { logStructured, createRequestLogger } = await import('../src/utils/logger.js');
+          const { logStructured, createRequestLogger } =
+            await import('../src/utils/logger.js');
 
           // Verify logStructured function exists and can be called
           expect(typeof logStructured).toBe('function');
@@ -887,7 +957,7 @@ describe('Error Handling and Logging Tests', () => {
           const logEntry = {
             message,
             timestamp: new Date().toISOString(),
-            ...metadata
+            ...metadata,
           };
 
           expect(logEntry.message).toBe(message);
@@ -938,9 +1008,14 @@ describe('Error Handling and Logging Tests', () => {
       fc.asyncProperty(
         // Generate different server configurations
         fc.record({
-          nodeEnv: fc.constantFrom('development', 'staging', 'production', 'test'),
+          nodeEnv: fc.constantFrom(
+            'development',
+            'staging',
+            'production',
+            'test'
+          ),
           logLevel: fc.constantFrom('debug', 'info', 'warn', 'error'),
-          maxConnections: fc.integer({ min: 10, max: 100 })
+          maxConnections: fc.integer({ min: 10, max: 100 }),
         }),
         async ({ nodeEnv, logLevel, maxConnections }) => {
           // Create server configuration
@@ -953,28 +1028,28 @@ describe('Error Handling and Logging Tests', () => {
               apiKey: 'test_key',
               model: 'gpt-4',
               maxTokens: 2048,
-              temperature: 0.7
+              temperature: 0.7,
             },
             websocket: {
               pingInterval: 30000,
               maxConnections,
-              messageQueueSize: 1000
+              messageQueueSize: 1000,
             },
             logging: {
               level: logLevel,
-              format: 'json'
+              format: 'json',
             },
             tools: {
               enabled: ['gas_price'],
-              rateLimit: 10
+              rateLimit: 10,
             },
             corsOrigin: 'http://localhost:3000',
-            apiTimeout: 30000
+            apiTimeout: 30000,
           };
 
           server = await createServer(config);
 
-          await new Promise((resolve) => {
+          await new Promise(resolve => {
             server.listen(0, resolve);
           });
 
@@ -991,7 +1066,9 @@ describe('Error Handling and Logging Tests', () => {
           expect(healthData.timestamp).toBeDefined();
 
           // Test detailed health endpoint
-          const detailedHealthResponse = await fetch(`http://localhost:${port}/health/detailed`);
+          const detailedHealthResponse = await fetch(
+            `http://localhost:${port}/health/detailed`
+          );
           const detailedHealthData = await detailedHealthResponse.json();
 
           expect([200, 503]).toContain(detailedHealthResponse.status);
@@ -1002,7 +1079,9 @@ describe('Error Handling and Logging Tests', () => {
           expect(detailedHealthData.components.websocket).toBeDefined();
 
           // Test metrics endpoint
-          const metricsResponse = await fetch(`http://localhost:${port}/metrics`);
+          const metricsResponse = await fetch(
+            `http://localhost:${port}/metrics`
+          );
           const metricsData = await metricsResponse.json();
 
           expect(metricsResponse.status).toBe(200);
@@ -1032,7 +1111,7 @@ describe('Error Handling and Logging Tests', () => {
             server.wsHandler.destroy();
           }
 
-          await new Promise((resolve) => {
+          await new Promise(resolve => {
             server.close(() => {
               server = null;
               resolve();
@@ -1067,7 +1146,7 @@ describe('WebSocket Connection Tests', () => {
         server.wsHandler.destroy();
       }
 
-      await new Promise((resolve) => {
+      await new Promise(resolve => {
         server.close(() => {
           server = null;
           resolve();
@@ -1093,7 +1172,7 @@ describe('WebSocket Connection Tests', () => {
         server.wsHandler.destroy();
       }
 
-      await new Promise((resolve) => {
+      await new Promise(resolve => {
         server.close(() => {
           server = null;
           resolve();
@@ -1112,11 +1191,11 @@ describe('WebSocket Connection Tests', () => {
       fc.asyncProperty(
         // Reduce max connections for faster testing
         fc.integer({ min: 1, max: 5 }),
-        async (numConnections) => {
+        async numConnections => {
           const config = validateConfig();
           server = await createServer(config);
 
-          await new Promise((resolve) => {
+          await new Promise(resolve => {
             server.listen(0, resolve);
           });
 
@@ -1140,14 +1219,14 @@ describe('WebSocket Connection Tests', () => {
                 clearTimeout(timeout);
               });
 
-              ws.on('message', (data) => {
+              ws.on('message', data => {
                 try {
                   const message = JSON.parse(data.toString());
                   if (message.type === 'CONNECTION_ESTABLISHED') {
                     clearTimeout(timeout);
                     resolve({
                       ws,
-                      sessionId: message.payload.sessionId
+                      sessionId: message.payload.sessionId,
                     });
                   }
                 } catch (error) {
@@ -1156,7 +1235,7 @@ describe('WebSocket Connection Tests', () => {
                 }
               });
 
-              ws.on('error', (error) => {
+              ws.on('error', error => {
                 clearTimeout(timeout);
                 reject(error);
               });
@@ -1196,7 +1275,7 @@ describe('WebSocket Connection Tests', () => {
             server.wsHandler.destroy();
           }
 
-          await new Promise((resolve) => {
+          await new Promise(resolve => {
             server.close(() => {
               server = null;
               resolve();
@@ -1219,13 +1298,13 @@ describe('WebSocket Connection Tests', () => {
         // Generate smaller ping counts and faster intervals for speed
         fc.record({
           pingCount: fc.integer({ min: 1, max: 2 }),
-          intervalMs: fc.integer({ min: 10, max: 50 })
+          intervalMs: fc.integer({ min: 10, max: 50 }),
         }),
         async ({ pingCount, intervalMs }) => {
           const config = validateConfig();
           server = await createServer(config);
 
-          await new Promise((resolve) => {
+          await new Promise(resolve => {
             server.listen(0, resolve);
           });
 
@@ -1241,7 +1320,7 @@ describe('WebSocket Connection Tests', () => {
               reject(new Error('Connection timeout'));
             }, 1000);
 
-            ws.on('message', (data) => {
+            ws.on('message', data => {
               try {
                 const message = JSON.parse(data.toString());
                 if (message.type === 'CONNECTION_ESTABLISHED') {
@@ -1254,7 +1333,7 @@ describe('WebSocket Connection Tests', () => {
               }
             });
 
-            ws.on('error', (error) => {
+            ws.on('error', error => {
               clearTimeout(timeout);
               reject(error);
             });
@@ -1263,7 +1342,7 @@ describe('WebSocket Connection Tests', () => {
           // Test ping/pong mechanism with response collection
           const pongResponses = [];
 
-          ws.on('message', (data) => {
+          ws.on('message', data => {
             try {
               const message = JSON.parse(data.toString());
               if (message.type === 'PONG') {
@@ -1278,15 +1357,19 @@ describe('WebSocket Connection Tests', () => {
           for (let i = 0; i < pingCount; i++) {
             const pingId = `ping_${i}_${Date.now()}`;
 
-            ws.send(JSON.stringify({
-              type: 'PING',
-              id: pingId,
-              timestamp: Date.now()
-            }));
+            ws.send(
+              JSON.stringify({
+                type: 'PING',
+                id: pingId,
+                timestamp: Date.now(),
+              })
+            );
           }
 
           // Wait for all pong responses with much shorter timeout
-          await new Promise(resolve => setTimeout(resolve, Math.max(100, intervalMs * 2)));
+          await new Promise(resolve =>
+            setTimeout(resolve, Math.max(100, intervalMs * 2))
+          );
 
           // Verify we received pong responses
           expect(pongResponses.length).toBe(pingCount);
@@ -1311,7 +1394,7 @@ describe('WebSocket Connection Tests', () => {
             server.wsHandler.destroy();
           }
 
-          await new Promise((resolve) => {
+          await new Promise(resolve => {
             server.close(() => {
               server = null;
               resolve();
@@ -1332,7 +1415,7 @@ describe('WebSocket Connection Tests', () => {
     const config = validateConfig();
     server = await createServer(config);
 
-    await new Promise((resolve) => {
+    await new Promise(resolve => {
       server.listen(0, resolve);
     });
 
@@ -1363,7 +1446,7 @@ describe('WebSocket Connection Tests', () => {
         }, 100);
       });
 
-      ws.on('error', (error) => {
+      ws.on('error', error => {
         clearTimeout(timeout);
         reject(error);
       });
@@ -1380,7 +1463,7 @@ describe('WebSocket Connection Tests', () => {
 
     server = await createServer(config);
 
-    await new Promise((resolve) => {
+    await new Promise(resolve => {
       server.listen(0, resolve);
     });
 
@@ -1405,7 +1488,7 @@ describe('WebSocket Connection Tests', () => {
           resolve();
         });
 
-        ws.on('error', (error) => {
+        ws.on('error', error => {
           clearTimeout(timeout);
           reject(error);
         });
@@ -1421,7 +1504,7 @@ describe('WebSocket Connection Tests', () => {
 
     let testCompleted = false;
 
-    await new Promise((resolve) => {
+    await new Promise(resolve => {
       let connectionOpened = false;
       let connectionClosed = false;
 

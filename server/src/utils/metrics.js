@@ -2,18 +2,20 @@ import { logger } from './logger.js';
 
 /**
  * MetricsCollector
- * 
+ *
  * Centralized metrics collection for monitoring service performance.
  * Tracks request counts, response times, error rates, and resource usage.
  */
 export class MetricsCollector {
   constructor(options = {}) {
     this.options = {
-      histogramBuckets: options.histogramBuckets || [10, 50, 100, 200, 500, 1000, 2000, 5000],
+      histogramBuckets: options.histogramBuckets || [
+        10, 50, 100, 200, 500, 1000, 2000, 5000,
+      ],
       flushInterval: options.flushInterval || 60000, // 1 minute
       enablePeriodicLogging: options.enablePeriodicLogging !== false,
       slowThreshold: options.slowThreshold || 1000, // 1 second
-      ...options
+      ...options,
     };
 
     // Request metrics
@@ -21,14 +23,14 @@ export class MetricsCollector {
       total: 0,
       byEndpoint: new Map(),
       byMethod: new Map(),
-      byStatus: new Map()
+      byStatus: new Map(),
     };
 
     // Response time metrics
     this.responseTimes = {
       all: [],
       byEndpoint: new Map(),
-      histogram: this.createHistogram()
+      histogram: this.createHistogram(),
     };
 
     // Error metrics
@@ -36,7 +38,7 @@ export class MetricsCollector {
       total: 0,
       byType: new Map(),
       byEndpoint: new Map(),
-      recent: [] // Keep last 100 errors
+      recent: [], // Keep last 100 errors
     };
 
     // Service metrics
@@ -45,14 +47,14 @@ export class MetricsCollector {
     // Rate limit metrics
     this.rateLimits = {
       exceeded: 0,
-      byKey: new Map()
+      byKey: new Map(),
     };
 
     // Cache metrics
     this.cache = {
       hits: 0,
       misses: 0,
-      byService: new Map()
+      byService: new Map(),
     };
 
     // External API metrics
@@ -101,17 +103,26 @@ export class MetricsCollector {
 
     // By endpoint
     const endpointKey = `${method}:${endpoint}`;
-    const endpointStats = this.requests.byEndpoint.get(endpointKey) || { count: 0, errors: 0 };
+    const endpointStats = this.requests.byEndpoint.get(endpointKey) || {
+      count: 0,
+      errors: 0,
+    };
     endpointStats.count++;
     if (statusCode >= 400) endpointStats.errors++;
     this.requests.byEndpoint.set(endpointKey, endpointStats);
 
     // By method
-    this.requests.byMethod.set(method, (this.requests.byMethod.get(method) || 0) + 1);
+    this.requests.byMethod.set(
+      method,
+      (this.requests.byMethod.get(method) || 0) + 1
+    );
 
     // By status
     const statusGroup = `${Math.floor(statusCode / 100)}xx`;
-    this.requests.byStatus.set(statusGroup, (this.requests.byStatus.get(statusGroup) || 0) + 1);
+    this.requests.byStatus.set(
+      statusGroup,
+      (this.requests.byStatus.get(statusGroup) || 0) + 1
+    );
 
     // Record response time
     this.recordResponseTime(endpoint, duration);
@@ -123,7 +134,7 @@ export class MetricsCollector {
         endpoint,
         statusCode,
         duration,
-        threshold: this.options.slowThreshold
+        threshold: this.options.slowThreshold,
       });
     }
   }
@@ -176,11 +187,17 @@ export class MetricsCollector {
     this.errors.total++;
 
     // By type
-    this.errors.byType.set(errorType, (this.errors.byType.get(errorType) || 0) + 1);
+    this.errors.byType.set(
+      errorType,
+      (this.errors.byType.get(errorType) || 0) + 1
+    );
 
     // By endpoint
     if (endpoint) {
-      this.errors.byEndpoint.set(endpoint, (this.errors.byEndpoint.get(endpoint) || 0) + 1);
+      this.errors.byEndpoint.set(
+        endpoint,
+        (this.errors.byEndpoint.get(endpoint) || 0) + 1
+      );
     }
 
     // Keep recent errors
@@ -188,7 +205,7 @@ export class MetricsCollector {
       type: errorType,
       endpoint,
       timestamp: Date.now(),
-      ...details
+      ...details,
     });
 
     // Limit to last 100 errors
@@ -209,7 +226,7 @@ export class MetricsCollector {
   recordServiceMetrics(serviceName, metrics) {
     this.services.set(serviceName, {
       ...metrics,
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
     });
   }
 
@@ -281,7 +298,7 @@ export class MetricsCollector {
         calls: 0,
         errors: 0,
         totalDuration: 0,
-        responseTimes: []
+        responseTimes: [],
       };
       this.externalAPIs.set(provider, providerMetrics);
     }
@@ -323,7 +340,7 @@ export class MetricsCollector {
       p50: this.percentile(sorted, 50),
       p95: this.percentile(sorted, 95),
       p99: this.percentile(sorted, 99),
-      count: values.length
+      count: values.length,
     };
   }
 
@@ -353,42 +370,56 @@ export class MetricsCollector {
     return {
       uptime: {
         seconds: uptimeSeconds,
-        formatted: this.formatUptime(uptimeSeconds)
+        formatted: this.formatUptime(uptimeSeconds),
       },
       requests: {
         total: this.requests.total,
-        perSecond: uptimeSeconds > 0 ? Math.round((this.requests.total / uptimeSeconds) * 100) / 100 : 0,
+        perSecond:
+          uptimeSeconds > 0
+            ? Math.round((this.requests.total / uptimeSeconds) * 100) / 100
+            : 0,
         byMethod: Object.fromEntries(this.requests.byMethod),
         byStatus: Object.fromEntries(this.requests.byStatus),
         byEndpoint: Object.fromEntries(
           Array.from(this.requests.byEndpoint.entries()).map(([k, v]) => [k, v])
-        )
+        ),
       },
       responseTimes: {
         overall: this.calculateStats(this.responseTimes.all),
         histogram: this.responseTimes.histogram,
         byEndpoint: Object.fromEntries(
-          Array.from(this.responseTimes.byEndpoint.entries()).map(([k, v]) => [k, this.calculateStats(v)])
-        )
+          Array.from(this.responseTimes.byEndpoint.entries()).map(([k, v]) => [
+            k,
+            this.calculateStats(v),
+          ])
+        ),
       },
       errors: {
         total: this.errors.total,
-        rate: this.requests.total > 0 ? Math.round((this.errors.total / this.requests.total) * 10000) / 100 : 0,
+        rate:
+          this.requests.total > 0
+            ? Math.round((this.errors.total / this.requests.total) * 10000) /
+              100
+            : 0,
         byType: Object.fromEntries(this.errors.byType),
         byEndpoint: Object.fromEntries(this.errors.byEndpoint),
-        recent: this.errors.recent.slice(-10)
+        recent: this.errors.recent.slice(-10),
       },
       cache: {
         hits: this.cache.hits,
         misses: this.cache.misses,
-        hitRate: this.cache.hits + this.cache.misses > 0 
-          ? Math.round((this.cache.hits / (this.cache.hits + this.cache.misses)) * 10000) / 100 
-          : 0,
-        byService: Object.fromEntries(this.cache.byService)
+        hitRate:
+          this.cache.hits + this.cache.misses > 0
+            ? Math.round(
+                (this.cache.hits / (this.cache.hits + this.cache.misses)) *
+                  10000
+              ) / 100
+            : 0,
+        byService: Object.fromEntries(this.cache.byService),
       },
       rateLimits: {
         exceeded: this.rateLimits.exceeded,
-        byKey: Object.fromEntries(this.rateLimits.byKey)
+        byKey: Object.fromEntries(this.rateLimits.byKey),
       },
       externalAPIs: Object.fromEntries(
         Array.from(this.externalAPIs.entries()).map(([provider, metrics]) => [
@@ -396,10 +427,16 @@ export class MetricsCollector {
           {
             calls: metrics.calls,
             errors: metrics.errors,
-            errorRate: metrics.calls > 0 ? Math.round((metrics.errors / metrics.calls) * 10000) / 100 : 0,
-            avgResponseTime: metrics.calls > 0 ? Math.round(metrics.totalDuration / metrics.calls) : 0,
-            responseTimes: this.calculateStats(metrics.responseTimes)
-          }
+            errorRate:
+              metrics.calls > 0
+                ? Math.round((metrics.errors / metrics.calls) * 10000) / 100
+                : 0,
+            avgResponseTime:
+              metrics.calls > 0
+                ? Math.round(metrics.totalDuration / metrics.calls)
+                : 0,
+            responseTimes: this.calculateStats(metrics.responseTimes),
+          },
         ])
       ),
       services: Object.fromEntries(this.services),
@@ -408,9 +445,9 @@ export class MetricsCollector {
         cpuUsage: process.cpuUsage(),
         platform: process.platform,
         nodeVersion: process.version,
-        pid: process.pid
+        pid: process.pid,
       },
-      timestamp: now
+      timestamp: now,
     };
   }
 
@@ -423,14 +460,20 @@ export class MetricsCollector {
     return {
       requests: this.requests.total,
       errors: this.errors.total,
-      errorRate: this.requests.total > 0 ? Math.round((this.errors.total / this.requests.total) * 10000) / 100 : 0,
+      errorRate:
+        this.requests.total > 0
+          ? Math.round((this.errors.total / this.requests.total) * 10000) / 100
+          : 0,
       avgResponseTime: stats.avg,
       p95ResponseTime: stats.p95,
-      cacheHitRate: this.cache.hits + this.cache.misses > 0 
-        ? Math.round((this.cache.hits / (this.cache.hits + this.cache.misses)) * 10000) / 100 
-        : 0,
+      cacheHitRate:
+        this.cache.hits + this.cache.misses > 0
+          ? Math.round(
+              (this.cache.hits / (this.cache.hits + this.cache.misses)) * 10000
+            ) / 100
+          : 0,
       rateLimitsExceeded: this.rateLimits.exceeded,
-      uptime: Math.floor((Date.now() - this.startTime) / 1000)
+      uptime: Math.floor((Date.now() - this.startTime) / 1000),
     };
   }
 
@@ -441,7 +484,7 @@ export class MetricsCollector {
     const summary = this.getSummary();
     logger.info('Metrics summary', {
       type: 'metrics_summary',
-      ...summary
+      ...summary,
     });
   }
 
@@ -473,28 +516,28 @@ export class MetricsCollector {
       total: 0,
       byEndpoint: new Map(),
       byMethod: new Map(),
-      byStatus: new Map()
+      byStatus: new Map(),
     };
     this.responseTimes = {
       all: [],
       byEndpoint: new Map(),
-      histogram: this.createHistogram()
+      histogram: this.createHistogram(),
     };
     this.errors = {
       total: 0,
       byType: new Map(),
       byEndpoint: new Map(),
-      recent: []
+      recent: [],
     };
     this.services.clear();
     this.rateLimits = {
       exceeded: 0,
-      byKey: new Map()
+      byKey: new Map(),
     };
     this.cache = {
       hits: 0,
       misses: 0,
-      byService: new Map()
+      byService: new Map(),
     };
     this.externalAPIs.clear();
     this.startTime = Date.now();
@@ -517,4 +560,3 @@ export class MetricsCollector {
 export const metricsCollector = new MetricsCollector();
 
 export default MetricsCollector;
-

@@ -5,33 +5,41 @@ import request from 'supertest';
 // Mock the service container before importing the routes
 jest.unstable_mockModule('../../src/services/container.js', () => ({
   serviceContainer: {
-    get: jest.fn().mockImplementation((serviceName) => {
+    get: jest.fn().mockImplementation(serviceName => {
       if (serviceName === 'GasPriceAPIService') {
         return {
           getGasPrices: jest.fn().mockResolvedValue({
             network: 'ethereum',
             gasPrices: {
-              slow: { gwei: 10, usd_cost: 0.30 },
+              slow: { gwei: 10, usd_cost: 0.3 },
               standard: { gwei: 15, usd_cost: 0.45 },
-              fast: { gwei: 20, usd_cost: 0.60 }
+              fast: { gwei: 20, usd_cost: 0.6 },
             },
             timestamp: Date.now(),
-            source: 'test'
+            source: 'test',
           }),
           getMultiNetworkGasPrices: jest.fn().mockResolvedValue({
             networks: {
               ethereum: {
                 network: 'ethereum',
-                gasPrices: { slow: { gwei: 10 }, standard: { gwei: 15 }, fast: { gwei: 20 } }
+                gasPrices: {
+                  slow: { gwei: 10 },
+                  standard: { gwei: 15 },
+                  fast: { gwei: 20 },
+                },
               },
               polygon: {
                 network: 'polygon',
-                gasPrices: { slow: { gwei: 2 }, standard: { gwei: 3 }, fast: { gwei: 4 } }
-              }
+                gasPrices: {
+                  slow: { gwei: 2 },
+                  standard: { gwei: 3 },
+                  fast: { gwei: 4 },
+                },
+              },
             },
             timestamp: Date.now(),
-            source: 'test'
-          })
+            source: 'test',
+          }),
         };
       }
       if (serviceName === 'PriceFeedAPIService') {
@@ -44,16 +52,16 @@ jest.unstable_mockModule('../../src/services/container.js', () => ({
             volume_24h: 15000000000,
             market_cap: 820000000000,
             timestamp: Date.now(),
-            source: 'test'
+            source: 'test',
           }),
           getMultiplePrices: jest.fn().mockResolvedValue({
             prices: {
               BTC: { price: 42000, currency: 'USD' },
-              ETH: { price: 2500, currency: 'USD' }
+              ETH: { price: 2500, currency: 'USD' },
             },
             timestamp: Date.now(),
-            source: 'test'
-          })
+            source: 'test',
+          }),
         };
       }
       if (serviceName === 'LendingAPIService') {
@@ -62,19 +70,19 @@ jest.unstable_mockModule('../../src/services/container.js', () => ({
             token: 'USDC',
             protocols: [
               { protocol: 'aave', supplyAPY: 0.032, borrowAPY: 0.052 },
-              { protocol: 'compound', supplyAPY: 0.030, borrowAPY: 0.050 }
+              { protocol: 'compound', supplyAPY: 0.03, borrowAPY: 0.05 },
             ],
             timestamp: Date.now(),
-            source: 'test'
+            source: 'test',
           }),
           getAllProtocolRates: jest.fn().mockResolvedValue({
             protocols: {
               aave: { tokens: [{ symbol: 'USDC', supplyAPY: 0.032 }] },
-              compound: { tokens: [{ symbol: 'USDC', supplyAPY: 0.030 }] }
+              compound: { tokens: [{ symbol: 'USDC', supplyAPY: 0.03 }] },
             },
             timestamp: Date.now(),
-            source: 'test'
-          })
+            source: 'test',
+          }),
         };
       }
       if (serviceName === 'TokenBalanceAPIService') {
@@ -85,34 +93,35 @@ jest.unstable_mockModule('../../src/services/container.js', () => ({
             symbol: 'USDC',
             balance: '1000.50',
             balanceUSD: '$1,000.50',
-            timestamp: Date.now()
+            timestamp: Date.now(),
           }),
           getAllTokenBalances: jest.fn().mockResolvedValue({
             address: '0x1234567890123456789012345678901234567890',
             network: 'ethereum',
             tokens: [
               { symbol: 'ETH', balance: '1.5', balanceUSD: '$3,000' },
-              { symbol: 'USDC', balance: '1000.50', balanceUSD: '$1,000.50' }
+              { symbol: 'USDC', balance: '1000.50', balanceUSD: '$1,000.50' },
             ],
             totalUSD: '4000.50',
-            timestamp: Date.now()
+            timestamp: Date.now(),
           }),
           getPortfolioValue: jest.fn().mockResolvedValue({
             address: '0x1234567890123456789012345678901234567890',
             networks: ['ethereum'],
             totalUSD: '4000.50',
-            breakdown: [{ network: 'ethereum', valueUSD: 4000.50 }],
-            timestamp: Date.now()
-          })
+            breakdown: [{ network: 'ethereum', valueUSD: 4000.5 }],
+            timestamp: Date.now(),
+          }),
         };
       }
       throw new Error(`Service not found: ${serviceName}`);
-    })
-  }
+    }),
+  },
 }));
 
 // Import after mock is set up
-const { createServiceRoutes } = await import('../../src/routes/serviceRoutes.js');
+const { createServiceRoutes } =
+  await import('../../src/routes/serviceRoutes.js');
 
 describe('Service Routes', () => {
   let app;
@@ -157,7 +166,13 @@ describe('Service Routes', () => {
        * Validates: Requirements 1.4
        */
       test('Property 7: should accept all valid networks', async () => {
-        const validNetworks = ['ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism'];
+        const validNetworks = [
+          'ethereum',
+          'polygon',
+          'bsc',
+          'arbitrum',
+          'optimism',
+        ];
 
         for (const network of validNetworks) {
           const response = await request(app)
@@ -181,9 +196,7 @@ describe('Service Routes', () => {
       });
 
       test('should default to ethereum when no networks specified', async () => {
-        const response = await request(app)
-          .get('/api/gas-prices')
-          .expect(200);
+        const response = await request(app).get('/api/gas-prices').expect(200);
 
         expect(response.body.success).toBe(true);
       });
@@ -205,9 +218,7 @@ describe('Service Routes', () => {
   describe('Price Feed Endpoints', () => {
     describe('GET /api/prices/:symbol', () => {
       test('should return price for valid symbol', async () => {
-        const response = await request(app)
-          .get('/api/prices/BTC')
-          .expect(200);
+        const response = await request(app).get('/api/prices/BTC').expect(200);
 
         expect(response.body.success).toBe(true);
         expect(response.body.data).toBeDefined();
@@ -216,9 +227,7 @@ describe('Service Routes', () => {
       });
 
       test('should handle lowercase symbols', async () => {
-        const response = await request(app)
-          .get('/api/prices/btc')
-          .expect(200);
+        const response = await request(app).get('/api/prices/btc').expect(200);
 
         expect(response.body.success).toBe(true);
       });
@@ -237,7 +246,16 @@ describe('Service Routes', () => {
        * Validates: Requirements 3.4
        */
       test('Property 7: should accept all valid crypto symbols', async () => {
-        const validSymbols = ['BTC', 'ETH', 'USDC', 'USDT', 'SOL', 'MATIC', 'LINK', 'UNI'];
+        const validSymbols = [
+          'BTC',
+          'ETH',
+          'USDC',
+          'USDT',
+          'SOL',
+          'MATIC',
+          'LINK',
+          'UNI',
+        ];
 
         for (const symbol of validSymbols) {
           const response = await request(app)
@@ -410,7 +428,7 @@ describe('Service Routes', () => {
         const validAddresses = [
           '0x1234567890123456789012345678901234567890',
           '0xabcdef1234567890abcdef1234567890abcdef12',
-          '0xABCDEF1234567890ABCDEF1234567890ABCDEF12'
+          '0xABCDEF1234567890ABCDEF1234567890ABCDEF12',
         ];
 
         for (const address of validAddresses) {
@@ -426,7 +444,7 @@ describe('Service Routes', () => {
           '1234567890123456789012345678901234567890', // missing 0x
           '0x123456789012345678901234567890123456789', // too short
           '0x12345678901234567890123456789012345678901', // too long
-          '0xGHIJKL1234567890123456789012345678901234' // invalid hex
+          '0xGHIJKL1234567890123456789012345678901234', // invalid hex
         ];
 
         for (const address of invalidAddresses) {
@@ -477,9 +495,7 @@ describe('Service Routes', () => {
   describe('Utility Endpoints', () => {
     describe('GET /api/supported', () => {
       test('should return all supported options', async () => {
-        const response = await request(app)
-          .get('/api/supported')
-          .expect(200);
+        const response = await request(app).get('/api/supported').expect(200);
 
         expect(response.body.success).toBe(true);
         expect(response.body.data.networks).toBeDefined();
@@ -506,7 +522,7 @@ describe('Service Routes', () => {
           '/api/gas-prices/ethereum',
           '/api/prices/BTC',
           '/api/lending-rates/USDC',
-          `/api/balances/${testAddress}`
+          `/api/balances/${testAddress}`,
         ];
 
         for (const endpoint of endpoints) {
@@ -536,7 +552,7 @@ describe('Service Routes', () => {
           request(app).get('/api/prices/BTC'),
           request(app).get('/api/prices/ETH'),
           request(app).get('/api/lending-rates/USDC'),
-          request(app).get(`/api/balances/${validAddress}`)
+          request(app).get(`/api/balances/${validAddress}`),
         ];
 
         const responses = await Promise.all(requests);
@@ -558,7 +574,7 @@ describe('Service Routes', () => {
           '/api/gas-prices/invalid-network',
           '/api/prices/INVALID',
           '/api/lending-rates/INVALID',
-          '/api/balances/invalid-address'
+          '/api/balances/invalid-address',
         ];
 
         for (const endpoint of invalidRequests) {
@@ -577,4 +593,3 @@ describe('Service Routes', () => {
     });
   });
 });
-

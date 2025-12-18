@@ -1,5 +1,10 @@
 export class ServerError extends Error {
-  constructor(message, statusCode = 500, code = 'INTERNAL_ERROR', context = {}) {
+  constructor(
+    message,
+    statusCode = 500,
+    code = 'INTERNAL_ERROR',
+    context = {}
+  ) {
     super(message);
     this.name = 'ServerError';
     this.statusCode = statusCode;
@@ -73,10 +78,10 @@ export function createErrorResponse(error, requestId = null) {
         code: error.code || 'UNKNOWN_ERROR',
         statusCode: error.statusCode || 500,
         timestamp: error.timestamp || new Date().toISOString(),
-        severity: error.severity || 'error'
-      }
+        severity: error.severity || 'error',
+      },
     },
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
 }
 
@@ -85,7 +90,7 @@ export class CircuitBreaker {
     this.failureThreshold = options.failureThreshold || 5;
     this.resetTimeout = options.resetTimeout || 60000; // 1 minute
     this.monitoringPeriod = options.monitoringPeriod || 10000; // 10 seconds
-    
+
     this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
     this.failureCount = 0;
     this.lastFailureTime = null;
@@ -98,7 +103,11 @@ export class CircuitBreaker {
         this.state = 'HALF_OPEN';
         this.successCount = 0;
       } else {
-        throw new ServerError('Circuit breaker is OPEN', 503, 'CIRCUIT_BREAKER_OPEN');
+        throw new ServerError(
+          'Circuit breaker is OPEN',
+          503,
+          'CIRCUIT_BREAKER_OPEN'
+        );
       }
     }
 
@@ -125,7 +134,7 @@ export class CircuitBreaker {
   onFailure() {
     this.failureCount++;
     this.lastFailureTime = Date.now();
-    
+
     if (this.failureCount >= this.failureThreshold) {
       this.state = 'OPEN';
     }
@@ -136,7 +145,7 @@ export class CircuitBreaker {
       state: this.state,
       failureCount: this.failureCount,
       lastFailureTime: this.lastFailureTime,
-      successCount: this.successCount
+      successCount: this.successCount,
     };
   }
 }
@@ -146,32 +155,32 @@ export function classifyError(error) {
   if (error instanceof ConfigurationError) {
     return { category: 'configuration', severity: 'error', recoverable: false };
   }
-  
+
   if (error instanceof LLMError) {
     return { category: 'llm', severity: 'warn', recoverable: true };
   }
-  
+
   if (error instanceof ToolError) {
     return { category: 'tool', severity: 'warn', recoverable: true };
   }
-  
+
   if (error instanceof WebSocketError) {
     return { category: 'websocket', severity: 'info', recoverable: true };
   }
-  
+
   if (error instanceof ConversationError) {
     return { category: 'conversation', severity: 'warn', recoverable: true };
   }
-  
+
   if (error instanceof ServiceError) {
     return { category: 'service', severity: 'warn', recoverable: true };
   }
-  
+
   // Network/timeout errors
   if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
     return { category: 'network', severity: 'warn', recoverable: true };
   }
-  
+
   // Default classification
   return { category: 'unknown', severity: 'error', recoverable: false };
 }

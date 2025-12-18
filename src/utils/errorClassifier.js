@@ -2,10 +2,10 @@
  * Error type constants for classification
  */
 export const ERROR_TYPES = {
-  NETWORK: 'network',
-  WALLET: 'wallet',
-  RENDER: 'render',
-  GENERIC: 'generic'
+  NETWORK: "network",
+  WALLET: "wallet",
+  RENDER: "render",
+  GENERIC: "generic",
 };
 
 /**
@@ -15,23 +15,39 @@ export const ERROR_MESSAGES = {
   [ERROR_TYPES.NETWORK]: {
     title: "We're having trouble connecting to the network",
     description: "Check your internet connection and try again",
-    actions: ["Check your internet connection", "Try again in a moment", "Refresh the page"]
+    actions: [
+      "Check your internet connection",
+      "Try again in a moment",
+      "Refresh the page",
+    ],
   },
   [ERROR_TYPES.WALLET]: {
     title: "There's an issue with your wallet connection",
     description: "Please reconnect your wallet or refresh the page",
-    actions: ["Reconnect your wallet", "Refresh the page", "Check your wallet extension"]
+    actions: [
+      "Reconnect your wallet",
+      "Refresh the page",
+      "Check your wallet extension",
+    ],
   },
   [ERROR_TYPES.RENDER]: {
     title: "Something unexpected happened",
     description: "We encountered an issue displaying this content",
-    actions: ["Refresh the page", "Try again", "Contact support if the issue persists"]
+    actions: [
+      "Refresh the page",
+      "Try again",
+      "Contact support if the issue persists",
+    ],
   },
   [ERROR_TYPES.GENERIC]: {
     title: "Something unexpected happened",
     description: "We encountered an unexpected error",
-    actions: ["Refresh the page", "Try again", "Contact support if the issue persists"]
-  }
+    actions: [
+      "Refresh the page",
+      "Try again",
+      "Contact support if the issue persists",
+    ],
+  },
 };
 
 /**
@@ -44,35 +60,35 @@ export function classifyError(error) {
     return ERROR_TYPES.GENERIC;
   }
 
-  const errorMessage = error.message?.toLowerCase() || '';
-  const errorName = error.name?.toLowerCase() || '';
-  const errorStack = error.stack?.toLowerCase() || '';
+  const errorMessage = error.message?.toLowerCase() || "";
+  const errorName = error.name?.toLowerCase() || "";
+  const errorStack = error.stack?.toLowerCase() || "";
 
   // Check for network-related errors
   if (
-    errorMessage.includes('fetch') ||
-    errorMessage.includes('network') ||
-    errorMessage.includes('timeout') ||
-    errorMessage.includes('connection') ||
-    errorMessage.includes('xhr') ||
-    errorMessage.includes('ajax') ||
-    errorName.includes('networkerror')
+    errorMessage.includes("fetch") ||
+    errorMessage.includes("network") ||
+    errorMessage.includes("timeout") ||
+    errorMessage.includes("connection") ||
+    errorMessage.includes("xhr") ||
+    errorMessage.includes("ajax") ||
+    errorName.includes("networkerror")
   ) {
     return ERROR_TYPES.NETWORK;
   }
 
   // Check for wallet-related errors
   if (
-    errorMessage.includes('wallet') ||
-    errorMessage.includes('ethereum') ||
-    errorMessage.includes('metamask') ||
-    errorMessage.includes('web3') ||
-    errorMessage.includes('provider') ||
-    errorMessage.includes('signer') ||
-    errorMessage.includes('account') ||
-    errorStack.includes('ethers') ||
-    errorStack.includes('wagmi') ||
-    errorStack.includes('viem')
+    errorMessage.includes("wallet") ||
+    errorMessage.includes("ethereum") ||
+    errorMessage.includes("metamask") ||
+    errorMessage.includes("web3") ||
+    errorMessage.includes("provider") ||
+    errorMessage.includes("signer") ||
+    errorMessage.includes("account") ||
+    errorStack.includes("ethers") ||
+    errorStack.includes("wagmi") ||
+    errorStack.includes("viem")
   ) {
     return ERROR_TYPES.WALLET;
   }
@@ -80,12 +96,12 @@ export function classifyError(error) {
   // Check for render-related errors
   if (
     error instanceof TypeError ||
-    errorMessage.includes('render') ||
-    errorMessage.includes('cannot read property') ||
-    errorMessage.includes('cannot read properties') ||
-    errorMessage.includes('undefined is not an object') ||
-    errorMessage.includes('null is not an object') ||
-    errorName.includes('typeerror')
+    errorMessage.includes("render") ||
+    errorMessage.includes("cannot read property") ||
+    errorMessage.includes("cannot read properties") ||
+    errorMessage.includes("undefined is not an object") ||
+    errorMessage.includes("null is not an object") ||
+    errorName.includes("typeerror")
   ) {
     return ERROR_TYPES.RENDER;
   }
@@ -100,7 +116,9 @@ export function classifyError(error) {
  * @returns {object} The error message configuration
  */
 export function getErrorMessage(errorType) {
-  return ERROR_MESSAGES.hasOwnProperty(errorType) ? ERROR_MESSAGES[errorType] : ERROR_MESSAGES[ERROR_TYPES.GENERIC];
+  return ERROR_MESSAGES.hasOwnProperty(errorType)
+    ? ERROR_MESSAGES[errorType]
+    : ERROR_MESSAGES[ERROR_TYPES.GENERIC];
 }
 
 /**
@@ -110,24 +128,28 @@ export function getErrorMessage(errorType) {
  * @param {string} boundaryName - Name of the error boundary that caught the error
  * @returns {object} Error context object
  */
-export function extractErrorContext(error, errorInfo = null, boundaryName = 'unknown') {
+export function extractErrorContext(
+  error,
+  errorInfo = null,
+  boundaryName = "unknown"
+) {
   const context = {
     error: {
-      message: error?.message || 'Unknown error',
-      stack: error?.stack || '',
-      name: error?.name || 'Error'
+      message: error?.message || "Unknown error",
+      stack: error?.stack || "",
+      name: error?.name || "Error",
     },
     errorInfo: {
-      componentStack: errorInfo?.componentStack || ''
+      componentStack: errorInfo?.componentStack || "",
     },
     context: {
       timestamp: Date.now(),
-      url: typeof window !== 'undefined' ? window.location.href : '',
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-      environment: process.env.NODE_ENV || 'development',
+      url: typeof window !== "undefined" ? window.location.href : "",
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+      environment: process.env.NODE_ENV || "development",
       boundaryName: boundaryName,
-      errorType: classifyError(error)
-    }
+      errorType: classifyError(error),
+    },
   };
 
   return context;
@@ -147,7 +169,7 @@ export function formatErrorForDisplay(error, isDevelopment = false) {
     type: errorType,
     title: messageConfig.title,
     description: messageConfig.description,
-    actions: messageConfig.actions
+    actions: messageConfig.actions,
   };
 
   // Only include technical details in development
@@ -155,7 +177,7 @@ export function formatErrorForDisplay(error, isDevelopment = false) {
     formatted.technicalDetails = {
       message: error?.message,
       name: error?.name,
-      stack: error?.stack
+      stack: error?.stack,
     };
   }
 

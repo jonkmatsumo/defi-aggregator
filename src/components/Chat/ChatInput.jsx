@@ -1,8 +1,8 @@
-import React from 'react';
+import React from "react";
 
 const ChatInput = ({ value, onChange, onSubmit, disabled }) => {
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+  const handleKeyDown = e => {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       onSubmit();
     }
@@ -17,7 +17,7 @@ const ChatInput = ({ value, onChange, onSubmit, disabled }) => {
       <input
         type="text"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={e => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Type your message..."
         disabled={disabled}

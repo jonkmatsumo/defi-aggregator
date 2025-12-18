@@ -7,32 +7,32 @@ jest.unstable_mockModule('../../src/utils/logger.js', () => ({
     info: jest.fn(),
     debug: jest.fn(),
     warn: jest.fn(),
-    error: jest.fn()
+    error: jest.fn(),
   },
-  logError: jest.fn()
+  logError: jest.fn(),
 }));
 
 // Mock UUID for predictable test results
 jest.unstable_mockModule('uuid', () => ({
-  v4: jest.fn(() => 'test-uuid-' + Math.random().toString(36).substr(2, 9))
+  v4: jest.fn(() => 'test-uuid-' + Math.random().toString(36).substr(2, 9)),
 }));
 
 // Mock the service container with all services
 jest.unstable_mockModule('../../src/services/container.js', () => ({
   serviceContainer: {
-    get: jest.fn().mockImplementation((serviceName) => {
+    get: jest.fn().mockImplementation(serviceName => {
       if (serviceName === 'GasPriceAPIService') {
         return {
           getGasPrices: jest.fn().mockResolvedValue({
             network: 'ethereum',
             gasPrices: {
-              slow: { gwei: 10, usd_cost: 0.30 },
+              slow: { gwei: 10, usd_cost: 0.3 },
               standard: { gwei: 15, usd_cost: 0.45 },
-              fast: { gwei: 20, usd_cost: 0.60 }
+              fast: { gwei: 20, usd_cost: 0.6 },
             },
             timestamp: Date.now(),
-            source: 'test'
-          })
+            source: 'test',
+          }),
         };
       }
       if (serviceName === 'PriceFeedAPIService') {
@@ -45,8 +45,8 @@ jest.unstable_mockModule('../../src/services/container.js', () => ({
             volume_24h: 15000000000,
             market_cap: 820000000000,
             timestamp: Date.now(),
-            source: 'test'
-          })
+            source: 'test',
+          }),
         };
       }
       if (serviceName === 'LendingAPIService') {
@@ -63,12 +63,12 @@ jest.unstable_mockModule('../../src/services/container.js', () => ({
                 totalBorrow: 2000000,
                 utilizationRate: 0.5,
                 timestamp: Date.now(),
-                source: 'test'
-              }
+                source: 'test',
+              },
             ],
             timestamp: Date.now(),
-            source: 'test'
-          })
+            source: 'test',
+          }),
         };
       }
       if (serviceName === 'TokenBalanceAPIService') {
@@ -81,29 +81,41 @@ jest.unstable_mockModule('../../src/services/container.js', () => ({
             balance: '1000.50',
             balanceUSD: '$1,000.50',
             decimals: 6,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           }),
           getAllTokenBalances: jest.fn().mockResolvedValue({
             address: '0x1234567890123456789012345678901234567890',
             network: 'ethereum',
             tokens: [
-              { symbol: 'ETH', name: 'Ether', balance: '1.5', balanceUSD: '$3000', decimals: 18 },
-              { symbol: 'USDC', name: 'USD Coin', balance: '1000', balanceUSD: '$1000', decimals: 6 }
+              {
+                symbol: 'ETH',
+                name: 'Ether',
+                balance: '1.5',
+                balanceUSD: '$3000',
+                decimals: 18,
+              },
+              {
+                symbol: 'USDC',
+                name: 'USD Coin',
+                balance: '1000',
+                balanceUSD: '$1000',
+                decimals: 6,
+              },
             ],
             totalUSD: '4000',
-            timestamp: Date.now()
-          })
+            timestamp: Date.now(),
+          }),
         };
       }
       throw new Error(`Service not found: ${serviceName}`);
-    })
-  }
+    }),
+  },
 }));
 
 // Import modules after mocks
-const { ConversationManager } = await import('../../src/conversation/manager.js');
+const { ConversationManager } =
+  await import('../../src/conversation/manager.js');
 const { ToolRegistry } = await import('../../src/tools/registry.js');
-
 
 describe('AI Agent Integration Tests', () => {
   let manager;
@@ -117,7 +129,7 @@ describe('AI Agent Integration Tests', () => {
     // Create mock LLM interface
     mockLLM = {
       generateResponse: jest.fn(),
-      generateStreamingResponse: jest.fn()
+      generateStreamingResponse: jest.fn(),
     };
 
     // Create real tool registry
@@ -125,20 +137,15 @@ describe('AI Agent Integration Tests', () => {
 
     // Create mock component intent generator
     intentGenerator = {
-      generateIntent: jest.fn(() => null)
+      generateIntent: jest.fn(() => null),
     };
 
     // Create conversation manager
-    manager = new ConversationManager(
-      mockLLM,
-      registry,
-      intentGenerator,
-      {
-        maxHistoryLength: 50,
-        sessionTimeoutMs: 60000,
-        cleanupIntervalMs: 30000
-      }
-    );
+    manager = new ConversationManager(mockLLM, registry, intentGenerator, {
+      maxHistoryLength: 50,
+      sessionTimeoutMs: 60000,
+      cleanupIntervalMs: 30000,
+    });
   });
 
   afterEach(() => {
@@ -151,12 +158,13 @@ describe('AI Agent Integration Tests', () => {
     it('should process a message without tool calls successfully', async () => {
       const sessionId = 'test-session-1';
       const userMessage = 'Hello, how are you?';
-      const expectedResponse = 'I\'m doing great! How can I help you with DeFi today?';
+      const expectedResponse =
+        "I'm doing great! How can I help you with DeFi today?";
 
       mockLLM.generateResponse.mockResolvedValueOnce({
         content: expectedResponse,
         toolCalls: [],
-        usage: { total_tokens: 50 }
+        usage: { total_tokens: 50 },
       });
 
       const result = await manager.processMessage(sessionId, userMessage);
@@ -174,19 +182,22 @@ describe('AI Agent Integration Tests', () => {
       // First LLM call returns tool request
       mockLLM.generateResponse.mockResolvedValueOnce({
         content: 'Let me check the current gas prices for you.',
-        toolCalls: [{
-          id: 'call_gas_1',
-          name: 'get_gas_prices',
-          parameters: { network: 'ethereum' }
-        }],
-        usage: { total_tokens: 100 }
+        toolCalls: [
+          {
+            id: 'call_gas_1',
+            name: 'get_gas_prices',
+            parameters: { network: 'ethereum' },
+          },
+        ],
+        usage: { total_tokens: 100 },
       });
 
       // Second LLM call after tool execution
       mockLLM.generateResponse.mockResolvedValueOnce({
-        content: 'The current gas prices on Ethereum are: Slow: 10 gwei ($0.30), Standard: 15 gwei ($0.45), Fast: 20 gwei ($0.60). Gas prices are currently low - a good time for transactions!',
+        content:
+          'The current gas prices on Ethereum are: Slow: 10 gwei ($0.30), Standard: 15 gwei ($0.45), Fast: 20 gwei ($0.60). Gas prices are currently low - a good time for transactions!',
         toolCalls: [],
-        usage: { total_tokens: 150 }
+        usage: { total_tokens: 150 },
       });
 
       const result = await manager.processMessage(sessionId, userMessage);
@@ -213,17 +224,20 @@ describe('AI Agent Integration Tests', () => {
       mockLLM.generateResponse
         .mockResolvedValueOnce({
           content: 'Let me check the Bitcoin price.',
-          toolCalls: [{
-            id: 'call_crypto_1',
-            name: 'get_crypto_price',
-            parameters: { symbol: 'BTC', currency: 'USD' }
-          }],
-          usage: { total_tokens: 80 }
+          toolCalls: [
+            {
+              id: 'call_crypto_1',
+              name: 'get_crypto_price',
+              parameters: { symbol: 'BTC', currency: 'USD' },
+            },
+          ],
+          usage: { total_tokens: 80 },
         })
         .mockResolvedValueOnce({
-          content: 'Bitcoin is currently trading at $42,000 USD, up 2.5% in the last 24 hours.',
+          content:
+            'Bitcoin is currently trading at $42,000 USD, up 2.5% in the last 24 hours.',
           toolCalls: [],
-          usage: { total_tokens: 120 }
+          usage: { total_tokens: 120 },
         });
 
       const result = await manager.processMessage(sessionId, userMessage);
@@ -239,18 +253,21 @@ describe('AI Agent Integration Tests', () => {
 
       mockLLM.generateResponse
         .mockResolvedValueOnce({
-          content: 'I\'ll check the USDC lending rates for you.',
-          toolCalls: [{
-            id: 'call_lending_1',
-            name: 'get_lending_rates',
-            parameters: { token: 'USDC', protocols: ['aave'] }
-          }],
-          usage: { total_tokens: 90 }
+          content: "I'll check the USDC lending rates for you.",
+          toolCalls: [
+            {
+              id: 'call_lending_1',
+              name: 'get_lending_rates',
+              parameters: { token: 'USDC', protocols: ['aave'] },
+            },
+          ],
+          usage: { total_tokens: 90 },
         })
         .mockResolvedValueOnce({
-          content: 'On Aave, USDC has a supply APY of 3.2% and a borrow APY of 5.2%.',
+          content:
+            'On Aave, USDC has a supply APY of 3.2% and a borrow APY of 5.2%.',
           toolCalls: [],
-          usage: { total_tokens: 130 }
+          usage: { total_tokens: 130 },
         });
 
       const result = await manager.processMessage(sessionId, userMessage);
@@ -266,17 +283,26 @@ describe('AI Agent Integration Tests', () => {
 
       mockLLM.generateResponse
         .mockResolvedValueOnce({
-          content: 'I\'ll get both for you.',
+          content: "I'll get both for you.",
           toolCalls: [
-            { id: 'call_multi_1', name: 'get_gas_prices', parameters: { network: 'ethereum' } },
-            { id: 'call_multi_2', name: 'get_crypto_price', parameters: { symbol: 'BTC' } }
+            {
+              id: 'call_multi_1',
+              name: 'get_gas_prices',
+              parameters: { network: 'ethereum' },
+            },
+            {
+              id: 'call_multi_2',
+              name: 'get_crypto_price',
+              parameters: { symbol: 'BTC' },
+            },
           ],
-          usage: { total_tokens: 100 }
+          usage: { total_tokens: 100 },
         })
         .mockResolvedValueOnce({
-          content: 'Here are the results: Gas is at 15 gwei standard, and BTC is at $42,000.',
+          content:
+            'Here are the results: Gas is at 15 gwei standard, and BTC is at $42,000.',
           toolCalls: [],
-          usage: { total_tokens: 180 }
+          usage: { total_tokens: 180 },
         });
 
       const result = await manager.processMessage(sessionId, userMessage);
@@ -298,19 +324,21 @@ describe('AI Agent Integration Tests', () => {
         parameters: {},
         execute: async () => {
           throw new Error('Service unavailable');
-        }
+        },
       });
 
       mockLLM.generateResponse
         .mockResolvedValueOnce({
           content: 'Let me check.',
-          toolCalls: [{ id: 'call_error_1', name: 'failing_tool', parameters: {} }],
-          usage: { total_tokens: 50 }
+          toolCalls: [
+            { id: 'call_error_1', name: 'failing_tool', parameters: {} },
+          ],
+          usage: { total_tokens: 50 },
         })
         .mockResolvedValueOnce({
           content: 'I encountered an error retrieving that information.',
           toolCalls: [],
-          usage: { total_tokens: 80 }
+          usage: { total_tokens: 80 },
         });
 
       const result = await manager.processMessage(sessionId, userMessage);
@@ -325,7 +353,9 @@ describe('AI Agent Integration Tests', () => {
       const sessionId = 'test-session-llm-error';
       const userMessage = 'Hello';
 
-      mockLLM.generateResponse.mockRejectedValueOnce(new Error('OpenAI API error'));
+      mockLLM.generateResponse.mockRejectedValueOnce(
+        new Error('OpenAI API error')
+      );
 
       const result = await manager.processMessage(sessionId, userMessage);
 
@@ -361,7 +391,9 @@ describe('AI Agent Integration Tests', () => {
 
       expect(result.error.code).toBe('VALIDATION_ERROR');
       expect(result.error.retryable).toBe(false);
-      expect(result.error.suggestions).toContain('Make sure wallet addresses are valid Ethereum addresses');
+      expect(result.error.suggestions).toContain(
+        'Make sure wallet addresses are valid Ethereum addresses'
+      );
     });
   });
 
@@ -373,7 +405,7 @@ describe('AI Agent Integration Tests', () => {
       mockLLM.generateResponse.mockResolvedValueOnce({
         content: 'Hello! How can I help?',
         toolCalls: [],
-        usage: { total_tokens: 30 }
+        usage: { total_tokens: 30 },
       });
       await manager.processMessage(sessionId, 'Hi');
 
@@ -381,13 +413,19 @@ describe('AI Agent Integration Tests', () => {
       mockLLM.generateResponse
         .mockResolvedValueOnce({
           content: 'Checking gas...',
-          toolCalls: [{ id: 'call_history_1', name: 'get_gas_prices', parameters: { network: 'ethereum' } }],
-          usage: { total_tokens: 50 }
+          toolCalls: [
+            {
+              id: 'call_history_1',
+              name: 'get_gas_prices',
+              parameters: { network: 'ethereum' },
+            },
+          ],
+          usage: { total_tokens: 50 },
         })
         .mockResolvedValueOnce({
           content: 'Gas is 15 gwei',
           toolCalls: [],
-          usage: { total_tokens: 70 }
+          usage: { total_tokens: 70 },
         });
       await manager.processMessage(sessionId, 'What are gas prices?');
 
@@ -408,13 +446,19 @@ describe('AI Agent Integration Tests', () => {
       mockLLM.generateResponse
         .mockResolvedValueOnce({
           content: 'Let me get that.',
-          toolCalls: [{ id: 'call_context_1', name: 'get_gas_prices', parameters: { network: 'ethereum' } }],
-          usage: { total_tokens: 60 }
+          toolCalls: [
+            {
+              id: 'call_context_1',
+              name: 'get_gas_prices',
+              parameters: { network: 'ethereum' },
+            },
+          ],
+          usage: { total_tokens: 60 },
         })
         .mockResolvedValueOnce({
           content: 'Gas is 15 gwei standard.',
           toolCalls: [],
-          usage: { total_tokens: 100 }
+          usage: { total_tokens: 100 },
         });
 
       await manager.processMessage(sessionId, 'Gas prices please');
@@ -429,89 +473,105 @@ describe('AI Agent Integration Tests', () => {
 
   describe('Property Tests for AI Agent Flow', () => {
     it('should always return a valid response structure', async () => {
-      await fc.assert(fc.asyncProperty(
-        fc.string({ minLength: 1, maxLength: 500 }),
-        async (userMessage) => {
-          const sessionId = 'prop-test-' + Math.random().toString(36).substr(2, 9);
-          const newManager = new ConversationManager(
-            {
-              generateResponse: jest.fn().mockResolvedValue({
-                content: 'Response: ' + userMessage.slice(0, 50),
-                toolCalls: [],
-                usage: { total_tokens: 50 }
-              })
-            },
-            registry,
-            intentGenerator,
-            { cleanupIntervalMs: 60000 }
-          );
+      await fc.assert(
+        fc.asyncProperty(
+          fc.string({ minLength: 1, maxLength: 500 }),
+          async userMessage => {
+            const sessionId =
+              'prop-test-' + Math.random().toString(36).substr(2, 9);
+            const newManager = new ConversationManager(
+              {
+                generateResponse: jest.fn().mockResolvedValue({
+                  content: 'Response: ' + userMessage.slice(0, 50),
+                  toolCalls: [],
+                  usage: { total_tokens: 50 },
+                }),
+              },
+              registry,
+              intentGenerator,
+              { cleanupIntervalMs: 60000 }
+            );
 
-          try {
-            const result = await newManager.processMessage(sessionId, userMessage);
+            try {
+              const result = await newManager.processMessage(
+                sessionId,
+                userMessage
+              );
 
-            // Response should always have these properties
-            expect(result).toHaveProperty('id');
-            expect(result).toHaveProperty('role', 'assistant');
-            expect(result).toHaveProperty('content');
-            expect(result).toHaveProperty('timestamp');
-            expect(typeof result.id).toBe('string');
-            expect(typeof result.content).toBe('string');
-            expect(typeof result.timestamp).toBe('number');
-          } finally {
-            newManager.destroy();
+              // Response should always have these properties
+              expect(result).toHaveProperty('id');
+              expect(result).toHaveProperty('role', 'assistant');
+              expect(result).toHaveProperty('content');
+              expect(result).toHaveProperty('timestamp');
+              expect(typeof result.id).toBe('string');
+              expect(typeof result.content).toBe('string');
+              expect(typeof result.timestamp).toBe('number');
+            } finally {
+              newManager.destroy();
+            }
           }
-        }
-      ), { numRuns: 20 });
+        ),
+        { numRuns: 20 }
+      );
     });
 
     it('should handle any combination of tool calls correctly', async () => {
-      await fc.assert(fc.asyncProperty(
-        fc.array(
-          fc.constantFrom('get_gas_prices', 'get_crypto_price', 'get_lending_rates'),
-          { minLength: 1, maxLength: 3 }
-        ),
-        async (toolNames) => {
-          const sessionId = 'prop-multi-' + Math.random().toString(36).substr(2, 9);
+      await fc.assert(
+        fc.asyncProperty(
+          fc.array(
+            fc.constantFrom(
+              'get_gas_prices',
+              'get_crypto_price',
+              'get_lending_rates'
+            ),
+            { minLength: 1, maxLength: 3 }
+          ),
+          async toolNames => {
+            const sessionId =
+              'prop-multi-' + Math.random().toString(36).substr(2, 9);
 
-          const toolCalls = toolNames.map((name, index) => {
-            const params = {
-              'get_gas_prices': { network: 'ethereum' },
-              'get_crypto_price': { symbol: 'BTC' },
-              'get_lending_rates': { token: 'USDC' }
-            };
-            return {
-              id: `call_prop_${index}_${Math.random().toString(36).substr(2, 5)}`,
-              name,
-              parameters: params[name]
-            };
-          });
-
-          mockLLM.generateResponse
-            .mockResolvedValueOnce({
-              content: 'Processing...',
-              toolCalls,
-              usage: { total_tokens: 100 }
-            })
-            .mockResolvedValueOnce({
-              content: 'Here are the results.',
-              toolCalls: [],
-              usage: { total_tokens: 150 }
+            const toolCalls = toolNames.map((name, index) => {
+              const params = {
+                get_gas_prices: { network: 'ethereum' },
+                get_crypto_price: { symbol: 'BTC' },
+                get_lending_rates: { token: 'USDC' },
+              };
+              return {
+                id: `call_prop_${index}_${Math.random().toString(36).substr(2, 5)}`,
+                name,
+                parameters: params[name],
+              };
             });
 
-          const result = await manager.processMessage(sessionId, 'Get data');
+            mockLLM.generateResponse
+              .mockResolvedValueOnce({
+                content: 'Processing...',
+                toolCalls,
+                usage: { total_tokens: 100 },
+              })
+              .mockResolvedValueOnce({
+                content: 'Here are the results.',
+                toolCalls: [],
+                usage: { total_tokens: 150 },
+              });
 
-          // Should have results for all tools
-          expect(result.toolResults).toHaveLength(toolNames.length);
-          expect(result.formattedResults.results).toHaveLength(toolNames.length);
+            const result = await manager.processMessage(sessionId, 'Get data');
 
-          // All tool results should be successful
-          result.toolResults.forEach(tr => {
-            expect(tr.success).toBe(true);
-            expect(tr.result).toBeDefined();
-          });
-        }
-      ), { numRuns: 20 });
+            // Should have results for all tools
+            expect(result.toolResults).toHaveLength(toolNames.length);
+            expect(result.formattedResults.results).toHaveLength(
+              toolNames.length
+            );
+
+            // All tool results should be successful
+            result.toolResults.forEach(tr => {
+              expect(tr.success).toBe(true);
+              expect(tr.result).toBeDefined();
+            });
+          }
+        ),
+        { numRuns: 20 }
+      );
     });
   });
 });
-

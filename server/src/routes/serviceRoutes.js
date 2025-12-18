@@ -13,7 +13,7 @@ export function createServiceRoutes() {
   // Middleware for request logging
   router.use((req, res, next) => {
     const startTime = Date.now();
-    
+
     res.on('finish', () => {
       const duration = Date.now() - startTime;
       logger.info('API request completed', {
@@ -21,10 +21,10 @@ export function createServiceRoutes() {
         path: req.path,
         statusCode: res.statusCode,
         duration,
-        query: req.query
+        query: req.query,
       });
     });
-    
+
     next();
   });
 
@@ -42,7 +42,13 @@ export function createServiceRoutes() {
       const { transactionType, includeUSDCosts } = req.query;
 
       // Validate network parameter
-      const validNetworks = ['ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism'];
+      const validNetworks = [
+        'ethereum',
+        'polygon',
+        'bsc',
+        'arbitrum',
+        'optimism',
+      ];
       if (!validNetworks.includes(network)) {
         return sendValidationError(
           res,
@@ -53,10 +59,10 @@ export function createServiceRoutes() {
 
       const gasPriceService = serviceContainer.get('GasPriceAPIService');
       const startTime = Date.now();
-      
+
       const result = await gasPriceService.getGasPrices(network, {
         transactionType: transactionType || 'transfer',
-        includeUSDCosts: includeUSDCosts !== 'false'
+        includeUSDCosts: includeUSDCosts !== 'false',
       });
 
       const executionTime = Date.now() - startTime;
@@ -66,10 +72,9 @@ export function createServiceRoutes() {
         data: result,
         metadata: {
           executionTime,
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       });
-
     } catch (error) {
       handleServiceError(res, error, 'gas-prices');
     }
@@ -82,12 +87,22 @@ export function createServiceRoutes() {
   router.get('/gas-prices', async (req, res) => {
     try {
       const { networks } = req.query;
-      const networkList = networks ? networks.split(',').map(n => n.trim()) : ['ethereum'];
+      const networkList = networks
+        ? networks.split(',').map(n => n.trim())
+        : ['ethereum'];
 
       // Validate networks
-      const validNetworks = ['ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism'];
-      const invalidNetworks = networkList.filter(n => !validNetworks.includes(n));
-      
+      const validNetworks = [
+        'ethereum',
+        'polygon',
+        'bsc',
+        'arbitrum',
+        'optimism',
+      ];
+      const invalidNetworks = networkList.filter(
+        n => !validNetworks.includes(n)
+      );
+
       if (invalidNetworks.length > 0) {
         return sendValidationError(
           res,
@@ -98,8 +113,9 @@ export function createServiceRoutes() {
 
       const gasPriceService = serviceContainer.get('GasPriceAPIService');
       const startTime = Date.now();
-      
-      const result = await gasPriceService.getMultiNetworkGasPrices(networkList);
+
+      const result =
+        await gasPriceService.getMultiNetworkGasPrices(networkList);
 
       const executionTime = Date.now() - startTime;
 
@@ -109,10 +125,9 @@ export function createServiceRoutes() {
         metadata: {
           executionTime,
           timestamp: Date.now(),
-          networksRequested: networkList.length
-        }
+          networksRequested: networkList.length,
+        },
       });
-
     } catch (error) {
       handleServiceError(res, error, 'gas-prices');
     }
@@ -133,8 +148,17 @@ export function createServiceRoutes() {
 
       // Validate symbol
       const upperSymbol = symbol.toUpperCase();
-      const validSymbols = ['BTC', 'ETH', 'USDC', 'USDT', 'SOL', 'MATIC', 'LINK', 'UNI'];
-      
+      const validSymbols = [
+        'BTC',
+        'ETH',
+        'USDC',
+        'USDT',
+        'SOL',
+        'MATIC',
+        'LINK',
+        'UNI',
+      ];
+
       if (!validSymbols.includes(upperSymbol)) {
         return sendValidationError(
           res,
@@ -145,7 +169,7 @@ export function createServiceRoutes() {
 
       const priceFeedService = serviceContainer.get('PriceFeedAPIService');
       const startTime = Date.now();
-      
+
       const result = await priceFeedService.getCryptocurrencyPrice(
         upperSymbol,
         currency || 'USD',
@@ -159,10 +183,9 @@ export function createServiceRoutes() {
         data: result,
         metadata: {
           executionTime,
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       });
-
     } catch (error) {
       handleServiceError(res, error, 'prices');
     }
@@ -175,14 +198,23 @@ export function createServiceRoutes() {
   router.get('/prices', async (req, res) => {
     try {
       const { symbols, currency } = req.query;
-      const symbolList = symbols 
-        ? symbols.split(',').map(s => s.trim().toUpperCase()) 
+      const symbolList = symbols
+        ? symbols.split(',').map(s => s.trim().toUpperCase())
         : ['BTC', 'ETH'];
 
       // Validate symbols
-      const validSymbols = ['BTC', 'ETH', 'USDC', 'USDT', 'SOL', 'MATIC', 'LINK', 'UNI'];
+      const validSymbols = [
+        'BTC',
+        'ETH',
+        'USDC',
+        'USDT',
+        'SOL',
+        'MATIC',
+        'LINK',
+        'UNI',
+      ];
       const invalidSymbols = symbolList.filter(s => !validSymbols.includes(s));
-      
+
       if (invalidSymbols.length > 0) {
         return sendValidationError(
           res,
@@ -193,8 +225,11 @@ export function createServiceRoutes() {
 
       const priceFeedService = serviceContainer.get('PriceFeedAPIService');
       const startTime = Date.now();
-      
-      const result = await priceFeedService.getMultiplePrices(symbolList, currency || 'USD');
+
+      const result = await priceFeedService.getMultiplePrices(
+        symbolList,
+        currency || 'USD'
+      );
 
       const executionTime = Date.now() - startTime;
 
@@ -204,10 +239,9 @@ export function createServiceRoutes() {
         metadata: {
           executionTime,
           timestamp: Date.now(),
-          symbolsRequested: symbolList.length
-        }
+          symbolsRequested: symbolList.length,
+        },
       });
-
     } catch (error) {
       handleServiceError(res, error, 'prices');
     }
@@ -228,8 +262,18 @@ export function createServiceRoutes() {
 
       // Validate token
       const upperToken = token.toUpperCase();
-      const validTokens = ['ETH', 'DAI', 'USDC', 'USDT', 'WBTC', 'UNI', 'LINK', 'AAVE', 'COMP'];
-      
+      const validTokens = [
+        'ETH',
+        'DAI',
+        'USDC',
+        'USDT',
+        'WBTC',
+        'UNI',
+        'LINK',
+        'AAVE',
+        'COMP',
+      ];
+
       if (!validTokens.includes(upperToken)) {
         return sendValidationError(
           res,
@@ -238,14 +282,16 @@ export function createServiceRoutes() {
         );
       }
 
-      const protocolList = protocols 
-        ? protocols.split(',').map(p => p.trim().toLowerCase()) 
+      const protocolList = protocols
+        ? protocols.split(',').map(p => p.trim().toLowerCase())
         : ['aave', 'compound'];
 
       // Validate protocols
       const validProtocols = ['aave', 'compound'];
-      const invalidProtocols = protocolList.filter(p => !validProtocols.includes(p));
-      
+      const invalidProtocols = protocolList.filter(
+        p => !validProtocols.includes(p)
+      );
+
       if (invalidProtocols.length > 0) {
         return sendValidationError(
           res,
@@ -256,10 +302,14 @@ export function createServiceRoutes() {
 
       const lendingService = serviceContainer.get('LendingAPIService');
       const startTime = Date.now();
-      
-      const result = await lendingService.getLendingRates(upperToken, protocolList, {
-        includeUtilization: includeUtilization !== 'false'
-      });
+
+      const result = await lendingService.getLendingRates(
+        upperToken,
+        protocolList,
+        {
+          includeUtilization: includeUtilization !== 'false',
+        }
+      );
 
       const executionTime = Date.now() - startTime;
 
@@ -268,10 +318,9 @@ export function createServiceRoutes() {
         data: result,
         metadata: {
           executionTime,
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       });
-
     } catch (error) {
       handleServiceError(res, error, 'lending-rates');
     }
@@ -285,7 +334,7 @@ export function createServiceRoutes() {
     try {
       const lendingService = serviceContainer.get('LendingAPIService');
       const startTime = Date.now();
-      
+
       const result = await lendingService.getAllProtocolRates();
 
       const executionTime = Date.now() - startTime;
@@ -295,10 +344,9 @@ export function createServiceRoutes() {
         data: result,
         metadata: {
           executionTime,
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       });
-
     } catch (error) {
       handleServiceError(res, error, 'lending-rates');
     }
@@ -327,9 +375,15 @@ export function createServiceRoutes() {
       }
 
       // Validate network if provided
-      const validNetworks = ['ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism'];
+      const validNetworks = [
+        'ethereum',
+        'polygon',
+        'bsc',
+        'arbitrum',
+        'optimism',
+      ];
       const networkToUse = network || 'ethereum';
-      
+
       if (!validNetworks.includes(networkToUse)) {
         return sendValidationError(
           res,
@@ -347,16 +401,26 @@ export function createServiceRoutes() {
         );
       }
 
-      const tokenBalanceService = serviceContainer.get('TokenBalanceAPIService');
+      const tokenBalanceService = serviceContainer.get(
+        'TokenBalanceAPIService'
+      );
       const startTime = Date.now();
-      
+
       let result;
       if (tokenAddress) {
-        result = await tokenBalanceService.getTokenBalance(address, tokenAddress, networkToUse);
+        result = await tokenBalanceService.getTokenBalance(
+          address,
+          tokenAddress,
+          networkToUse
+        );
       } else {
-        result = await tokenBalanceService.getAllTokenBalances(address, networkToUse, {
-          includeUSDValues: includeUSDValues !== 'false'
-        });
+        result = await tokenBalanceService.getAllTokenBalances(
+          address,
+          networkToUse,
+          {
+            includeUSDValues: includeUSDValues !== 'false',
+          }
+        );
       }
 
       const executionTime = Date.now() - startTime;
@@ -366,10 +430,9 @@ export function createServiceRoutes() {
         data: result,
         metadata: {
           executionTime,
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       });
-
     } catch (error) {
       handleServiceError(res, error, 'balances');
     }
@@ -393,14 +456,22 @@ export function createServiceRoutes() {
         );
       }
 
-      const networkList = networks 
-        ? networks.split(',').map(n => n.trim().toLowerCase()) 
+      const networkList = networks
+        ? networks.split(',').map(n => n.trim().toLowerCase())
         : ['ethereum'];
 
       // Validate networks
-      const validNetworks = ['ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism'];
-      const invalidNetworks = networkList.filter(n => !validNetworks.includes(n));
-      
+      const validNetworks = [
+        'ethereum',
+        'polygon',
+        'bsc',
+        'arbitrum',
+        'optimism',
+      ];
+      const invalidNetworks = networkList.filter(
+        n => !validNetworks.includes(n)
+      );
+
       if (invalidNetworks.length > 0) {
         return sendValidationError(
           res,
@@ -409,10 +480,15 @@ export function createServiceRoutes() {
         );
       }
 
-      const tokenBalanceService = serviceContainer.get('TokenBalanceAPIService');
+      const tokenBalanceService = serviceContainer.get(
+        'TokenBalanceAPIService'
+      );
       const startTime = Date.now();
-      
-      const result = await tokenBalanceService.getPortfolioValue(address, networkList);
+
+      const result = await tokenBalanceService.getPortfolioValue(
+        address,
+        networkList
+      );
 
       const executionTime = Date.now() - startTime;
 
@@ -422,10 +498,9 @@ export function createServiceRoutes() {
         metadata: {
           executionTime,
           timestamp: Date.now(),
-          networksQueried: networkList.length
-        }
+          networksQueried: networkList.length,
+        },
       });
-
     } catch (error) {
       handleServiceError(res, error, 'portfolio');
     }
@@ -444,14 +519,33 @@ export function createServiceRoutes() {
       success: true,
       data: {
         networks: ['ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism'],
-        cryptocurrencies: ['BTC', 'ETH', 'USDC', 'USDT', 'SOL', 'MATIC', 'LINK', 'UNI'],
-        lendingTokens: ['ETH', 'DAI', 'USDC', 'USDT', 'WBTC', 'UNI', 'LINK', 'AAVE', 'COMP'],
+        cryptocurrencies: [
+          'BTC',
+          'ETH',
+          'USDC',
+          'USDT',
+          'SOL',
+          'MATIC',
+          'LINK',
+          'UNI',
+        ],
+        lendingTokens: [
+          'ETH',
+          'DAI',
+          'USDC',
+          'USDT',
+          'WBTC',
+          'UNI',
+          'LINK',
+          'AAVE',
+          'COMP',
+        ],
         protocols: ['aave', 'compound'],
-        currencies: ['USD', 'EUR', 'GBP']
+        currencies: ['USD', 'EUR', 'GBP'],
       },
       metadata: {
-        timestamp: Date.now()
-      }
+        timestamp: Date.now(),
+      },
     });
   });
 
@@ -479,11 +573,11 @@ function sendValidationError(res, message, code) {
     error: {
       type: 'validation',
       message,
-      code
+      code,
     },
     metadata: {
-      timestamp: Date.now()
-    }
+      timestamp: Date.now(),
+    },
   });
 }
 
@@ -497,7 +591,7 @@ function handleServiceError(res, error, endpoint) {
   logger.error('Service API error', {
     endpoint,
     error: error.message,
-    stack: error.stack
+    stack: error.stack,
   });
 
   // Determine error type and status code
@@ -514,16 +608,25 @@ function handleServiceError(res, error, endpoint) {
       statusCode = 429;
       errorType = 'rate_limit';
       errorCode = 'RATE_LIMIT_EXCEEDED';
-    } else if (error.message.includes('Invalid') || error.message.includes('Unsupported')) {
+    } else if (
+      error.message.includes('Invalid') ||
+      error.message.includes('Unsupported')
+    ) {
       statusCode = 400;
       errorType = 'validation';
       errorCode = 'VALIDATION_ERROR';
     }
-  } else if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+  } else if (
+    error.message.includes('timeout') ||
+    error.message.includes('ETIMEDOUT')
+  ) {
     statusCode = 504;
     errorType = 'timeout';
     errorCode = 'GATEWAY_TIMEOUT';
-  } else if (error.message.includes('network') || error.message.includes('ECONNREFUSED')) {
+  } else if (
+    error.message.includes('network') ||
+    error.message.includes('ECONNREFUSED')
+  ) {
     statusCode = 503;
     errorType = 'service_unavailable';
     errorCode = 'SERVICE_UNAVAILABLE';
@@ -534,11 +637,10 @@ function handleServiceError(res, error, endpoint) {
     error: {
       type: errorType,
       message: error.message,
-      code: errorCode
+      code: errorCode,
     },
     metadata: {
-      timestamp: Date.now()
-    }
+      timestamp: Date.now(),
+    },
   });
 }
-

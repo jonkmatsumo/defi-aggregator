@@ -13,9 +13,9 @@ module.exports = {
     'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     'prefer-const': 'error',
     'no-var': 'error',
-    'semi': ['error', 'always'],
-    'quotes': ['error', 'single'],
-    'indent': ['error', 2]
+    'semi': 'off', // Handled by Prettier
+    'quotes': 'off', // Handled by Prettier
+    'indent': 'off' // Handled by Prettier
   },
   ignorePatterns: [
     'node_modules/',

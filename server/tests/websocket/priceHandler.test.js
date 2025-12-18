@@ -1,4 +1,11 @@
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from '@jest/globals';
 import fc from 'fast-check';
 
 // Mock WebSocket
@@ -53,10 +60,22 @@ class MockWebSocket {
 const mockPriceFeedService = {
   getSupportedSymbols: jest.fn(() => ({
     BTC: { name: 'Bitcoin', coinGeckoId: 'bitcoin', binanceSymbol: 'BTCUSDT' },
-    ETH: { name: 'Ethereum', coinGeckoId: 'ethereum', binanceSymbol: 'ETHUSDT' },
-    USDC: { name: 'USD Coin', coinGeckoId: 'usd-coin', binanceSymbol: 'USDCUSDT' },
+    ETH: {
+      name: 'Ethereum',
+      coinGeckoId: 'ethereum',
+      binanceSymbol: 'ETHUSDT',
+    },
+    USDC: {
+      name: 'USD Coin',
+      coinGeckoId: 'usd-coin',
+      binanceSymbol: 'USDCUSDT',
+    },
     SOL: { name: 'Solana', coinGeckoId: 'solana', binanceSymbol: 'SOLUSDT' },
-    MATIC: { name: 'Polygon', coinGeckoId: 'matic-network', binanceSymbol: 'MATICUSDT' }
+    MATIC: {
+      name: 'Polygon',
+      coinGeckoId: 'matic-network',
+      binanceSymbol: 'MATICUSDT',
+    },
   })),
   getCryptocurrencyPrice: jest.fn().mockResolvedValue({
     symbol: 'BTC',
@@ -64,25 +83,26 @@ const mockPriceFeedService = {
     change_24h: 2.5,
     volume_24h: 15000000000,
     market_cap: 820000000000,
-    source: 'coingecko'
+    source: 'coingecko',
   }),
-  subscribeToRealTimePrices: jest.fn().mockReturnValue(() => {})
+  subscribeToRealTimePrices: jest.fn().mockReturnValue(() => {}),
 };
 
 // Mock the service container before importing the handler
 jest.unstable_mockModule('../../src/services/container.js', () => ({
   serviceContainer: {
-    get: jest.fn((name) => {
+    get: jest.fn(name => {
       if (name === 'PriceFeedAPIService') {
         return mockPriceFeedService;
       }
       throw new Error(`Unknown service: ${name}`);
-    })
-  }
+    }),
+  },
 }));
 
 // Now import the handler (after mocking)
-const { PriceWebSocketHandler } = await import('../../src/websocket/priceHandler.js');
+const { PriceWebSocketHandler } =
+  await import('../../src/websocket/priceHandler.js');
 
 describe('PriceWebSocketHandler', () => {
   let handler;
@@ -91,37 +111,53 @@ describe('PriceWebSocketHandler', () => {
   beforeEach(() => {
     mockWss = {
       on: jest.fn(),
-      clients: new Set()
+      clients: new Set(),
     };
 
     handler = new PriceWebSocketHandler(mockWss, {
       maxSubscriptionsPerClient: 10,
-      heartbeatInterval: 5000
+      heartbeatInterval: 5000,
     });
 
     // Reset all mocks before each test
     mockPriceFeedService.getSupportedSymbols.mockClear();
     mockPriceFeedService.getCryptocurrencyPrice.mockClear();
     mockPriceFeedService.subscribeToRealTimePrices.mockClear();
-    
+
     // Reset mock implementations
     mockPriceFeedService.getSupportedSymbols.mockReturnValue({
-      BTC: { name: 'Bitcoin', coinGeckoId: 'bitcoin', binanceSymbol: 'BTCUSDT' },
-      ETH: { name: 'Ethereum', coinGeckoId: 'ethereum', binanceSymbol: 'ETHUSDT' },
-      USDC: { name: 'USD Coin', coinGeckoId: 'usd-coin', binanceSymbol: 'USDCUSDT' },
+      BTC: {
+        name: 'Bitcoin',
+        coinGeckoId: 'bitcoin',
+        binanceSymbol: 'BTCUSDT',
+      },
+      ETH: {
+        name: 'Ethereum',
+        coinGeckoId: 'ethereum',
+        binanceSymbol: 'ETHUSDT',
+      },
+      USDC: {
+        name: 'USD Coin',
+        coinGeckoId: 'usd-coin',
+        binanceSymbol: 'USDCUSDT',
+      },
       SOL: { name: 'Solana', coinGeckoId: 'solana', binanceSymbol: 'SOLUSDT' },
-      MATIC: { name: 'Polygon', coinGeckoId: 'matic-network', binanceSymbol: 'MATICUSDT' }
+      MATIC: {
+        name: 'Polygon',
+        coinGeckoId: 'matic-network',
+        binanceSymbol: 'MATICUSDT',
+      },
     });
-    
+
     mockPriceFeedService.getCryptocurrencyPrice.mockResolvedValue({
       symbol: 'BTC',
       price: 42000,
       change_24h: 2.5,
       volume_24h: 15000000000,
       market_cap: 820000000000,
-      source: 'coingecko'
+      source: 'coingecko',
     });
-    
+
     mockPriceFeedService.subscribeToRealTimePrices.mockReturnValue(() => {});
   });
 
@@ -167,11 +203,11 @@ describe('PriceWebSocketHandler', () => {
       const clientId = 'test-client-1';
 
       handler.handleConnection(clientId, mockWs);
-      
+
       // Subscribe to invalid symbols only
       await handler.handleMessage(clientId, {
         type: 'subscribe',
-        symbols: ['INVALID1', 'INVALID2']
+        symbols: ['INVALID1', 'INVALID2'],
       });
 
       const lastMessage = mockWs.getLastMessage();
@@ -187,11 +223,13 @@ describe('PriceWebSocketHandler', () => {
 
       await handler.handleMessage(clientId, {
         type: 'subscribe',
-        symbols: ['BTC', 'ETH']
+        symbols: ['BTC', 'ETH'],
       });
 
       // Find confirmation message
-      const confirmMessage = mockWs.sentMessages.find(m => m.type === 'subscription_confirmed');
+      const confirmMessage = mockWs.sentMessages.find(
+        m => m.type === 'subscription_confirmed'
+      );
       expect(confirmMessage).toBeDefined();
       expect(confirmMessage.symbols).toContain('BTC');
       expect(confirmMessage.symbols).toContain('ETH');
@@ -208,7 +246,7 @@ describe('PriceWebSocketHandler', () => {
       // Subscribe first
       await handler.handleMessage(clientId, {
         type: 'subscribe',
-        symbols: ['BTC', 'ETH']
+        symbols: ['BTC', 'ETH'],
       });
 
       mockWs.clearMessages();
@@ -216,7 +254,7 @@ describe('PriceWebSocketHandler', () => {
       // Unsubscribe
       await handler.handleMessage(clientId, {
         type: 'unsubscribe',
-        symbols: ['BTC']
+        symbols: ['BTC'],
       });
 
       const confirmMessage = mockWs.getLastMessage();
@@ -229,7 +267,7 @@ describe('PriceWebSocketHandler', () => {
     test('should enforce subscription limit', async () => {
       // Create handler with small limit
       const limitedHandler = new PriceWebSocketHandler(mockWss, {
-        maxSubscriptionsPerClient: 3
+        maxSubscriptionsPerClient: 3,
       });
 
       const mockWs = new MockWebSocket();
@@ -240,7 +278,7 @@ describe('PriceWebSocketHandler', () => {
       // Try to subscribe to more than limit
       await limitedHandler.handleMessage(clientId, {
         type: 'subscribe',
-        symbols: ['BTC', 'ETH', 'USDC', 'SOL', 'MATIC']
+        symbols: ['BTC', 'ETH', 'USDC', 'SOL', 'MATIC'],
       });
 
       const lastMessage = mockWs.getLastMessage();
@@ -259,14 +297,14 @@ describe('PriceWebSocketHandler', () => {
       // Subscribe first
       await handler.handleMessage(clientId, {
         type: 'subscribe',
-        symbols: ['BTC', 'ETH']
+        symbols: ['BTC', 'ETH'],
       });
 
       mockWs.clearMessages();
 
       // Request subscriptions
       await handler.handleMessage(clientId, {
-        type: 'get_subscriptions'
+        type: 'get_subscriptions',
       });
 
       const lastMessage = mockWs.getLastMessage();
@@ -297,12 +335,12 @@ describe('PriceWebSocketHandler', () => {
 
       await handler.handleMessage('client-1', {
         type: 'subscribe',
-        symbols: ['BTC', 'ETH']
+        symbols: ['BTC', 'ETH'],
       });
 
       await handler.handleMessage('client-2', {
         type: 'subscribe',
-        symbols: ['BTC']
+        symbols: ['BTC'],
       });
 
       const metrics = handler.getMetrics();
@@ -322,7 +360,7 @@ describe('PriceWebSocketHandler', () => {
 
       await handler.handleMessage(clientId, {
         type: 'subscribe',
-        symbols: ['BTC']
+        symbols: ['BTC'],
       });
 
       mockWs.clearMessages();
@@ -333,9 +371,9 @@ describe('PriceWebSocketHandler', () => {
         data: {
           symbol: 'BTC',
           price: 43000,
-          change_24h: 3.5
+          change_24h: 3.5,
         },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       const lastMessage = mockWs.getLastMessage();
@@ -352,7 +390,7 @@ describe('PriceWebSocketHandler', () => {
 
       await handler.handleMessage(clientId, {
         type: 'subscribe',
-        symbols: ['BTC']
+        symbols: ['BTC'],
       });
 
       mockWs.clearMessages();
@@ -361,7 +399,7 @@ describe('PriceWebSocketHandler', () => {
       handler.handlePriceUpdate('BTC', {
         type: 'connection',
         status: 'disconnected',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       const lastMessage = mockWs.getLastMessage();
@@ -393,7 +431,7 @@ describe('PriceWebSocketHandler', () => {
 
       await handler.handleMessage(clientId, {
         type: 'subscribe',
-        symbols: ['BTC']
+        symbols: ['BTC'],
       });
 
       expect(handler.clients.size).toBe(1);
@@ -415,7 +453,7 @@ describe('PriceWebSocketHandler', () => {
 
       await handler.handleMessage(clientId, {
         type: 'subscribe',
-        symbols: ['BTC']
+        symbols: ['BTC'],
       });
 
       expect(handler.symbolSubscribers.get('BTC')?.size).toBe(1);
@@ -431,7 +469,7 @@ describe('PriceWebSocketHandler', () => {
       mockWs.readyState = 3; // CLOSED
 
       handler.handleConnection('client-1', mockWs);
-      
+
       // Should not throw
       expect(() => {
         handler.sendToClient('client-1', { type: 'test' });
@@ -453,13 +491,13 @@ describe('PriceWebSocketHandler', () => {
               symbols: fc.array(
                 fc.constantFrom('BTC', 'ETH', 'USDC', 'SOL', 'MATIC'),
                 { minLength: 1, maxLength: 3 }
-              )
+              ),
             }),
             { minLength: 1, maxLength: 10 }
           ),
-          async (operations) => {
+          async operations => {
             const testHandler = new PriceWebSocketHandler(mockWss, {
-              maxSubscriptionsPerClient: 20
+              maxSubscriptionsPerClient: 20,
             });
 
             const mockWs = new MockWebSocket();
@@ -473,13 +511,13 @@ describe('PriceWebSocketHandler', () => {
               if (op.action === 'subscribe') {
                 await testHandler.handleMessage(clientId, {
                   type: 'subscribe',
-                  symbols: op.symbols
+                  symbols: op.symbols,
                 });
                 op.symbols.forEach(s => expectedSubs.add(s.toUpperCase()));
               } else {
                 await testHandler.handleMessage(clientId, {
                   type: 'unsubscribe',
-                  symbols: op.symbols
+                  symbols: op.symbols,
                 });
                 op.symbols.forEach(s => expectedSubs.delete(s.toUpperCase()));
               }
@@ -488,7 +526,7 @@ describe('PriceWebSocketHandler', () => {
             // Property: Final subscription state should match expected
             const actualSubs = testHandler.clientSubscriptions.get(clientId);
             expect(actualSubs.size).toBe(expectedSubs.size);
-            
+
             for (const symbol of expectedSubs) {
               expect(actualSubs.has(symbol)).toBe(true);
             }
@@ -505,10 +543,13 @@ describe('PriceWebSocketHandler', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.integer({ min: 2, max: 5 }),
-          fc.array(fc.constantFrom('BTC', 'ETH', 'USDC'), { minLength: 1, maxLength: 3 }),
+          fc.array(fc.constantFrom('BTC', 'ETH', 'USDC'), {
+            minLength: 1,
+            maxLength: 3,
+          }),
           async (numClients, symbols) => {
             const testHandler = new PriceWebSocketHandler(mockWss, {
-              maxSubscriptionsPerClient: 10
+              maxSubscriptionsPerClient: 10,
             });
 
             const clients = [];
@@ -518,10 +559,10 @@ describe('PriceWebSocketHandler', () => {
               const mockWs = new MockWebSocket();
               const clientId = `client-${i}`;
               testHandler.handleConnection(clientId, mockWs);
-              
+
               await testHandler.handleMessage(clientId, {
                 type: 'subscribe',
-                symbols
+                symbols,
               });
 
               clients.push({ id: clientId, ws: mockWs });
@@ -535,7 +576,7 @@ describe('PriceWebSocketHandler', () => {
             testHandler.handlePriceUpdate(testSymbol, {
               type: 'price_update',
               data: { symbol: testSymbol, price: 50000 },
-              timestamp: Date.now()
+              timestamp: Date.now(),
             });
 
             // Property: All clients should receive the price update
@@ -562,9 +603,9 @@ describe('PriceWebSocketHandler', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.constantFrom('BTC', 'ETH', 'USDC'),
-          async (symbol) => {
+          async symbol => {
             const testHandler = new PriceWebSocketHandler(mockWss, {
-              maxSubscriptionsPerClient: 10
+              maxSubscriptionsPerClient: 10,
             });
 
             const mockWs1 = new MockWebSocket();
@@ -576,17 +617,17 @@ describe('PriceWebSocketHandler', () => {
             // Both subscribe
             await testHandler.handleMessage('client-1', {
               type: 'subscribe',
-              symbols: [symbol]
+              symbols: [symbol],
             });
             await testHandler.handleMessage('client-2', {
               type: 'subscribe',
-              symbols: [symbol]
+              symbols: [symbol],
             });
 
             // Client 1 unsubscribes
             await testHandler.handleMessage('client-1', {
               type: 'unsubscribe',
-              symbols: [symbol]
+              symbols: [symbol],
             });
 
             mockWs1.clearMessages();
@@ -597,7 +638,7 @@ describe('PriceWebSocketHandler', () => {
             testHandler.handlePriceUpdate(upperSymbol, {
               type: 'price_update',
               data: { symbol: upperSymbol, price: 50000 },
-              timestamp: Date.now()
+              timestamp: Date.now(),
             });
 
             // Property: Client 1 should NOT receive update
@@ -620,10 +661,13 @@ describe('PriceWebSocketHandler', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.constantFrom('subscribe', 'unsubscribe', 'get_subscriptions'),
-          fc.array(fc.constantFrom('BTC', 'ETH', 'USDC'), { minLength: 1, maxLength: 3 }),
+          fc.array(fc.constantFrom('BTC', 'ETH', 'USDC'), {
+            minLength: 1,
+            maxLength: 3,
+          }),
           async (messageType, symbols) => {
             const testHandler = new PriceWebSocketHandler(mockWss, {
-              maxSubscriptionsPerClient: 10
+              maxSubscriptionsPerClient: 10,
             });
 
             const mockWs = new MockWebSocket();
@@ -633,14 +677,14 @@ describe('PriceWebSocketHandler', () => {
             if (messageType === 'unsubscribe') {
               await testHandler.handleMessage('test-client', {
                 type: 'subscribe',
-                symbols
+                symbols,
               });
               mockWs.clearMessages();
             }
 
             await testHandler.handleMessage('test-client', {
               type: messageType,
-              symbols
+              symbols,
             });
 
             // Property: All sent messages should have type and timestamp
@@ -663,10 +707,13 @@ describe('PriceWebSocketHandler', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.integer({ min: 1, max: 5 }),
-          fc.array(fc.constantFrom('BTC', 'ETH', 'USDC', 'SOL'), { minLength: 1, maxLength: 4 }),
+          fc.array(fc.constantFrom('BTC', 'ETH', 'USDC', 'SOL'), {
+            minLength: 1,
+            maxLength: 4,
+          }),
           async (numClients, symbols) => {
             const testHandler = new PriceWebSocketHandler(mockWss, {
-              maxSubscriptionsPerClient: 20
+              maxSubscriptionsPerClient: 20,
             });
 
             testHandler.initialize();
@@ -677,7 +724,7 @@ describe('PriceWebSocketHandler', () => {
               testHandler.handleConnection(`client-${i}`, mockWs);
               await testHandler.handleMessage(`client-${i}`, {
                 type: 'subscribe',
-                symbols
+                symbols,
               });
             }
 
@@ -707,13 +754,16 @@ describe('PriceWebSocketHandler', () => {
           fc.array(
             fc.record({
               clientId: fc.integer({ min: 1, max: 10 }).map(n => `client-${n}`),
-              symbols: fc.array(fc.constantFrom('BTC', 'ETH', 'USDC', 'SOL'), { minLength: 1, maxLength: 4 })
+              symbols: fc.array(fc.constantFrom('BTC', 'ETH', 'USDC', 'SOL'), {
+                minLength: 1,
+                maxLength: 4,
+              }),
             }),
             { minLength: 1, maxLength: 5 }
           ),
-          async (clientConfigs) => {
+          async clientConfigs => {
             const testHandler = new PriceWebSocketHandler(mockWss, {
-              maxSubscriptionsPerClient: 20
+              maxSubscriptionsPerClient: 20,
             });
 
             const connectedClients = new Set();
@@ -728,7 +778,7 @@ describe('PriceWebSocketHandler', () => {
 
               await testHandler.handleMessage(config.clientId, {
                 type: 'subscribe',
-                symbols: config.symbols
+                symbols: config.symbols,
               });
 
               // Track expected subscriptions
@@ -766,7 +816,7 @@ describe('PriceWebSocketHandler', () => {
     // Property: Real-time price updates reach all subscribers
     test('Property: price updates are delivered to all appropriate subscribers', async () => {
       const testHandler = new PriceWebSocketHandler(mockWss, {
-        maxSubscriptionsPerClient: 10
+        maxSubscriptionsPerClient: 10,
       });
 
       // Set up multiple clients with different subscriptions
@@ -779,9 +829,18 @@ describe('PriceWebSocketHandler', () => {
       testHandler.handleConnection('client-3', client3Ws);
 
       // Different subscription patterns
-      await testHandler.handleMessage('client-1', { type: 'subscribe', symbols: ['BTC', 'ETH'] });
-      await testHandler.handleMessage('client-2', { type: 'subscribe', symbols: ['BTC', 'USDC'] });
-      await testHandler.handleMessage('client-3', { type: 'subscribe', symbols: ['ETH', 'USDC'] });
+      await testHandler.handleMessage('client-1', {
+        type: 'subscribe',
+        symbols: ['BTC', 'ETH'],
+      });
+      await testHandler.handleMessage('client-2', {
+        type: 'subscribe',
+        symbols: ['BTC', 'USDC'],
+      });
+      await testHandler.handleMessage('client-3', {
+        type: 'subscribe',
+        symbols: ['ETH', 'USDC'],
+      });
 
       // Clear setup messages
       client1Ws.clearMessages();
@@ -792,12 +851,24 @@ describe('PriceWebSocketHandler', () => {
       testHandler.handlePriceUpdate('BTC', {
         type: 'price_update',
         data: { symbol: 'BTC', price: 50000 },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
-      expect(client1Ws.sentMessages.some(m => m.type === 'price_update' && m.symbol === 'BTC')).toBe(true);
-      expect(client2Ws.sentMessages.some(m => m.type === 'price_update' && m.symbol === 'BTC')).toBe(true);
-      expect(client3Ws.sentMessages.some(m => m.type === 'price_update' && m.symbol === 'BTC')).toBe(false);
+      expect(
+        client1Ws.sentMessages.some(
+          m => m.type === 'price_update' && m.symbol === 'BTC'
+        )
+      ).toBe(true);
+      expect(
+        client2Ws.sentMessages.some(
+          m => m.type === 'price_update' && m.symbol === 'BTC'
+        )
+      ).toBe(true);
+      expect(
+        client3Ws.sentMessages.some(
+          m => m.type === 'price_update' && m.symbol === 'BTC'
+        )
+      ).toBe(false);
 
       // Clear and send ETH update - should reach client-1 and client-3
       client1Ws.clearMessages();
@@ -807,12 +878,24 @@ describe('PriceWebSocketHandler', () => {
       testHandler.handlePriceUpdate('ETH', {
         type: 'price_update',
         data: { symbol: 'ETH', price: 3000 },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
-      expect(client1Ws.sentMessages.some(m => m.type === 'price_update' && m.symbol === 'ETH')).toBe(true);
-      expect(client2Ws.sentMessages.some(m => m.type === 'price_update' && m.symbol === 'ETH')).toBe(false);
-      expect(client3Ws.sentMessages.some(m => m.type === 'price_update' && m.symbol === 'ETH')).toBe(true);
+      expect(
+        client1Ws.sentMessages.some(
+          m => m.type === 'price_update' && m.symbol === 'ETH'
+        )
+      ).toBe(true);
+      expect(
+        client2Ws.sentMessages.some(
+          m => m.type === 'price_update' && m.symbol === 'ETH'
+        )
+      ).toBe(false);
+      expect(
+        client3Ws.sentMessages.some(
+          m => m.type === 'price_update' && m.symbol === 'ETH'
+        )
+      ).toBe(true);
 
       testHandler.cleanup();
     });
@@ -820,7 +903,7 @@ describe('PriceWebSocketHandler', () => {
     // Property: Initial prices are sent on subscription
     test('Property: initial prices are sent when subscribing', async () => {
       const testHandler = new PriceWebSocketHandler(mockWss, {
-        maxSubscriptionsPerClient: 10
+        maxSubscriptionsPerClient: 10,
       });
 
       const mockWs = new MockWebSocket();
@@ -828,20 +911,26 @@ describe('PriceWebSocketHandler', () => {
 
       await testHandler.handleMessage('test-client', {
         type: 'subscribe',
-        symbols: ['BTC']
+        symbols: ['BTC'],
       });
 
       // Should have subscription confirmation AND initial price
-      const hasConfirmation = mockWs.sentMessages.some(m => m.type === 'subscription_confirmed');
-      const hasInitialPrice = mockWs.sentMessages.some(m => 
-        m.type === 'price_update' && m.initial === true
+      const hasConfirmation = mockWs.sentMessages.some(
+        m => m.type === 'subscription_confirmed'
+      );
+      const hasInitialPrice = mockWs.sentMessages.some(
+        m => m.type === 'price_update' && m.initial === true
       );
 
       expect(hasConfirmation).toBe(true);
       expect(hasInitialPrice).toBe(true);
 
       // Verify getCryptocurrencyPrice was called for initial price
-      expect(mockPriceFeedService.getCryptocurrencyPrice).toHaveBeenCalledWith('BTC', 'USD', true);
+      expect(mockPriceFeedService.getCryptocurrencyPrice).toHaveBeenCalledWith(
+        'BTC',
+        'USD',
+        true
+      );
 
       testHandler.cleanup();
     });

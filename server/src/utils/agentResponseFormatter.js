@@ -1,8 +1,6 @@
-
-
 /**
  * AgentResponseFormatter
- * 
+ *
  * Formats AI agent tool results and errors into user-friendly responses.
  * Provides consistent formatting for DeFi data presentation.
  */
@@ -12,7 +10,7 @@ export class AgentResponseFormatter {
       includeTimestamps: options.includeTimestamps !== false,
       includeSource: options.includeSource !== false,
       currency: options.currency || 'USD',
-      ...options
+      ...options,
     };
   }
 
@@ -44,7 +42,7 @@ export class AgentResponseFormatter {
       results: formattedResults,
       errors: errors.length > 0 ? errors : undefined,
       hasErrors: errors.length > 0,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 
@@ -57,21 +55,21 @@ export class AgentResponseFormatter {
     const { toolName, result: data } = result;
 
     switch (toolName) {
-    case 'get_gas_prices':
-      return this.formatGasPrices(data);
-    case 'get_crypto_price':
-      return this.formatCryptoPrice(data);
-    case 'get_lending_rates':
-      return this.formatLendingRates(data);
-    case 'get_token_balance':
-      return this.formatTokenBalance(data);
-    default:
-      return {
-        type: 'generic',
-        toolName,
-        data,
-        timestamp: Date.now()
-      };
+      case 'get_gas_prices':
+        return this.formatGasPrices(data);
+      case 'get_crypto_price':
+        return this.formatCryptoPrice(data);
+      case 'get_lending_rates':
+        return this.formatLendingRates(data);
+      case 'get_token_balance':
+        return this.formatTokenBalance(data);
+      default:
+        return {
+          type: 'generic',
+          toolName,
+          data,
+          timestamp: Date.now(),
+        };
     }
   }
 
@@ -90,21 +88,21 @@ export class AgentResponseFormatter {
         slow: {
           gwei: gasPrices?.slow?.gwei,
           usdCost: this.formatCurrency(gasPrices?.slow?.usd_cost),
-          label: '🐢 Slow (~5 min)'
+          label: '🐢 Slow (~5 min)',
         },
         standard: {
           gwei: gasPrices?.standard?.gwei,
           usdCost: this.formatCurrency(gasPrices?.standard?.usd_cost),
-          label: '⚡ Standard (~3 min)'
+          label: '⚡ Standard (~3 min)',
         },
         fast: {
           gwei: gasPrices?.fast?.gwei,
           usdCost: this.formatCurrency(gasPrices?.fast?.usd_cost),
-          label: '🚀 Fast (~1 min)'
-        }
+          label: '🚀 Fast (~1 min)',
+        },
       },
       recommendation: this.getGasRecommendation(gasPrices),
-      timestamp: this.options.includeTimestamps ? timestamp : undefined
+      timestamp: this.options.includeTimestamps ? timestamp : undefined,
     };
   }
 
@@ -114,7 +112,15 @@ export class AgentResponseFormatter {
    * @returns {Object} Formatted crypto price response
    */
   formatCryptoPrice(data) {
-    const { symbol, price, currency, change_24h, volume_24h, market_cap, timestamp } = data;
+    const {
+      symbol,
+      price,
+      currency,
+      change_24h,
+      volume_24h,
+      market_cap,
+      timestamp,
+    } = data;
 
     return {
       type: 'crypto_price',
@@ -125,11 +131,11 @@ export class AgentResponseFormatter {
         value: change_24h,
         formatted: this.formatPercentage(change_24h),
         direction: change_24h >= 0 ? 'up' : 'down',
-        emoji: change_24h >= 0 ? '📈' : '📉'
+        emoji: change_24h >= 0 ? '📈' : '📉',
       },
       volume24h: this.formatLargeNumber(volume_24h),
       marketCap: this.formatLargeNumber(market_cap),
-      timestamp: this.options.includeTimestamps ? timestamp : undefined
+      timestamp: this.options.includeTimestamps ? timestamp : undefined,
     };
   }
 
@@ -145,17 +151,17 @@ export class AgentResponseFormatter {
       protocol: this.formatProtocolName(p.protocol),
       supplyAPY: {
         value: p.supplyAPY,
-        formatted: this.formatPercentage(p.supplyAPY * 100)
+        formatted: this.formatPercentage(p.supplyAPY * 100),
       },
       borrowAPY: {
         value: p.borrowAPY,
-        formatted: this.formatPercentage(p.borrowAPY * 100)
+        formatted: this.formatPercentage(p.borrowAPY * 100),
       },
       utilizationRate: p.utilizationRate
         ? this.formatPercentage(p.utilizationRate * 100)
         : undefined,
       totalSupply: this.formatLargeNumber(p.totalSupply),
-      totalBorrow: this.formatLargeNumber(p.totalBorrow)
+      totalBorrow: this.formatLargeNumber(p.totalBorrow),
     }));
 
     // Find best rates
@@ -167,16 +173,20 @@ export class AgentResponseFormatter {
       token: token?.toUpperCase(),
       protocols: formattedProtocols,
       recommendation: {
-        bestForSupply: bestSupply ? {
-          protocol: this.formatProtocolName(bestSupply.protocol),
-          apy: this.formatPercentage(bestSupply.supplyAPY * 100)
-        } : null,
-        bestForBorrow: bestBorrow ? {
-          protocol: this.formatProtocolName(bestBorrow.protocol),
-          apy: this.formatPercentage(bestBorrow.borrowAPY * 100)
-        } : null
+        bestForSupply: bestSupply
+          ? {
+              protocol: this.formatProtocolName(bestSupply.protocol),
+              apy: this.formatPercentage(bestSupply.supplyAPY * 100),
+            }
+          : null,
+        bestForBorrow: bestBorrow
+          ? {
+              protocol: this.formatProtocolName(bestBorrow.protocol),
+              apy: this.formatPercentage(bestBorrow.borrowAPY * 100),
+            }
+          : null,
       },
-      timestamp: this.options.includeTimestamps ? timestamp : undefined
+      timestamp: this.options.includeTimestamps ? timestamp : undefined,
     };
   }
 
@@ -192,8 +202,16 @@ export class AgentResponseFormatter {
       symbol: t.symbol,
       name: t.name,
       balance: this.formatTokenAmount(t.balance, t.decimals),
-      balanceUSD: t.balanceUSD || this.formatCurrency(parseFloat(t.balance) * (t.priceUSD || 0)),
-      percentage: totalUSD ? this.formatPercentage((parseFloat(t.balanceUSD?.replace(/[$,]/g, '') || 0) / parseFloat(totalUSD)) * 100) : undefined
+      balanceUSD:
+        t.balanceUSD ||
+        this.formatCurrency(parseFloat(t.balance) * (t.priceUSD || 0)),
+      percentage: totalUSD
+        ? this.formatPercentage(
+            (parseFloat(t.balanceUSD?.replace(/[$,]/g, '') || 0) /
+              parseFloat(totalUSD)) *
+              100
+          )
+        : undefined,
     }));
 
     return {
@@ -203,7 +221,7 @@ export class AgentResponseFormatter {
       tokens: formattedTokens,
       totalValue: this.formatCurrency(parseFloat(totalUSD || 0)),
       tokenCount: tokens?.length || 0,
-      timestamp: this.options.includeTimestamps ? timestamp : undefined
+      timestamp: this.options.includeTimestamps ? timestamp : undefined,
     };
   }
 
@@ -223,7 +241,7 @@ export class AgentResponseFormatter {
       error: userFriendlyError.message,
       code: userFriendlyError.code,
       suggestion: userFriendlyError.suggestion,
-      retryable: userFriendlyError.retryable
+      retryable: userFriendlyError.retryable,
     };
   }
 
@@ -241,7 +259,7 @@ export class AgentResponseFormatter {
         message: 'Service is temporarily busy. Please try again in a moment.',
         code: 'RATE_LIMIT',
         suggestion: 'Wait a few seconds and try again.',
-        retryable: true
+        retryable: true,
       };
     }
 
@@ -250,7 +268,7 @@ export class AgentResponseFormatter {
         message: 'Request took too long to complete.',
         code: 'TIMEOUT',
         suggestion: 'The service might be slow. Try again later.',
-        retryable: true
+        retryable: true,
       };
     }
 
@@ -259,7 +277,7 @@ export class AgentResponseFormatter {
         message: 'Unable to connect to the service.',
         code: 'NETWORK_ERROR',
         suggestion: 'Check your internet connection and try again.',
-        retryable: true
+        retryable: true,
       };
     }
 
@@ -268,7 +286,7 @@ export class AgentResponseFormatter {
         message: 'The requested data could not be found.',
         code: 'NOT_FOUND',
         suggestion: 'Verify the parameters and try again.',
-        retryable: false
+        retryable: false,
       };
     }
 
@@ -277,7 +295,7 @@ export class AgentResponseFormatter {
         message: 'Invalid request parameters.',
         code: 'VALIDATION_ERROR',
         suggestion: 'Please check your input and try again.',
-        retryable: false
+        retryable: false,
       };
     }
 
@@ -286,7 +304,7 @@ export class AgentResponseFormatter {
         message: `The ${this.getToolDisplayName(toolName)} service is currently unavailable.`,
         code: 'SERVICE_UNAVAILABLE',
         suggestion: 'Please try again later.',
-        retryable: true
+        retryable: true,
       };
     }
 
@@ -295,7 +313,7 @@ export class AgentResponseFormatter {
       message: `Unable to retrieve ${this.getToolDisplayName(toolName)} data.`,
       code: 'UNKNOWN_ERROR',
       suggestion: 'Please try again or contact support if the issue persists.',
-      retryable: true
+      retryable: true,
     };
   }
 
@@ -310,10 +328,10 @@ export class AgentResponseFormatter {
    */
   getToolDisplayName(toolName) {
     const displayNames = {
-      'get_gas_prices': 'gas price',
-      'get_crypto_price': 'cryptocurrency price',
-      'get_lending_rates': 'lending rate',
-      'get_token_balance': 'token balance'
+      get_gas_prices: 'gas price',
+      get_crypto_price: 'cryptocurrency price',
+      get_lending_rates: 'lending rate',
+      get_token_balance: 'token balance',
     };
     return displayNames[toolName] || toolName;
   }
@@ -325,11 +343,11 @@ export class AgentResponseFormatter {
    */
   formatNetworkName(network) {
     const names = {
-      'ethereum': 'Ethereum',
-      'polygon': 'Polygon',
-      'bsc': 'BNB Smart Chain',
-      'arbitrum': 'Arbitrum',
-      'optimism': 'Optimism'
+      ethereum: 'Ethereum',
+      polygon: 'Polygon',
+      bsc: 'BNB Smart Chain',
+      arbitrum: 'Arbitrum',
+      optimism: 'Optimism',
     };
     return names[network?.toLowerCase()] || network;
   }
@@ -341,8 +359,8 @@ export class AgentResponseFormatter {
    */
   formatProtocolName(protocol) {
     const names = {
-      'aave': 'Aave',
-      'compound': 'Compound'
+      aave: 'Aave',
+      compound: 'Compound',
     };
     return names[protocol?.toLowerCase()] || protocol;
   }
@@ -362,7 +380,7 @@ export class AgentResponseFormatter {
       style: 'currency',
       currency,
       minimumFractionDigits: 2,
-      maximumFractionDigits: value < 1 ? 6 : 2
+      maximumFractionDigits: value < 1 ? 6 : 2,
     });
 
     return formatter.format(value);
@@ -463,9 +481,11 @@ export class AgentResponseFormatter {
    */
   findBestSupplyRate(protocols) {
     if (!protocols || protocols.length === 0) return null;
-    return protocols.reduce((best, current) =>
-      (!best || current.supplyAPY > best.supplyAPY) ? current : best
-    , null);
+    return protocols.reduce(
+      (best, current) =>
+        !best || current.supplyAPY > best.supplyAPY ? current : best,
+      null
+    );
   }
 
   /**
@@ -475,9 +495,11 @@ export class AgentResponseFormatter {
    */
   findBestBorrowRate(protocols) {
     if (!protocols || protocols.length === 0) return null;
-    return protocols.reduce((best, current) =>
-      (!best || current.borrowAPY < best.borrowAPY) ? current : best
-    , null);
+    return protocols.reduce(
+      (best, current) =>
+        !best || current.borrowAPY < best.borrowAPY ? current : best,
+      null
+    );
   }
 }
 
@@ -485,4 +507,3 @@ export class AgentResponseFormatter {
 export const agentResponseFormatter = new AgentResponseFormatter();
 
 export default AgentResponseFormatter;
-

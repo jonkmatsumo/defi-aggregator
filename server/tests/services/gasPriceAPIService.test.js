@@ -1,4 +1,11 @@
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from '@jest/globals';
 import fc from 'fast-check';
 import { GasPriceAPIService } from '../../src/services/gasPriceAPIService.js';
 
@@ -13,17 +20,17 @@ describe('GasPriceAPIService', () => {
       getCredentials: jest.fn(),
       hasCredentials: jest.fn(),
       get: jest.fn(),
-      getMetrics: jest.fn(() => ({ totalRequests: 0, successfulRequests: 0 }))
+      getMetrics: jest.fn(() => ({ totalRequests: 0, successfulRequests: 0 })),
     };
 
     // Create service instance with test configuration
     service = new GasPriceAPIService({
       apiKeys: {
         etherscan: 'test-etherscan-key',
-        polygonscan: 'test-polygonscan-key'
+        polygonscan: 'test-polygonscan-key',
       },
       cacheTimeout: 100, // 100ms for testing
-      rateLimitMax: 100
+      rateLimitMax: 100,
     });
 
     // Replace the API client with our mock after construction
@@ -40,7 +47,13 @@ describe('GasPriceAPIService', () => {
     test('should initialize with correct configuration', () => {
       expect(service).toBeDefined();
       expect(service.networks).toBeDefined();
-      expect(Object.keys(service.networks)).toEqual(['ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism']);
+      expect(Object.keys(service.networks)).toEqual([
+        'ethereum',
+        'polygon',
+        'bsc',
+        'arbitrum',
+        'optimism',
+      ]);
     });
 
     test('should set up API credentials correctly', () => {
@@ -51,15 +64,21 @@ describe('GasPriceAPIService', () => {
     });
 
     test('should return fallback data for unsupported network', async () => {
-      await expect(service.getGasPrices('unsupported')).rejects.toThrow('Unsupported network: unsupported');
+      await expect(service.getGasPrices('unsupported')).rejects.toThrow(
+        'Unsupported network: unsupported'
+      );
     });
 
     test('should return cached data when available', async () => {
       const testData = {
         network: 'ethereum',
-        gasPrices: { slow: { gwei: 10 }, standard: { gwei: 15 }, fast: { gwei: 20 } },
+        gasPrices: {
+          slow: { gwei: 10 },
+          standard: { gwei: 15 },
+          fast: { gwei: 20 },
+        },
         timestamp: Date.now(),
-        source: 'test'
+        source: 'test',
       };
 
       // Set cache data
@@ -75,7 +94,7 @@ describe('GasPriceAPIService', () => {
       mockApiClient.getCredentials.mockReturnValue({ apiKey: 'test-key' });
 
       const result = await service.getGasPrices('ethereum');
-      
+
       // Should return fallback data
       expect(result.source).toBe('fallback');
       expect(result.network).toBe('ethereum');
@@ -88,13 +107,16 @@ describe('GasPriceAPIService', () => {
         result: {
           SafeGasPrice: '10',
           ProposeGasPrice: '15',
-          FastGasPrice: '20'
-        }
+          FastGasPrice: '20',
+        },
       });
       mockApiClient.getCredentials.mockReturnValue({ apiKey: 'test-key' });
 
-      const result = await service.getMultiNetworkGasPrices(['ethereum', 'polygon']);
-      
+      const result = await service.getMultiNetworkGasPrices([
+        'ethereum',
+        'polygon',
+      ]);
+
       expect(result.networks).toBeDefined();
       expect(result.networks.ethereum).toBeDefined();
       expect(result.networks.polygon).toBeDefined();
@@ -108,8 +130,12 @@ describe('GasPriceAPIService', () => {
         fc.asyncProperty(
           fc.constantFrom('ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism'),
           fc.record({
-            transactionType: fc.constantFrom('transfer', 'swap', 'contract_interaction'),
-            includeUSDCosts: fc.boolean()
+            transactionType: fc.constantFrom(
+              'transfer',
+              'swap',
+              'contract_interaction'
+            ),
+            includeUSDCosts: fc.boolean(),
           }),
           async (network, options) => {
             // Mock successful API response
@@ -118,10 +144,12 @@ describe('GasPriceAPIService', () => {
               result: {
                 SafeGasPrice: '10',
                 ProposeGasPrice: '15',
-                FastGasPrice: '20'
-              }
+                FastGasPrice: '20',
+              },
             });
-            mockApiClient.getCredentials.mockReturnValue({ apiKey: 'test-key' });
+            mockApiClient.getCredentials.mockReturnValue({
+              apiKey: 'test-key',
+            });
 
             const result = await service.getGasPrices(network, options);
 
@@ -141,11 +169,21 @@ describe('GasPriceAPIService', () => {
             expect(typeof result.gasPrices.fast.gwei).toBe('number');
 
             // Gas prices should be in logical order (slow <= standard <= fast)
-            expect(result.gasPrices.slow.gwei).toBeLessThanOrEqual(result.gasPrices.standard.gwei);
-            expect(result.gasPrices.standard.gwei).toBeLessThanOrEqual(result.gasPrices.fast.gwei);
+            expect(result.gasPrices.slow.gwei).toBeLessThanOrEqual(
+              result.gasPrices.standard.gwei
+            );
+            expect(result.gasPrices.standard.gwei).toBeLessThanOrEqual(
+              result.gasPrices.fast.gwei
+            );
 
             // Should support all required networks
-            expect(['ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism']).toContain(network);
+            expect([
+              'ethereum',
+              'polygon',
+              'bsc',
+              'arbitrum',
+              'optimism',
+            ]).toContain(network);
           }
         ),
         { numRuns: 100 }
@@ -162,7 +200,7 @@ describe('GasPriceAPIService', () => {
             // Create service with specific cache timeout
             const testService = new GasPriceAPIService({
               apiKeys: { etherscan: 'test-key' },
-              cacheTimeout
+              cacheTimeout,
             });
 
             // Replace with mock API client
@@ -171,7 +209,10 @@ describe('GasPriceAPIService', () => {
               getCredentials: jest.fn().mockReturnValue({ apiKey: 'test-key' }),
               hasCredentials: jest.fn().mockReturnValue(true),
               get: jest.fn(),
-              getMetrics: jest.fn(() => ({ totalRequests: 0, successfulRequests: 0 }))
+              getMetrics: jest.fn(() => ({
+                totalRequests: 0,
+                successfulRequests: 0,
+              })),
             };
             testService.apiClient = testMockClient;
 
@@ -181,8 +222,8 @@ describe('GasPriceAPIService', () => {
               result: {
                 SafeGasPrice: '10',
                 ProposeGasPrice: '15',
-                FastGasPrice: '20'
-              }
+                FastGasPrice: '20',
+              },
             });
 
             // First call should fetch from API
@@ -194,7 +235,9 @@ describe('GasPriceAPIService', () => {
             expect(result2.timestamp).toBe(result1.timestamp); // Same cached data
 
             // Wait for cache to expire
-            await new Promise(resolve => setTimeout(resolve, cacheTimeout + 50));
+            await new Promise(resolve =>
+              setTimeout(resolve, cacheTimeout + 50)
+            );
 
             // Mock second API response with different data
             testMockClient.get.mockResolvedValueOnce({
@@ -202,15 +245,15 @@ describe('GasPriceAPIService', () => {
               result: {
                 SafeGasPrice: '12',
                 ProposeGasPrice: '17',
-                FastGasPrice: '22'
-              }
+                FastGasPrice: '22',
+              },
             });
 
             const result3 = await testService.getGasPrices(network);
-            
+
             // Property: Cache should respect TTL and refresh when expired
             expect(result3.timestamp).toBeGreaterThan(result1.timestamp);
-            
+
             // For networks that use API calls, check the new data
             // All networks should have refreshed data after cache expiry
             expect(result3.timestamp).not.toBe(result1.timestamp);
@@ -224,10 +267,10 @@ describe('GasPriceAPIService', () => {
     test('Property 1 (fallback): Gas price API fallback handling', async () => {
       // Test fallback behavior directly using the fallback method
       const networks = ['ethereum', 'bsc', 'arbitrum', 'optimism'];
-      
+
       for (const network of networks) {
         const fallbackResult = service.getFallbackGasPrices(network);
-        
+
         // Property: Service should provide fallback data when API fails
         expect(fallbackResult).toBeDefined();
         expect(fallbackResult.network).toBe(network);
@@ -243,16 +286,29 @@ describe('GasPriceAPIService', () => {
         expect(fallbackResult.gasPrices.fast.gwei).toBeGreaterThan(0);
 
         // Should maintain logical order even in fallback
-        expect(fallbackResult.gasPrices.slow.gwei).toBeLessThanOrEqual(fallbackResult.gasPrices.standard.gwei);
-        expect(fallbackResult.gasPrices.standard.gwei).toBeLessThanOrEqual(fallbackResult.gasPrices.fast.gwei);
+        expect(fallbackResult.gasPrices.slow.gwei).toBeLessThanOrEqual(
+          fallbackResult.gasPrices.standard.gwei
+        );
+        expect(fallbackResult.gasPrices.standard.gwei).toBeLessThanOrEqual(
+          fallbackResult.gasPrices.fast.gwei
+        );
       }
     });
 
     test('Property: Multi-network gas price consistency', async () => {
       await fc.assert(
         fc.asyncProperty(
-          fc.array(fc.constantFrom('ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism'), { minLength: 1, maxLength: 5 }),
-          async (networks) => {
+          fc.array(
+            fc.constantFrom(
+              'ethereum',
+              'polygon',
+              'bsc',
+              'arbitrum',
+              'optimism'
+            ),
+            { minLength: 1, maxLength: 5 }
+          ),
+          async networks => {
             // Remove duplicates
             const uniqueNetworks = [...new Set(networks)];
 
@@ -262,16 +318,21 @@ describe('GasPriceAPIService', () => {
               result: {
                 SafeGasPrice: '10',
                 ProposeGasPrice: '15',
-                FastGasPrice: '20'
-              }
+                FastGasPrice: '20',
+              },
             });
-            mockApiClient.getCredentials.mockReturnValue({ apiKey: 'test-key' });
+            mockApiClient.getCredentials.mockReturnValue({
+              apiKey: 'test-key',
+            });
 
-            const result = await service.getMultiNetworkGasPrices(uniqueNetworks);
+            const result =
+              await service.getMultiNetworkGasPrices(uniqueNetworks);
 
             // Property: Multi-network response should include all requested networks
             expect(result.networks).toBeDefined();
-            expect(Object.keys(result.networks)).toHaveLength(uniqueNetworks.length);
+            expect(Object.keys(result.networks)).toHaveLength(
+              uniqueNetworks.length
+            );
 
             uniqueNetworks.forEach(network => {
               expect(result.networks[network]).toBeDefined();
@@ -298,17 +359,21 @@ describe('GasPriceAPIService', () => {
             const mockGasData = {
               network,
               gasPrices: {
-                slow: { gwei: 10, usd_cost: 0.30 },
+                slow: { gwei: 10, usd_cost: 0.3 },
                 standard: { gwei: 15, usd_cost: 0.45 },
-                fast: { gwei: 20, usd_cost: 0.60 }
+                fast: { gwei: 20, usd_cost: 0.6 },
               },
               timestamp: Date.now(),
-              source: 'test'
+              source: 'test',
             };
 
             service.setCachedData(`gas_prices_${network}`, mockGasData);
 
-            const result = await service.getTransactionCostEstimate(network, transactionType, gasLimit);
+            const result = await service.getTransactionCostEstimate(
+              network,
+              transactionType,
+              gasLimit
+            );
 
             // Property: Cost estimation should be mathematically consistent
             expect(result).toBeDefined();

@@ -6,19 +6,20 @@ jest.unstable_mockModule('../../src/utils/logger.js', () => ({
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
-    debug: jest.fn()
-  }
+    debug: jest.fn(),
+  },
 }));
 
 // Now import the module under test
-const { MetricsCollector, metricsCollector } = await import('../../src/utils/metrics.js');
+const { MetricsCollector, metricsCollector } =
+  await import('../../src/utils/metrics.js');
 
 describe('MetricsCollector', () => {
   let collector;
 
   beforeEach(() => {
     collector = new MetricsCollector({
-      enablePeriodicLogging: false // Disable for tests
+      enablePeriodicLogging: false, // Disable for tests
     });
   });
 
@@ -28,16 +29,18 @@ describe('MetricsCollector', () => {
 
   describe('Constructor', () => {
     it('should initialize with default options', () => {
-      expect(collector.options.histogramBuckets).toEqual([10, 50, 100, 200, 500, 1000, 2000, 5000]);
+      expect(collector.options.histogramBuckets).toEqual([
+        10, 50, 100, 200, 500, 1000, 2000, 5000,
+      ]);
       expect(collector.options.slowThreshold).toBe(1000);
     });
 
     it('should accept custom options', () => {
       const custom = new MetricsCollector({
         slowThreshold: 500,
-        enablePeriodicLogging: false
+        enablePeriodicLogging: false,
       });
-      
+
       expect(custom.options.slowThreshold).toBe(500);
       custom.destroy();
     });
@@ -116,7 +119,9 @@ describe('MetricsCollector', () => {
 
   describe('Error Metrics', () => {
     it('should record errors', () => {
-      collector.recordError('VALIDATION_ERROR', '/api/test', { field: 'email' });
+      collector.recordError('VALIDATION_ERROR', '/api/test', {
+        field: 'email',
+      });
 
       expect(collector.errors.total).toBe(1);
       expect(collector.errors.byType.get('VALIDATION_ERROR')).toBe(1);
@@ -150,7 +155,7 @@ describe('MetricsCollector', () => {
     it('should record service metrics', () => {
       collector.recordServiceMetrics('TestService', {
         requests: 100,
-        cacheHits: 80
+        cacheHits: 80,
       });
 
       const metrics = collector.getServiceMetrics('TestService');

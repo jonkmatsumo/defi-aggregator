@@ -28,22 +28,45 @@ describe('Configuration Management', () => {
         fc.record({
           PORT: fc.integer({ min: 1024, max: 65535 }).map(String),
           HOST: fc.constantFrom('localhost', '127.0.0.1', '0.0.0.0'),
-          NODE_ENV: fc.constantFrom('development', 'staging', 'production', 'test'),
+          NODE_ENV: fc.constantFrom(
+            'development',
+            'staging',
+            'production',
+            'test'
+          ),
           LLM_PROVIDER: fc.constantFrom('openai', 'anthropic'),
-          LLM_MODEL: fc.constantFrom('gpt-4', 'gpt-3.5-turbo', 'claude-3-sonnet', 'claude-3-haiku'),
+          LLM_MODEL: fc.constantFrom(
+            'gpt-4',
+            'gpt-3.5-turbo',
+            'claude-3-sonnet',
+            'claude-3-haiku'
+          ),
           LLM_MAX_TOKENS: fc.integer({ min: 100, max: 4096 }).map(String),
-          LLM_TEMPERATURE: fc.float({ min: 0, max: 2, noNaN: true }).map(String),
+          LLM_TEMPERATURE: fc
+            .float({ min: 0, max: 2, noNaN: true })
+            .map(String),
           WS_PING_INTERVAL: fc.integer({ min: 5000, max: 60000 }).map(String),
           WS_MAX_CONNECTIONS: fc.integer({ min: 10, max: 1000 }).map(String),
-          WS_MESSAGE_QUEUE_SIZE: fc.integer({ min: 100, max: 10000 }).map(String),
+          WS_MESSAGE_QUEUE_SIZE: fc
+            .integer({ min: 100, max: 10000 })
+            .map(String),
           LOG_LEVEL: fc.constantFrom('debug', 'info', 'warn', 'error'),
           LOG_FORMAT: fc.constantFrom('json', 'text'),
-          TOOLS_ENABLED: fc.array(fc.constantFrom('gas_price', 'token_balance', 'lending'), { minLength: 1, maxLength: 3 }).map(arr => arr.join(',')),
+          TOOLS_ENABLED: fc
+            .array(fc.constantFrom('gas_price', 'token_balance', 'lending'), {
+              minLength: 1,
+              maxLength: 3,
+            })
+            .map(arr => arr.join(',')),
           TOOLS_RATE_LIMIT: fc.integer({ min: 1, max: 100 }).map(String),
-          CORS_ORIGIN: fc.constantFrom('http://localhost:3000', 'https://example.com', '*'),
-          API_TIMEOUT: fc.integer({ min: 5000, max: 120000 }).map(String)
+          CORS_ORIGIN: fc.constantFrom(
+            'http://localhost:3000',
+            'https://example.com',
+            '*'
+          ),
+          API_TIMEOUT: fc.integer({ min: 5000, max: 120000 }).map(String),
         }),
-        async (envVars) => {
+        async envVars => {
           // Set environment variables
           Object.assign(process.env, envVars);
 
@@ -52,7 +75,9 @@ describe('Configuration Management', () => {
           process.env.ANTHROPIC_API_KEY = 'test_anthropic_key';
 
           // Import validateConfig fresh to pick up new env vars
-          const { validateConfig } = await import('../../src/config/environment.js?' + Date.now());
+          const { validateConfig } = await import(
+            '../../src/config/environment.js?' + Date.now()
+          );
 
           // Validate configuration
           const config = validateConfig();
@@ -64,19 +89,34 @@ describe('Configuration Management', () => {
           expect(config.llm.provider).toBe(envVars.LLM_PROVIDER);
           expect(config.llm.model).toBe(envVars.LLM_MODEL);
           expect(config.llm.maxTokens).toBe(parseInt(envVars.LLM_MAX_TOKENS));
-          expect(config.llm.temperature).toBe(parseFloat(envVars.LLM_TEMPERATURE));
-          expect(config.websocket.pingInterval).toBe(parseInt(envVars.WS_PING_INTERVAL));
-          expect(config.websocket.maxConnections).toBe(parseInt(envVars.WS_MAX_CONNECTIONS));
-          expect(config.websocket.messageQueueSize).toBe(parseInt(envVars.WS_MESSAGE_QUEUE_SIZE));
+          expect(config.llm.temperature).toBe(
+            parseFloat(envVars.LLM_TEMPERATURE)
+          );
+          expect(config.websocket.pingInterval).toBe(
+            parseInt(envVars.WS_PING_INTERVAL)
+          );
+          expect(config.websocket.maxConnections).toBe(
+            parseInt(envVars.WS_MAX_CONNECTIONS)
+          );
+          expect(config.websocket.messageQueueSize).toBe(
+            parseInt(envVars.WS_MESSAGE_QUEUE_SIZE)
+          );
           expect(config.logging.level).toBe(envVars.LOG_LEVEL);
           expect(config.logging.format).toBe(envVars.LOG_FORMAT);
-          expect(config.tools.enabled).toEqual(envVars.TOOLS_ENABLED.split(','));
-          expect(config.tools.rateLimit).toBe(parseInt(envVars.TOOLS_RATE_LIMIT));
+          expect(config.tools.enabled).toEqual(
+            envVars.TOOLS_ENABLED.split(',')
+          );
+          expect(config.tools.rateLimit).toBe(
+            parseInt(envVars.TOOLS_RATE_LIMIT)
+          );
           expect(config.corsOrigin).toBe(envVars.CORS_ORIGIN);
           expect(config.apiTimeout).toBe(parseInt(envVars.API_TIMEOUT));
 
           // Verify API key is set correctly based on provider
-          const expectedApiKey = envVars.LLM_PROVIDER === 'anthropic' ? 'test_anthropic_key' : 'test_openai_key';
+          const expectedApiKey =
+            envVars.LLM_PROVIDER === 'anthropic'
+              ? 'test_anthropic_key'
+              : 'test_openai_key';
           expect(config.llm.apiKey).toBe(expectedApiKey);
         }
       ),
@@ -94,11 +134,20 @@ describe('Configuration Management', () => {
       fc.asyncProperty(
         // Generate different environment configurations
         fc.record({
-          environment: fc.constantFrom('development', 'staging', 'production', 'test'),
+          environment: fc.constantFrom(
+            'development',
+            'staging',
+            'production',
+            'test'
+          ),
           // Environment-specific overrides
           logLevel: fc.constantFrom('debug', 'info', 'warn', 'error'),
-          corsOrigin: fc.constantFrom('http://localhost:3000', 'https://staging.example.com', 'https://example.com'),
-          apiTimeout: fc.integer({ min: 5000, max: 120000 })
+          corsOrigin: fc.constantFrom(
+            'http://localhost:3000',
+            'https://staging.example.com',
+            'https://example.com'
+          ),
+          apiTimeout: fc.integer({ min: 5000, max: 120000 }),
         }),
         async ({ environment, logLevel, corsOrigin, apiTimeout }) => {
           // Set environment-specific variables
@@ -113,7 +162,9 @@ describe('Configuration Management', () => {
           process.env.PORT = '3001';
 
           // Import validateConfig fresh to pick up new env vars
-          const { validateConfig } = await import('../../src/config/environment.js?' + Date.now());
+          const { validateConfig } = await import(
+            '../../src/config/environment.js?' + Date.now()
+          );
 
           // Validate configuration
           const config = validateConfig();
@@ -126,10 +177,14 @@ describe('Configuration Management', () => {
 
           // Verify environment-appropriate defaults are applied
           expect(config.nodeEnv).toBe(environment);
-          expect(['debug', 'info', 'warn', 'error']).toContain(config.logging.level);
+          expect(['debug', 'info', 'warn', 'error']).toContain(
+            config.logging.level
+          );
 
           // All environments should have valid configuration
-          expect(['development', 'staging', 'production', 'test']).toContain(environment);
+          expect(['development', 'staging', 'production', 'test']).toContain(
+            environment
+          );
 
           // All environments should have valid configuration
           expect(config.port).toBeGreaterThan(0);
@@ -159,23 +214,23 @@ describe('Configuration Management', () => {
               fc.constant('0'),
               fc.constant('99999'),
               fc.constant('not_a_number')
-            )
+            ),
           }),
           // Invalid LLM provider
           fc.record({
             type: fc.constant('invalid_llm_provider'),
-            LLM_PROVIDER: fc.constantFrom('invalid_provider', 'gpt', 'claude')
+            LLM_PROVIDER: fc.constantFrom('invalid_provider', 'gpt', 'claude'),
           }),
           // Missing API key
           fc.record({
             type: fc.constant('missing_api_key'),
             LLM_PROVIDER: fc.constantFrom('openai', 'anthropic'),
-            removeApiKey: fc.constant(true)
+            removeApiKey: fc.constant(true),
           }),
           // Invalid log level
           fc.record({
             type: fc.constant('invalid_log_level'),
-            LOG_LEVEL: fc.constantFrom('invalid', 'trace', 'verbose')
+            LOG_LEVEL: fc.constantFrom('invalid', 'trace', 'verbose'),
           }),
           // Invalid temperature
           fc.record({
@@ -184,7 +239,7 @@ describe('Configuration Management', () => {
               fc.constant('-1'),
               fc.constant('3'),
               fc.constant('not_a_number')
-            )
+            ),
           }),
           // Invalid WebSocket configuration
           fc.record({
@@ -193,10 +248,10 @@ describe('Configuration Management', () => {
               fc.constant('0'),
               fc.constant('-1'),
               fc.constant('not_a_number')
-            )
+            ),
           })
         ),
-        async (invalidConfig) => {
+        async invalidConfig => {
           // Set base valid configuration
           process.env.PORT = '3001';
           process.env.HOST = 'localhost';
@@ -207,36 +262,38 @@ describe('Configuration Management', () => {
 
           // Apply invalid configuration based on type
           switch (invalidConfig.type) {
-          case 'invalid_port':
-            process.env.PORT = invalidConfig.PORT;
-            break;
-          case 'invalid_llm_provider':
-            process.env.LLM_PROVIDER = invalidConfig.LLM_PROVIDER;
-            break;
-          case 'missing_api_key':
-            if (invalidConfig.LLM_PROVIDER === 'openai') {
-              delete process.env.OPENAI_API_KEY;
-            } else {
-              delete process.env.ANTHROPIC_API_KEY;
-            }
-            process.env.LLM_PROVIDER = invalidConfig.LLM_PROVIDER;
-            break;
-          case 'invalid_log_level':
-            process.env.LOG_LEVEL = invalidConfig.LOG_LEVEL;
-            break;
-          case 'invalid_temperature':
-            process.env.LLM_TEMPERATURE = invalidConfig.LLM_TEMPERATURE;
-            break;
-          case 'invalid_websocket':
-            process.env.WS_MAX_CONNECTIONS = invalidConfig.WS_MAX_CONNECTIONS;
-            break;
-          default:
-            // No additional configuration needed
-            break;
+            case 'invalid_port':
+              process.env.PORT = invalidConfig.PORT;
+              break;
+            case 'invalid_llm_provider':
+              process.env.LLM_PROVIDER = invalidConfig.LLM_PROVIDER;
+              break;
+            case 'missing_api_key':
+              if (invalidConfig.LLM_PROVIDER === 'openai') {
+                delete process.env.OPENAI_API_KEY;
+              } else {
+                delete process.env.ANTHROPIC_API_KEY;
+              }
+              process.env.LLM_PROVIDER = invalidConfig.LLM_PROVIDER;
+              break;
+            case 'invalid_log_level':
+              process.env.LOG_LEVEL = invalidConfig.LOG_LEVEL;
+              break;
+            case 'invalid_temperature':
+              process.env.LLM_TEMPERATURE = invalidConfig.LLM_TEMPERATURE;
+              break;
+            case 'invalid_websocket':
+              process.env.WS_MAX_CONNECTIONS = invalidConfig.WS_MAX_CONNECTIONS;
+              break;
+            default:
+              // No additional configuration needed
+              break;
           }
 
           // Import validateConfig fresh to pick up new env vars
-          const { validateConfig } = await import('../../src/config/environment.js?' + Date.now());
+          const { validateConfig } = await import(
+            '../../src/config/environment.js?' + Date.now()
+          );
 
           // Validation should fail with descriptive error
           let thrownError;
@@ -254,7 +311,8 @@ describe('Configuration Management', () => {
           expect(thrownError.message.length).toBeGreaterThan(10); // Should be descriptive
           // Check that error message contains validation failure indication
           const errorMessage = thrownError.message.toLowerCase();
-          const hasValidationFailure = errorMessage.includes('configuration validation failed') ||
+          const hasValidationFailure =
+            errorMessage.includes('configuration validation failed') ||
             errorMessage.includes('validation') ||
             errorMessage.includes('invalid') ||
             errorMessage.includes('required') ||

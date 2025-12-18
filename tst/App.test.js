@@ -1,11 +1,11 @@
-import { render, screen } from '@testing-library/react';
-import App from '../src/App';
+import { render, screen } from "@testing-library/react";
+import App from "../src/App";
 
 // Mock react-router-dom (using manual mock from __mocks__)
-jest.mock('react-router-dom');
+jest.mock("react-router-dom");
 
 // Mock wagmi and rainbowkit before importing App
-jest.mock('wagmi', () => ({
+jest.mock("wagmi", () => ({
   useConnect: () => ({
     connect: jest.fn(),
     connectors: [],
@@ -34,63 +34,65 @@ jest.mock('wagmi', () => ({
   useChainId: () => 1,
 }));
 
-jest.mock('@rainbow-me/rainbowkit', () => ({
+jest.mock("@rainbow-me/rainbowkit", () => ({
   ConnectButton: () => <div data-testid="connect-button">Connect Button</div>,
 }));
 
 // Mock the wallet components
-jest.mock('../src/components/WalletProvider', () => ({
+jest.mock("../src/components/WalletProvider", () => ({
   __esModule: true,
-  default: ({ children }) => <div data-testid="wallet-provider">{children}</div>,
+  default: ({ children }) => (
+    <div data-testid="wallet-provider">{children}</div>
+  ),
 }));
 
 // Mock the Header component
-jest.mock('../src/components/Header', () => ({
+jest.mock("../src/components/Header", () => ({
   __esModule: true,
   default: () => <div data-testid="header">Header Component</div>,
 }));
 
 // Mock the route components
-jest.mock('../src/routes/DashboardRoute', () => ({
+jest.mock("../src/routes/DashboardRoute", () => ({
   __esModule: true,
   default: () => <div data-testid="dashboard-route">Dashboard Route</div>,
 }));
 
-jest.mock('../src/routes/ChatRoute', () => ({
+jest.mock("../src/routes/ChatRoute", () => ({
   __esModule: true,
   default: () => <div data-testid="chat-route">Chat Route</div>,
 }));
 
-describe('App', () => {
-  it('renders without crashing', () => {
+describe("App", () => {
+  it("renders without crashing", () => {
     render(<App />);
-    
-    expect(screen.getByTestId('wallet-provider')).toBeInTheDocument();
-    expect(screen.getByTestId('header')).toBeInTheDocument();
+
+    expect(screen.getByTestId("wallet-provider")).toBeInTheDocument();
+    expect(screen.getByTestId("header")).toBeInTheDocument();
   });
 
-  it('displays the header component', () => {
+  it("displays the header component", () => {
     render(<App />);
-    
-    expect(screen.getByTestId('header')).toBeInTheDocument();
+
+    expect(screen.getByTestId("header")).toBeInTheDocument();
   });
 
-  it('renders with BrowserRouter', () => {
+  it("renders with BrowserRouter", () => {
     render(<App />);
-    
-    expect(screen.getByTestId('browser-router')).toBeInTheDocument();
+
+    expect(screen.getByTestId("browser-router")).toBeInTheDocument();
   });
 
-  it('renders Routes component', () => {
+  it("renders Routes component", () => {
     render(<App />);
-    
-    expect(screen.getByTestId('routes')).toBeInTheDocument();
+
+    expect(screen.getByTestId("routes")).toBeInTheDocument();
   });
 
-  it('wraps content in WalletProvider', () => {
+  it("wraps content in WalletProvider", () => {
     render(<App />);
-    
-    const walletProvider = screen.getByTestId('wallet-provider');
-    expect(walletProvider).toContainElement(screen.getByTestId('header'));
+
+    const walletProvider = screen.getByTestId("wallet-provider");
+    expect(walletProvider).toContainElement(screen.getByTestId("header"));
   });
-}); 
+});

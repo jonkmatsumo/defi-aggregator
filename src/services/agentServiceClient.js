@@ -1,11 +1,11 @@
 /**
  * AgentServiceClient
- * 
+ *
  * Real implementation of AgentService that communicates with the GenAI server
  * via WebSocket connection. Replaces mockAgentService with actual AI capabilities.
  */
 
-import { AgentService } from './mockAgentService';
+import { AgentService } from "./mockAgentService";
 
 /**
  * Generate a unique ID for messages
@@ -18,16 +18,16 @@ function generateId() {
  * Connection states
  */
 const ConnectionState = {
-  DISCONNECTED: 'disconnected',
-  CONNECTING: 'connecting',
-  CONNECTED: 'connected',
-  RECONNECTING: 'reconnecting',
-  ERROR: 'error'
+  DISCONNECTED: "disconnected",
+  CONNECTING: "connecting",
+  CONNECTED: "connected",
+  RECONNECTING: "reconnecting",
+  ERROR: "error",
 };
 
 /**
  * AgentServiceClient
- * 
+ *
  * WebSocket-based implementation of AgentService for real server communication.
  * Provides automatic reconnection, message correlation, and error handling.
  */
@@ -44,7 +44,7 @@ class AgentServiceClient extends AgentService {
    */
   constructor(serverUrl, options = {}) {
     super();
-    
+
     this.serverUrl = serverUrl;
     this.options = {
       maxReconnectAttempts: options.maxReconnectAttempts || 5,
@@ -52,9 +52,9 @@ class AgentServiceClient extends AgentService {
       maxReconnectDelay: options.maxReconnectDelay || 30000,
       messageTimeout: options.messageTimeout || 30000,
       pingInterval: options.pingInterval || 30000,
-      ...options
+      ...options,
     };
-    
+
     // Connection state
     this.websocket = null;
     this.connectionState = ConnectionState.DISCONNECTED;
@@ -62,19 +62,19 @@ class AgentServiceClient extends AgentService {
     this.reconnectAttempts = 0;
     this.reconnectTimeout = null;
     this.pingInterval = null;
-    
+
     // Message handling
     this.messageQueue = [];
     this.pendingRequests = new Map(); // messageId -> { resolve, reject, timeout }
-    
+
     // Event handlers
     this.messageHandlers = [];
     this.connectionChangeHandlers = [];
     this.errorHandlers = [];
-    
+
     // Conversation context for restoration
     this.conversationHistory = [];
-    
+
     // Identifier for fallback logic
     this.isAgentServiceClient = true;
   }
@@ -84,8 +84,10 @@ class AgentServiceClient extends AgentService {
    * @returns {Promise<void>}
    */
   async connect() {
-    if (this.connectionState === ConnectionState.CONNECTING || 
-        this.connectionState === ConnectionState.CONNECTED) {
+    if (
+      this.connectionState === ConnectionState.CONNECTING ||
+      this.connectionState === ConnectionState.CONNECTED
+    ) {
       return;
     }
 
@@ -93,27 +95,27 @@ class AgentServiceClient extends AgentService {
 
     try {
       this.websocket = new WebSocket(this.serverUrl);
-      
+
       this.websocket.onopen = () => {
         this.handleConnectionOpen();
       };
-      
-      this.websocket.onmessage = (event) => {
+
+      this.websocket.onmessage = event => {
         this.handleMessage(event);
       };
-      
-      this.websocket.onclose = (event) => {
+
+      this.websocket.onclose = event => {
         this.handleConnectionClose(event);
       };
-      
-      this.websocket.onerror = (error) => {
+
+      this.websocket.onerror = error => {
         this.handleConnectionError(error);
       };
 
       // Wait for connection to be established
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
-          reject(new Error('Connection timeout'));
+          reject(new Error("Connection timeout"));
         }, 10000);
 
         const checkConnection = () => {
@@ -122,15 +124,14 @@ class AgentServiceClient extends AgentService {
             resolve();
           } else if (this.connectionState === ConnectionState.ERROR) {
             clearTimeout(timeout);
-            reject(new Error('Connection failed'));
+            reject(new Error("Connection failed"));
           } else {
             setTimeout(checkConnection, 100);
           }
         };
-        
+
         checkConnection();
       });
-
     } catch (error) {
       this.setConnectionState(ConnectionState.ERROR);
       throw new Error(`Failed to connect to server: ${error.message}`);
@@ -143,10 +144,10 @@ class AgentServiceClient extends AgentService {
   handleConnectionOpen() {
     this.setConnectionState(ConnectionState.CONNECTED);
     this.reconnectAttempts = 0;
-    
+
     // Start ping interval
     this.startPingInterval();
-    
+
     // Process queued messages
     this.processMessageQueue();
   }
@@ -157,47 +158,46 @@ class AgentServiceClient extends AgentService {
   handleMessage(event) {
     try {
       const message = JSON.parse(event.data);
-      
+
       switch (message.type) {
-      case 'CONNECTION_ESTABLISHED':
-        this.sessionId = message.payload.sessionId;
-        break;
-        
-      case 'CHAT_RESPONSE':
-        this.handleChatResponse(message);
-        break;
-        
-      case 'STREAM_CHUNK':
-        this.handleStreamChunk(message);
-        break;
-        
-      case 'STREAM_END':
-        this.handleStreamEnd(message);
-        break;
-        
-      case 'ERROR':
-        this.handleErrorResponse(message);
-        break;
-        
-      case 'PONG':
-        // Ping response received, connection is healthy
-        break;
-        
-      default:
-        console.warn('Unknown message type:', message.type);
+        case "CONNECTION_ESTABLISHED":
+          this.sessionId = message.payload.sessionId;
+          break;
+
+        case "CHAT_RESPONSE":
+          this.handleChatResponse(message);
+          break;
+
+        case "STREAM_CHUNK":
+          this.handleStreamChunk(message);
+          break;
+
+        case "STREAM_END":
+          this.handleStreamEnd(message);
+          break;
+
+        case "ERROR":
+          this.handleErrorResponse(message);
+          break;
+
+        case "PONG":
+          // Ping response received, connection is healthy
+          break;
+
+        default:
+          console.warn("Unknown message type:", message.type);
       }
-      
+
       // Notify message handlers
       this.messageHandlers.forEach(handler => {
         try {
           handler(message);
         } catch (error) {
-          console.error('Error in message handler:', error);
+          console.error("Error in message handler:", error);
         }
       });
-      
     } catch (error) {
-      console.error('Error parsing message:', error);
+      console.error("Error parsing message:", error);
     }
   }
 
@@ -209,12 +209,12 @@ class AgentServiceClient extends AgentService {
     if (pendingRequest) {
       clearTimeout(pendingRequest.timeout);
       this.pendingRequests.delete(message.id);
-      
+
       // Add to conversation history for context restoration
       if (message.payload.message) {
         this.conversationHistory.push(message.payload.message);
       }
-      
+
       pendingRequest.resolve(message.payload.message);
     }
   }
@@ -225,7 +225,7 @@ class AgentServiceClient extends AgentService {
   handleStreamChunk(message) {
     // For now, we'll handle streaming in a future iteration
     // This is a placeholder for streaming support
-    console.log('Received stream chunk:', message);
+    console.log("Received stream chunk:", message);
   }
 
   /**
@@ -234,7 +234,7 @@ class AgentServiceClient extends AgentService {
   handleStreamEnd(message) {
     // For now, we'll handle streaming in a future iteration
     // This is a placeholder for streaming support
-    console.log('Stream ended:', message);
+    console.log("Stream ended:", message);
   }
 
   /**
@@ -245,8 +245,8 @@ class AgentServiceClient extends AgentService {
     if (pendingRequest) {
       clearTimeout(pendingRequest.timeout);
       this.pendingRequests.delete(message.id);
-      
-      const error = new Error(message.payload.error?.message || 'Server error');
+
+      const error = new Error(message.payload.error?.message || "Server error");
       error.details = message.payload.error;
       pendingRequest.reject(error);
     }
@@ -257,7 +257,7 @@ class AgentServiceClient extends AgentService {
    */
   handleConnectionClose(event) {
     this.stopPingInterval();
-    
+
     if (this.connectionState === ConnectionState.CONNECTED) {
       // Unexpected disconnection, attempt reconnection
       this.attemptReconnection();
@@ -270,15 +270,15 @@ class AgentServiceClient extends AgentService {
    * Handle WebSocket connection error
    */
   handleConnectionError(error) {
-    console.error('WebSocket error:', error);
+    console.error("WebSocket error:", error);
     this.setConnectionState(ConnectionState.ERROR);
-    
+
     // Notify error handlers
     this.errorHandlers.forEach(handler => {
       try {
         handler(error);
       } catch (handlerError) {
-        console.error('Error in error handler:', handlerError);
+        console.error("Error in error handler:", handlerError);
       }
     });
   }
@@ -309,7 +309,7 @@ class AgentServiceClient extends AgentService {
         // Restore conversation context after reconnection
         await this.restoreContext();
       } catch (error) {
-        console.error('Reconnection failed:', error);
+        console.error("Reconnection failed:", error);
         this.attemptReconnection();
       }
     }, delay);
@@ -322,7 +322,11 @@ class AgentServiceClient extends AgentService {
     // Context restoration will be implemented when the server supports it
     // For now, we just log that context should be restored
     if (this.conversationHistory.length > 0) {
-      console.log('Context restoration needed for', this.conversationHistory.length, 'messages');
+      console.log(
+        "Context restoration needed for",
+        this.conversationHistory.length,
+        "messages"
+      );
     }
   }
 
@@ -352,11 +356,11 @@ class AgentServiceClient extends AgentService {
    */
   sendPing() {
     const pingMessage = {
-      type: 'PING',
+      type: "PING",
       id: generateId(),
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
+
     this.sendRawMessage(pingMessage);
   }
 
@@ -388,13 +392,13 @@ class AgentServiceClient extends AgentService {
   setConnectionState(newState) {
     const oldState = this.connectionState;
     this.connectionState = newState;
-    
+
     if (oldState !== newState) {
       this.connectionChangeHandlers.forEach(handler => {
         try {
           handler(newState, oldState);
         } catch (error) {
-          console.error('Error in connection change handler:', error);
+          console.error("Error in connection change handler:", error);
         }
       });
     }
@@ -415,23 +419,23 @@ class AgentServiceClient extends AgentService {
     // Add user message to conversation history
     const userMessage = {
       id: generateId(),
-      role: 'user',
+      role: "user",
       content: message,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
     this.conversationHistory.push(userMessage);
 
     // Create request message
     const requestId = generateId();
     const requestMessage = {
-      type: 'CHAT_MESSAGE',
+      type: "CHAT_MESSAGE",
       id: requestId,
       payload: {
         message: message,
         history: history,
-        sessionId: this.sessionId
+        sessionId: this.sessionId,
       },
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     // Send message and wait for response
@@ -439,7 +443,7 @@ class AgentServiceClient extends AgentService {
       // Set up timeout
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(requestId);
-        reject(new Error('Message timeout'));
+        reject(new Error("Message timeout"));
       }, this.options.messageTimeout);
 
       // Store pending request
@@ -465,14 +469,14 @@ class AgentServiceClient extends AgentService {
 
     // Close WebSocket connection
     if (this.websocket) {
-      this.websocket.close(1000, 'Client disconnect');
+      this.websocket.close(1000, "Client disconnect");
       this.websocket = null;
     }
 
     // Reject all pending requests
     this.pendingRequests.forEach(({ reject, timeout }) => {
       clearTimeout(timeout);
-      reject(new Error('Connection closed'));
+      reject(new Error("Connection closed"));
     });
     this.pendingRequests.clear();
 

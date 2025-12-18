@@ -10,19 +10,19 @@ async function startServer() {
   try {
     // Validate configuration
     const config = validateConfig();
-    
+
     // Create and start server
     const server = await createServer(config);
-    
+
     const port = config.port;
     const host = config.host;
-    
+
     server.listen(port, host, () => {
       logger.info('GenAI Server started successfully', {
         port,
         host,
         environment: config.nodeEnv,
-        llmProvider: config.llm.provider
+        llmProvider: config.llm.provider,
       });
     });
 
@@ -42,11 +42,10 @@ async function startServer() {
         process.exit(0);
       });
     });
-
   } catch (error) {
     logger.error('Failed to start server', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
     process.exit(1);
   }

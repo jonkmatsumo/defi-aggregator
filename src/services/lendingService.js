@@ -1,11 +1,11 @@
 /**
  * Lending Service - Frontend Client
- * 
+ *
  * Fetches DeFi lending rates from backend API instead of directly from Aave/Compound APIs.
  * This eliminates CORS issues and centralizes rate limiting/caching on the server.
  */
 
-import apiClient from './apiClient';
+import apiClient from "./apiClient";
 
 class LendingService {
   constructor() {
@@ -45,7 +45,7 @@ class LendingService {
     const cacheKey = this.getCacheKey(key);
     this.cache.set(cacheKey, {
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -61,21 +61,20 @@ class LendingService {
    * @returns {Promise<Array>} Compound tokens
    */
   async fetchCompoundTokens() {
-    const cached = this.getCachedData('compound_tokens');
+    const cached = this.getCachedData("compound_tokens");
     if (cached) return cached;
 
     try {
-      const result = await apiClient.get('/api/lending-rates', {
-        protocols: 'compound'
+      const result = await apiClient.get("/api/lending-rates", {
+        protocols: "compound",
       });
 
       // Transform backend response to match expected format
-      const tokens = this.transformProtocolData(result, 'Compound');
-      this.setCachedData('compound_tokens', tokens);
+      const tokens = this.transformProtocolData(result, "Compound");
+      this.setCachedData("compound_tokens", tokens);
       return tokens;
-
     } catch (error) {
-      console.error('Error fetching Compound tokens:', error);
+      console.error("Error fetching Compound tokens:", error);
       return this.getFallbackCompoundTokens();
     }
   }
@@ -85,20 +84,19 @@ class LendingService {
    * @returns {Promise<Array>} Compound markets
    */
   async fetchCompoundMarkets() {
-    const cached = this.getCachedData('compound_markets');
+    const cached = this.getCachedData("compound_markets");
     if (cached) return cached;
 
     try {
-      const result = await apiClient.get('/api/lending-rates', {
-        protocols: 'compound'
+      const result = await apiClient.get("/api/lending-rates", {
+        protocols: "compound",
       });
 
       const markets = result.protocols?.compound || result.compound || [];
-      this.setCachedData('compound_markets', markets);
+      this.setCachedData("compound_markets", markets);
       return markets;
-
     } catch (error) {
-      console.error('Error fetching Compound markets:', error);
+      console.error("Error fetching Compound markets:", error);
       return [];
     }
   }
@@ -108,21 +106,20 @@ class LendingService {
    * @returns {Promise<Array>} Aave reserves
    */
   async fetchAaveReserves() {
-    const cached = this.getCachedData('aave_reserves');
+    const cached = this.getCachedData("aave_reserves");
     if (cached) return cached;
 
     try {
-      const result = await apiClient.get('/api/lending-rates', {
-        protocols: 'aave'
+      const result = await apiClient.get("/api/lending-rates", {
+        protocols: "aave",
       });
 
       // Transform backend response to match expected format
-      const reserves = this.transformProtocolData(result, 'Aave');
-      this.setCachedData('aave_reserves', reserves);
+      const reserves = this.transformProtocolData(result, "Aave");
+      this.setCachedData("aave_reserves", reserves);
       return reserves;
-
     } catch (error) {
-      console.error('Error fetching Aave reserves:', error);
+      console.error("Error fetching Aave reserves:", error);
       return this.getFallbackAaveReserves();
     }
   }
@@ -135,15 +132,19 @@ class LendingService {
    */
   transformProtocolData(result, platform) {
     const protocolKey = platform.toLowerCase();
-    const protocolData = result.protocols?.[protocolKey] || result[protocolKey] || result.data || [];
-    
+    const protocolData =
+      result.protocols?.[protocolKey] ||
+      result[protocolKey] ||
+      result.data ||
+      [];
+
     if (!Array.isArray(protocolData)) {
       // Handle single token response
       if (result.token && result.protocols) {
         return result.protocols.map(p => ({
           symbol: p.symbol || result.token,
           name: this.getTokenName(p.symbol || result.token),
-          address: p.address || '',
+          address: p.address || "",
           decimals: p.decimals || 18,
           platform: platform,
           logo: this.getTokenLogo(p.symbol || result.token),
@@ -151,7 +152,7 @@ class LendingService {
           borrowRate: p.borrowAPY || 0,
           totalSupply: p.totalSupply || 0,
           totalBorrow: p.totalBorrow || 0,
-          utilizationRate: p.utilizationRate || 0
+          utilizationRate: p.utilizationRate || 0,
         }));
       }
       return [];
@@ -160,7 +161,7 @@ class LendingService {
     return protocolData.map(token => ({
       symbol: token.symbol,
       name: token.name || this.getTokenName(token.symbol),
-      address: token.address || '',
+      address: token.address || "",
       decimals: token.decimals || 18,
       platform: platform,
       logo: this.getTokenLogo(token.symbol),
@@ -169,7 +170,7 @@ class LendingService {
       totalSupply: token.totalSupply || 0,
       totalBorrow: token.totalBorrow || 0,
       utilizationRate: token.utilizationRate || 0,
-      availableLiquidity: token.availableLiquidity || 0
+      availableLiquidity: token.availableLiquidity || 0,
     }));
   }
 
@@ -180,15 +181,15 @@ class LendingService {
    */
   getTokenName(symbol) {
     const names = {
-      'ETH': 'Ethereum',
-      'DAI': 'Dai Stablecoin',
-      'USDC': 'USD Coin',
-      'USDT': 'Tether USD',
-      'WBTC': 'Wrapped Bitcoin',
-      'UNI': 'Uniswap',
-      'LINK': 'Chainlink',
-      'AAVE': 'Aave',
-      'COMP': 'Compound'
+      ETH: "Ethereum",
+      DAI: "Dai Stablecoin",
+      USDC: "USD Coin",
+      USDT: "Tether USD",
+      WBTC: "Wrapped Bitcoin",
+      UNI: "Uniswap",
+      LINK: "Chainlink",
+      AAVE: "Aave",
+      COMP: "Compound",
     };
     return names[symbol] || symbol;
   }
@@ -200,23 +201,37 @@ class LendingService {
   async fetchAllLendingAssets() {
     try {
       // Fetch from backend's all-rates endpoint
-      const result = await apiClient.get('/api/lending-rates');
-      
-      const compoundTokens = this.transformProtocolData({ compound: result.compound }, 'Compound');
-      const aaveReserves = this.transformProtocolData({ aave: result.aave }, 'Aave');
+      const result = await apiClient.get("/api/lending-rates");
+
+      const compoundTokens = this.transformProtocolData(
+        { compound: result.compound },
+        "Compound"
+      );
+      const aaveReserves = this.transformProtocolData(
+        { aave: result.aave },
+        "Aave"
+      );
 
       return {
-        compound: compoundTokens.length > 0 ? compoundTokens : this.getFallbackCompoundTokens(),
-        aave: aaveReserves.length > 0 ? aaveReserves : this.getFallbackAaveReserves(),
-        all: [...compoundTokens, ...aaveReserves]
+        compound:
+          compoundTokens.length > 0
+            ? compoundTokens
+            : this.getFallbackCompoundTokens(),
+        aave:
+          aaveReserves.length > 0
+            ? aaveReserves
+            : this.getFallbackAaveReserves(),
+        all: [...compoundTokens, ...aaveReserves],
       };
-
     } catch (error) {
-      console.error('Error fetching lending assets:', error);
+      console.error("Error fetching lending assets:", error);
       return {
         compound: this.getFallbackCompoundTokens(),
         aave: this.getFallbackAaveReserves(),
-        all: [...this.getFallbackCompoundTokens(), ...this.getFallbackAaveReserves()]
+        all: [
+          ...this.getFallbackCompoundTokens(),
+          ...this.getFallbackAaveReserves(),
+        ],
       };
     }
   }
@@ -227,14 +242,13 @@ class LendingService {
    * @param {string[]} protocols - Protocols to query
    * @returns {Promise<Object>} Token lending rates
    */
-  async fetchTokenLendingRates(token, protocols = ['aave', 'compound']) {
+  async fetchTokenLendingRates(token, protocols = ["aave", "compound"]) {
     try {
       const result = await apiClient.get(`/api/lending-rates/${token}`, {
-        protocols: protocols.join(',')
+        protocols: protocols.join(","),
       });
 
       return result;
-
     } catch (error) {
       console.error(`Error fetching lending rates for ${token}:`, error);
       throw error;
@@ -253,7 +267,7 @@ class LendingService {
         compound: [],
         aave: [],
         totalSupplied: 0,
-        totalBorrowed: 0
+        totalBorrowed: 0,
       };
     }
 
@@ -264,47 +278,47 @@ class LendingService {
       const mockBalances = {
         compound: [
           {
-            symbol: 'ETH',
-            name: 'Ethereum',
+            symbol: "ETH",
+            name: "Ethereum",
             supplied: 2.5,
             borrowed: 0,
             supplyValue: 5000,
             borrowValue: 0,
-            platform: 'Compound'
+            platform: "Compound",
           },
           {
-            symbol: 'DAI',
-            name: 'Dai Stablecoin',
+            symbol: "DAI",
+            name: "Dai Stablecoin",
             supplied: 1000,
             borrowed: 500,
             supplyValue: 1000,
             borrowValue: 500,
-            platform: 'Compound'
-          }
+            platform: "Compound",
+          },
         ],
         aave: [
           {
-            symbol: 'USDC',
-            name: 'USD Coin',
+            symbol: "USDC",
+            name: "USD Coin",
             supplied: 2000,
             borrowed: 0,
             supplyValue: 2000,
             borrowValue: 0,
-            platform: 'Aave'
-          }
+            platform: "Aave",
+          },
         ],
         totalSupplied: 8000,
-        totalBorrowed: 500
+        totalBorrowed: 500,
       };
 
       return mockBalances;
     } catch (error) {
-      console.error('Error fetching user balances:', error);
+      console.error("Error fetching user balances:", error);
       return {
         compound: [],
         aave: [],
         totalSupplied: 0,
-        totalBorrowed: 0
+        totalBorrowed: 0,
       };
     }
   }
@@ -320,16 +334,16 @@ class LendingService {
    */
   async supplyTokens(platform, tokenAddress, amount, userAddress, client) {
     console.log(`Supplying ${amount} of token ${tokenAddress} to ${platform}`);
-    
+
     // This would need actual wallet transaction signing
     // which happens client-side, not through backend
     return {
       success: true,
-      transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+      transactionHash: "0x" + Math.random().toString(16).substr(2, 64),
       platform,
       tokenAddress,
       amount,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
 
@@ -337,15 +351,17 @@ class LendingService {
    * Withdraw tokens from a lending protocol (mock - requires wallet transaction)
    */
   async withdrawTokens(platform, tokenAddress, amount, userAddress, client) {
-    console.log(`Withdrawing ${amount} of token ${tokenAddress} from ${platform}`);
-    
+    console.log(
+      `Withdrawing ${amount} of token ${tokenAddress} from ${platform}`
+    );
+
     return {
       success: true,
-      transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+      transactionHash: "0x" + Math.random().toString(16).substr(2, 64),
       platform,
       tokenAddress,
       amount,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
 
@@ -353,15 +369,17 @@ class LendingService {
    * Borrow tokens from a lending protocol (mock - requires wallet transaction)
    */
   async borrowTokens(platform, tokenAddress, amount, userAddress, client) {
-    console.log(`Borrowing ${amount} of token ${tokenAddress} from ${platform}`);
-    
+    console.log(
+      `Borrowing ${amount} of token ${tokenAddress} from ${platform}`
+    );
+
     return {
       success: true,
-      transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+      transactionHash: "0x" + Math.random().toString(16).substr(2, 64),
       platform,
       tokenAddress,
       amount,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
 
@@ -370,14 +388,14 @@ class LendingService {
    */
   async repayTokens(platform, tokenAddress, amount, userAddress, client) {
     console.log(`Repaying ${amount} of token ${tokenAddress} to ${platform}`);
-    
+
     return {
       success: true,
-      transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+      transactionHash: "0x" + Math.random().toString(16).substr(2, 64),
       platform,
       tokenAddress,
       amount,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
 
@@ -388,17 +406,17 @@ class LendingService {
    */
   getTokenLogo(symbol) {
     const logos = {
-      'ETH': '🔷',
-      'DAI': '🟡',
-      'USDC': '💙',
-      'USDT': '💚',
-      'WBTC': '🟠',
-      'UNI': '🟣',
-      'LINK': '🔵',
-      'AAVE': '🔴',
-      'COMP': '🟢'
+      ETH: "🔷",
+      DAI: "🟡",
+      USDC: "💙",
+      USDT: "💚",
+      WBTC: "🟠",
+      UNI: "🟣",
+      LINK: "🔵",
+      AAVE: "🔴",
+      COMP: "🟢",
     };
-    return logos[symbol] || '💰';
+    return logos[symbol] || "💰";
   }
 
   /**
@@ -427,47 +445,47 @@ class LendingService {
   getFallbackCompoundTokens() {
     return [
       {
-        symbol: 'ETH',
-        name: 'Ethereum',
-        address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeEe',
-        cTokenAddress: '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5',
+        symbol: "ETH",
+        name: "Ethereum",
+        address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeEe",
+        cTokenAddress: "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5",
         decimals: 18,
-        platform: 'Compound',
-        logo: '🔷',
+        platform: "Compound",
+        logo: "🔷",
         supplyRate: 0.025,
         borrowRate: 0.045,
         totalSupply: 1000000,
         totalBorrow: 500000,
-        exchangeRate: 1.02
+        exchangeRate: 1.02,
       },
       {
-        symbol: 'DAI',
-        name: 'Dai Stablecoin',
-        address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
-        cTokenAddress: '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643',
+        symbol: "DAI",
+        name: "Dai Stablecoin",
+        address: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        cTokenAddress: "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643",
         decimals: 18,
-        platform: 'Compound',
-        logo: '🟡',
+        platform: "Compound",
+        logo: "🟡",
         supplyRate: 0.035,
         borrowRate: 0.055,
         totalSupply: 5000000,
         totalBorrow: 2000000,
-        exchangeRate: 1.01
+        exchangeRate: 1.01,
       },
       {
-        symbol: 'USDC',
-        name: 'USD Coin',
-        address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-        cTokenAddress: '0x39AA39c021dfbaE8faC545936693aC917d5E7563',
+        symbol: "USDC",
+        name: "USD Coin",
+        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        cTokenAddress: "0x39AA39c021dfbaE8faC545936693aC917d5E7563",
         decimals: 6,
-        platform: 'Compound',
-        logo: '💙',
+        platform: "Compound",
+        logo: "💙",
         supplyRate: 0.03,
         borrowRate: 0.05,
         totalSupply: 3000000,
         totalBorrow: 1500000,
-        exchangeRate: 1.005
-      }
+        exchangeRate: 1.005,
+      },
     ];
   }
 
@@ -478,47 +496,47 @@ class LendingService {
   getFallbackAaveReserves() {
     return [
       {
-        symbol: 'ETH',
-        name: 'Ethereum',
-        address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeEe',
+        symbol: "ETH",
+        name: "Ethereum",
+        address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeEe",
         decimals: 18,
-        platform: 'Aave',
-        logo: '🔷',
+        platform: "Aave",
+        logo: "🔷",
         supplyRate: 0.028,
         borrowRate: 0.048,
         totalSupply: 1200000,
         totalBorrow: 600000,
         utilizationRate: 0.5,
-        availableLiquidity: 600000
+        availableLiquidity: 600000,
       },
       {
-        symbol: 'USDC',
-        name: 'USD Coin',
-        address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+        symbol: "USDC",
+        name: "USD Coin",
+        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
         decimals: 6,
-        platform: 'Aave',
-        logo: '💙',
+        platform: "Aave",
+        logo: "💙",
         supplyRate: 0.032,
         borrowRate: 0.052,
         totalSupply: 4000000,
         totalBorrow: 2000000,
         utilizationRate: 0.5,
-        availableLiquidity: 2000000
+        availableLiquidity: 2000000,
       },
       {
-        symbol: 'DAI',
-        name: 'Dai Stablecoin',
-        address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+        symbol: "DAI",
+        name: "Dai Stablecoin",
+        address: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
         decimals: 18,
-        platform: 'Aave',
-        logo: '🟡',
+        platform: "Aave",
+        logo: "🟡",
         supplyRate: 0.038,
         borrowRate: 0.058,
         totalSupply: 6000000,
         totalBorrow: 3000000,
         utilizationRate: 0.5,
-        availableLiquidity: 3000000
-      }
+        availableLiquidity: 3000000,
+      },
     ];
   }
 
@@ -528,15 +546,15 @@ class LendingService {
    */
   static getSupportedTokens() {
     return [
-      { symbol: 'ETH', name: 'Ethereum', logo: '🔷' },
-      { symbol: 'DAI', name: 'Dai Stablecoin', logo: '🟡' },
-      { symbol: 'USDC', name: 'USD Coin', logo: '💙' },
-      { symbol: 'USDT', name: 'Tether USD', logo: '💚' },
-      { symbol: 'WBTC', name: 'Wrapped Bitcoin', logo: '🟠' },
-      { symbol: 'UNI', name: 'Uniswap', logo: '🟣' },
-      { symbol: 'LINK', name: 'Chainlink', logo: '🔵' },
-      { symbol: 'AAVE', name: 'Aave', logo: '🔴' },
-      { symbol: 'COMP', name: 'Compound', logo: '🟢' }
+      { symbol: "ETH", name: "Ethereum", logo: "🔷" },
+      { symbol: "DAI", name: "Dai Stablecoin", logo: "🟡" },
+      { symbol: "USDC", name: "USD Coin", logo: "💙" },
+      { symbol: "USDT", name: "Tether USD", logo: "💚" },
+      { symbol: "WBTC", name: "Wrapped Bitcoin", logo: "🟠" },
+      { symbol: "UNI", name: "Uniswap", logo: "🟣" },
+      { symbol: "LINK", name: "Chainlink", logo: "🔵" },
+      { symbol: "AAVE", name: "Aave", logo: "🔴" },
+      { symbol: "COMP", name: "Compound", logo: "🟢" },
     ];
   }
 
@@ -546,8 +564,8 @@ class LendingService {
    */
   static getPlatforms() {
     return [
-      { id: 'compound', name: 'Compound', logo: '🏦' },
-      { id: 'aave', name: 'Aave', logo: '🦇' }
+      { id: "compound", name: "Compound", logo: "🏦" },
+      { id: "aave", name: "Aave", logo: "🦇" },
     ];
   }
 }

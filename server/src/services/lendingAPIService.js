@@ -15,14 +15,14 @@ export class LendingAPIService extends BaseService {
       rateLimitMax: 30, // 30 requests per minute per protocol
       retryAttempts: 3,
       retryDelay: 2000,
-      ...config
+      ...config,
     });
 
     // Initialize API client
     this.apiClient = new APIClient({
       timeout: 20000,
       retryAttempts: 2,
-      userAgent: 'DeFi-Backend-Lending/1.0.0'
+      userAgent: 'DeFi-Backend-Lending/1.0.0',
     });
 
     // Supported protocols configuration
@@ -32,19 +32,19 @@ export class LendingAPIService extends BaseService {
         version: 'v2',
         apiEndpoints: {
           reserves: 'https://aave-api-v2.aave.com/data/reserves',
-          markets: 'https://aave-api-v2.aave.com/data/markets'
+          markets: 'https://aave-api-v2.aave.com/data/markets',
         },
-        rateLimit: { maxRequests: 10, windowMs: 1000 } // 10 requests per second
+        rateLimit: { maxRequests: 10, windowMs: 1000 }, // 10 requests per second
       },
       compound: {
         name: 'Compound',
         version: 'v2',
         apiEndpoints: {
           ctoken: 'https://api.compound.finance/api/v2/ctoken',
-          markets: 'https://api.compound.finance/api/v2/market'
+          markets: 'https://api.compound.finance/api/v2/market',
         },
-        rateLimit: { maxRequests: 10, windowMs: 1000 }
-      }
+        rateLimit: { maxRequests: 10, windowMs: 1000 },
+      },
     };
 
     // Supported tokens for lending
@@ -57,27 +57,63 @@ export class LendingAPIService extends BaseService {
       { symbol: 'UNI', name: 'Uniswap', decimals: 18, logo: '🟣' },
       { symbol: 'LINK', name: 'Chainlink', decimals: 18, logo: '🔵' },
       { symbol: 'AAVE', name: 'Aave', decimals: 18, logo: '🔴' },
-      { symbol: 'COMP', name: 'Compound', decimals: 18, logo: '🟢' }
+      { symbol: 'COMP', name: 'Compound', decimals: 18, logo: '🟢' },
     ];
 
     // Fallback lending rates for error cases
     this.fallbackRates = {
       aave: {
-        ETH: { supplyAPY: 0.028, borrowAPY: 0.048, totalSupply: 1200000, totalBorrow: 600000, utilizationRate: 0.5 },
-        USDC: { supplyAPY: 0.032, borrowAPY: 0.052, totalSupply: 4000000, totalBorrow: 2000000, utilizationRate: 0.5 },
-        DAI: { supplyAPY: 0.038, borrowAPY: 0.058, totalSupply: 6000000, totalBorrow: 3000000, utilizationRate: 0.5 }
+        ETH: {
+          supplyAPY: 0.028,
+          borrowAPY: 0.048,
+          totalSupply: 1200000,
+          totalBorrow: 600000,
+          utilizationRate: 0.5,
+        },
+        USDC: {
+          supplyAPY: 0.032,
+          borrowAPY: 0.052,
+          totalSupply: 4000000,
+          totalBorrow: 2000000,
+          utilizationRate: 0.5,
+        },
+        DAI: {
+          supplyAPY: 0.038,
+          borrowAPY: 0.058,
+          totalSupply: 6000000,
+          totalBorrow: 3000000,
+          utilizationRate: 0.5,
+        },
       },
       compound: {
-        ETH: { supplyAPY: 0.025, borrowAPY: 0.045, totalSupply: 1000000, totalBorrow: 500000, exchangeRate: 1.02 },
-        DAI: { supplyAPY: 0.035, borrowAPY: 0.055, totalSupply: 5000000, totalBorrow: 2000000, exchangeRate: 1.01 },
-        USDC: { supplyAPY: 0.03, borrowAPY: 0.05, totalSupply: 3000000, totalBorrow: 1500000, exchangeRate: 1.005 }
-      }
+        ETH: {
+          supplyAPY: 0.025,
+          borrowAPY: 0.045,
+          totalSupply: 1000000,
+          totalBorrow: 500000,
+          exchangeRate: 1.02,
+        },
+        DAI: {
+          supplyAPY: 0.035,
+          borrowAPY: 0.055,
+          totalSupply: 5000000,
+          totalBorrow: 2000000,
+          exchangeRate: 1.01,
+        },
+        USDC: {
+          supplyAPY: 0.03,
+          borrowAPY: 0.05,
+          totalSupply: 3000000,
+          totalBorrow: 1500000,
+          exchangeRate: 1.005,
+        },
+      },
     };
 
-    logger.info('LendingAPIService initialized', { 
+    logger.info('LendingAPIService initialized', {
       supportedProtocols: Object.keys(this.protocols),
       supportedTokens: this.supportedTokens.length,
-      cacheTimeout: this.config.cacheTimeout 
+      cacheTimeout: this.config.cacheTimeout,
     });
   }
 
@@ -88,12 +124,18 @@ export class LendingAPIService extends BaseService {
    * @param {Object} options - Additional options
    * @returns {Object} Lending rates data
    */
-  async getLendingRates(token, protocols = ['aave', 'compound'], _options = {}) {
+  async getLendingRates(
+    token,
+    protocols = ['aave', 'compound'],
+    _options = {}
+  ) {
     if (!token) {
       throw new ServiceError('Token symbol is required');
     }
 
-    const validProtocols = protocols.filter(protocol => this.protocols[protocol]);
+    const validProtocols = protocols.filter(
+      protocol => this.protocols[protocol]
+    );
     if (validProtocols.length === 0) {
       throw new ServiceError('No valid protocols specified');
     }
@@ -107,14 +149,17 @@ export class LendingAPIService extends BaseService {
     }
 
     try {
-      const ratePromises = validProtocols.map(async (protocol) => {
+      const ratePromises = validProtocols.map(async protocol => {
         // Check rate limiting
         if (!this.checkRateLimit(`lending_${protocol}`)) {
-          logger.warn('Rate limit exceeded for lending request', { protocol, token });
-          return { 
-            protocol, 
-            data: this.getFallbackTokenData(protocol, token), 
-            success: false 
+          logger.warn('Rate limit exceeded for lending request', {
+            protocol,
+            token,
+          });
+          return {
+            protocol,
+            data: this.getFallbackTokenData(protocol, token),
+            success: false,
           };
         }
 
@@ -124,15 +169,15 @@ export class LendingAPIService extends BaseService {
           });
           return { protocol, data: protocolData, success: true };
         } catch (error) {
-          logger.warn('Failed to fetch rates for protocol', { 
-            protocol, 
-            token, 
-            error: error.message 
+          logger.warn('Failed to fetch rates for protocol', {
+            protocol,
+            token,
+            error: error.message,
           });
-          return { 
-            protocol, 
-            data: this.getFallbackTokenData(protocol, token), 
-            success: false 
+          return {
+            protocol,
+            data: this.getFallbackTokenData(protocol, token),
+            success: false,
           };
         }
       });
@@ -157,25 +202,24 @@ export class LendingAPIService extends BaseService {
         token,
         protocols: protocolRates,
         timestamp: Date.now(),
-        source: hasAnySuccess ? 'backend_api' : 'fallback'
+        source: hasAnySuccess ? 'backend_api' : 'fallback',
       };
 
       // Cache the result
       this.setCachedData(cacheKey, lendingData);
 
-      logger.info('Lending rates fetched successfully', { 
-        token, 
+      logger.info('Lending rates fetched successfully', {
+        token,
         protocols: validProtocols,
-        ratesCount: protocolRates.length
+        ratesCount: protocolRates.length,
       });
 
       return lendingData;
-
     } catch (error) {
-      logger.error('Failed to fetch lending rates', { 
-        token, 
-        protocols: validProtocols, 
-        error: error.message 
+      logger.error('Failed to fetch lending rates', {
+        token,
+        protocols: validProtocols,
+        error: error.message,
       });
 
       // Return fallback data on error
@@ -218,18 +262,17 @@ export class LendingAPIService extends BaseService {
       // Cache the result
       this.setCachedData(cacheKey, protocolData);
 
-      logger.info('Protocol data fetched successfully', { 
-        protocol, 
-        tokensCount: protocolData.tokens.length 
+      logger.info('Protocol data fetched successfully', {
+        protocol,
+        tokensCount: protocolData.tokens.length,
       });
 
       return protocolData;
-
     } catch (error) {
-      logger.error('Failed to fetch protocol data', { 
-        protocol, 
-        tokens, 
-        error: error.message 
+      logger.error('Failed to fetch protocol data', {
+        protocol,
+        tokens,
+        error: error.message,
       });
 
       // Return fallback data on error
@@ -253,23 +296,31 @@ export class LendingAPIService extends BaseService {
     }
 
     try {
-      const protocolPromises = Object.keys(this.protocols).map(async (protocol) => {
-        try {
-          const tokenSymbols = this.supportedTokens.map(t => t.symbol);
-          const protocolData = await this.getProtocolData(protocol, tokenSymbols);
-          return { protocol, data: protocolData, success: true };
-        } catch (error) {
-          logger.warn('Failed to fetch all rates for protocol', { 
-            protocol, 
-            error: error.message 
-          });
-          return { 
-            protocol, 
-            data: this.getFallbackProtocolData(protocol, this.supportedTokens.map(t => t.symbol)), 
-            success: false 
-          };
+      const protocolPromises = Object.keys(this.protocols).map(
+        async protocol => {
+          try {
+            const tokenSymbols = this.supportedTokens.map(t => t.symbol);
+            const protocolData = await this.getProtocolData(
+              protocol,
+              tokenSymbols
+            );
+            return { protocol, data: protocolData, success: true };
+          } catch (error) {
+            logger.warn('Failed to fetch all rates for protocol', {
+              protocol,
+              error: error.message,
+            });
+            return {
+              protocol,
+              data: this.getFallbackProtocolData(
+                protocol,
+                this.supportedTokens.map(t => t.symbol)
+              ),
+              success: false,
+            };
+          }
         }
-      });
+      );
 
       const results = await Promise.allSettled(protocolPromises);
       const allRates = { protocols: {} };
@@ -279,7 +330,10 @@ export class LendingAPIService extends BaseService {
         if (result.status === 'fulfilled') {
           allRates.protocols[protocol] = result.value.data;
         } else {
-          allRates.protocols[protocol] = this.getFallbackProtocolData(protocol, this.supportedTokens.map(t => t.symbol));
+          allRates.protocols[protocol] = this.getFallbackProtocolData(
+            protocol,
+            this.supportedTokens.map(t => t.symbol)
+          );
         }
       });
 
@@ -290,10 +344,11 @@ export class LendingAPIService extends BaseService {
       this.setCachedData(cacheKey, allRates);
 
       return allRates;
-
     } catch (error) {
-      logger.error('Failed to fetch all protocol rates', { error: error.message });
-      
+      logger.error('Failed to fetch all protocol rates', {
+        error: error.message,
+      });
+
       // Return fallback data
       const fallbackData = this.getFallbackAllProtocolRates();
       this.setCachedData(cacheKey, fallbackData);
@@ -309,12 +364,14 @@ export class LendingAPIService extends BaseService {
    */
   async fetchProtocolDataFromAPI(protocol, tokens = []) {
     switch (protocol) {
-    case 'aave':
-      return await this.fetchAaveData(tokens);
-    case 'compound':
-      return await this.fetchCompoundData(tokens);
-    default:
-      throw new ServiceError(`No API implementation for protocol: ${protocol}`);
+      case 'aave':
+        return await this.fetchAaveData(tokens);
+      case 'compound':
+        return await this.fetchCompoundData(tokens);
+      default:
+        throw new ServiceError(
+          `No API implementation for protocol: ${protocol}`
+        );
     }
   }
 
@@ -329,7 +386,7 @@ export class LendingAPIService extends BaseService {
 
     const response = await this.apiClient.get(url, {
       rateLimitKey: 'aave',
-      rateLimit: protocolConfig.rateLimit
+      rateLimit: protocolConfig.rateLimit,
     });
 
     if (!Array.isArray(response)) {
@@ -337,9 +394,10 @@ export class LendingAPIService extends BaseService {
     }
 
     const reserves = response;
-    const filteredReserves = tokens.length > 0 
-      ? reserves.filter(reserve => tokens.includes(reserve.symbol))
-      : reserves;
+    const filteredReserves =
+      tokens.length > 0
+        ? reserves.filter(reserve => tokens.includes(reserve.symbol))
+        : reserves;
 
     const formattedTokens = filteredReserves.map(reserve => ({
       symbol: reserve.symbol,
@@ -353,14 +411,14 @@ export class LendingAPIService extends BaseService {
       totalSupply: parseFloat(reserve.totalLiquidity || 0),
       totalBorrow: parseFloat(reserve.totalVariableDebt || 0),
       utilizationRate: parseFloat(reserve.utilizationRate || 0) / 1e25,
-      availableLiquidity: parseFloat(reserve.availableLiquidity || 0)
+      availableLiquidity: parseFloat(reserve.availableLiquidity || 0),
     }));
 
     return {
       protocol: 'aave',
       tokens: formattedTokens,
       timestamp: Date.now(),
-      source: 'aave_api'
+      source: 'aave_api',
     };
   }
 
@@ -375,7 +433,7 @@ export class LendingAPIService extends BaseService {
 
     const response = await this.apiClient.get(url, {
       rateLimitKey: 'compound',
-      rateLimit: protocolConfig.rateLimit
+      rateLimit: protocolConfig.rateLimit,
     });
 
     if (!response.cToken || !Array.isArray(response.cToken)) {
@@ -383,9 +441,10 @@ export class LendingAPIService extends BaseService {
     }
 
     const cTokens = response.cToken;
-    const filteredTokens = tokens.length > 0 
-      ? cTokens.filter(token => tokens.includes(token.symbol))
-      : cTokens;
+    const filteredTokens =
+      tokens.length > 0
+        ? cTokens.filter(token => tokens.includes(token.symbol))
+        : cTokens;
 
     const formattedTokens = filteredTokens.map(token => ({
       symbol: token.symbol,
@@ -399,14 +458,14 @@ export class LendingAPIService extends BaseService {
       borrowAPY: parseFloat(token.borrow_rate?.value || 0),
       totalSupply: parseFloat(token.total_supply?.value || 0),
       totalBorrow: parseFloat(token.total_borrow?.value || 0),
-      exchangeRate: parseFloat(token.exchange_rate?.value || 0)
+      exchangeRate: parseFloat(token.exchange_rate?.value || 0),
     }));
 
     return {
       protocol: 'compound',
       tokens: formattedTokens,
       timestamp: Date.now(),
-      source: 'compound_api'
+      source: 'compound_api',
     };
   }
 
@@ -419,15 +478,17 @@ export class LendingAPIService extends BaseService {
   async getProtocolTokenData(protocol, token) {
     const protocolData = await this.fetchProtocolDataFromAPI(protocol, [token]);
     const tokenData = protocolData.tokens.find(t => t.symbol === token);
-    
+
     if (!tokenData) {
-      throw new ServiceError(`Token ${token} not found in ${protocol} protocol`);
+      throw new ServiceError(
+        `Token ${token} not found in ${protocol} protocol`
+      );
     }
 
     return {
       protocol,
       ...tokenData,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 
@@ -462,7 +523,7 @@ export class LendingAPIService extends BaseService {
         totalSupply: 1000000,
         totalBorrow: 500000,
         timestamp: Date.now(),
-        source: 'fallback'
+        source: 'fallback',
       };
     }
 
@@ -474,7 +535,7 @@ export class LendingAPIService extends BaseService {
       logo: this.getTokenLogo(token),
       ...fallbackData,
       timestamp: Date.now(),
-      source: 'fallback'
+      source: 'fallback',
     };
   }
 
@@ -485,7 +546,7 @@ export class LendingAPIService extends BaseService {
    * @returns {Object} Fallback lending rates
    */
   getFallbackLendingRates(token, protocols) {
-    const protocolRates = protocols.map(protocol => 
+    const protocolRates = protocols.map(protocol =>
       this.getFallbackTokenData(protocol, token)
     );
 
@@ -493,7 +554,7 @@ export class LendingAPIService extends BaseService {
       token,
       protocols: protocolRates,
       timestamp: Date.now(),
-      source: 'fallback'
+      source: 'fallback',
     };
   }
 
@@ -504,7 +565,7 @@ export class LendingAPIService extends BaseService {
    * @returns {Object} Fallback protocol data
    */
   getFallbackProtocolData(protocol, tokens) {
-    const tokenData = tokens.map(token => 
+    const tokenData = tokens.map(token =>
       this.getFallbackTokenData(protocol, token)
     );
 
@@ -512,7 +573,7 @@ export class LendingAPIService extends BaseService {
       protocol,
       tokens: tokenData,
       timestamp: Date.now(),
-      source: 'fallback'
+      source: 'fallback',
     };
   }
 
@@ -525,13 +586,16 @@ export class LendingAPIService extends BaseService {
     const tokenSymbols = this.supportedTokens.map(t => t.symbol);
 
     Object.keys(this.protocols).forEach(protocol => {
-      protocols[protocol] = this.getFallbackProtocolData(protocol, tokenSymbols);
+      protocols[protocol] = this.getFallbackProtocolData(
+        protocol,
+        tokenSymbols
+      );
     });
 
     return {
       protocols,
       timestamp: Date.now(),
-      source: 'fallback'
+      source: 'fallback',
     };
   }
 
@@ -558,25 +622,29 @@ export class LendingAPIService extends BaseService {
    */
   getCachedData(key) {
     const data = super.getCachedData(key);
-    
+
     // Check for cache corruption
     if (data !== null && data !== undefined) {
       // Validate data structure based on cache key type
       if (key.includes('lending_rates_')) {
         if (!data.token || !data.protocols || !Array.isArray(data.protocols)) {
-          logger.warn('Cache corruption detected, clearing corrupted entry', { key });
+          logger.warn('Cache corruption detected, clearing corrupted entry', {
+            key,
+          });
           super.clearCache(key);
           return null;
         }
       } else if (key.includes('protocol_data_')) {
         if (!data.protocol || !data.tokens || !Array.isArray(data.tokens)) {
-          logger.warn('Cache corruption detected, clearing corrupted entry', { key });
+          logger.warn('Cache corruption detected, clearing corrupted entry', {
+            key,
+          });
           super.clearCache(key);
           return null;
         }
       }
     }
-    
+
     return data;
   }
 
@@ -590,7 +658,9 @@ export class LendingAPIService extends BaseService {
       super.clearCache(`lending_rates_${token}_${protocol}`);
     } else if (protocol) {
       // Clear all cache entries for protocol
-      const keys = Array.from(this.cache.keys()).filter(key => key.includes(protocol));
+      const keys = Array.from(this.cache.keys()).filter(key =>
+        key.includes(protocol)
+      );
       keys.forEach(key => super.clearCache(key));
     } else {
       // Clear all lending cache entries

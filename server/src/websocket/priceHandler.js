@@ -11,26 +11,26 @@ export class PriceWebSocketHandler {
     this.config = {
       maxSubscriptionsPerClient: config.maxSubscriptionsPerClient || 20,
       heartbeatInterval: config.heartbeatInterval || 30000,
-      ...config
+      ...config,
     };
 
     // Track client subscriptions: clientId -> Set of symbols
     this.clientSubscriptions = new Map();
-    
+
     // Track symbol subscribers: symbol -> Set of clientIds
     this.symbolSubscribers = new Map();
-    
+
     // Track WebSocket connections: clientId -> { ws, lastActivity }
     this.clients = new Map();
-    
+
     // Price service unsubscribe functions
     this.priceServiceUnsubscribers = new Map();
-    
+
     // Heartbeat interval
     this.heartbeatIntervalId = null;
 
     logger.info('PriceWebSocketHandler initialized', {
-      maxSubscriptionsPerClient: this.config.maxSubscriptionsPerClient
+      maxSubscriptionsPerClient: this.config.maxSubscriptionsPerClient,
     });
   }
 
@@ -55,14 +55,14 @@ export class PriceWebSocketHandler {
     this.clients.set(clientId, {
       ws,
       lastActivity: Date.now(),
-      isAlive: true
+      isAlive: true,
     });
 
     this.clientSubscriptions.set(clientId, new Set());
 
     logger.info('Price WebSocket client connected', {
       clientId,
-      totalClients: this.clients.size
+      totalClients: this.clients.size,
     });
 
     // Set up ping/pong for connection health
@@ -91,27 +91,27 @@ export class PriceWebSocketHandler {
 
     try {
       switch (message.type) {
-      case 'subscribe':
-        await this.handleSubscribe(clientId, message.symbols);
-        break;
+        case 'subscribe':
+          await this.handleSubscribe(clientId, message.symbols);
+          break;
 
-      case 'unsubscribe':
-        await this.handleUnsubscribe(clientId, message.symbols);
-        break;
+        case 'unsubscribe':
+          await this.handleUnsubscribe(clientId, message.symbols);
+          break;
 
-      case 'get_subscriptions':
-        this.sendCurrentSubscriptions(clientId);
-        break;
+        case 'get_subscriptions':
+          this.sendCurrentSubscriptions(clientId);
+          break;
 
-      default:
-        // Unknown message type for price handler - ignore
-        break;
+        default:
+          // Unknown message type for price handler - ignore
+          break;
       }
     } catch (error) {
       logger.error('Error handling price message', {
         clientId,
         messageType: message.type,
-        error: error.message
+        error: error.message,
       });
       this.sendError(clientId, error.message);
     }
@@ -123,7 +123,7 @@ export class PriceWebSocketHandler {
    */
   handleDisconnection(clientId) {
     const subscriptions = this.clientSubscriptions.get(clientId);
-    
+
     if (subscriptions) {
       // Unsubscribe from all symbols
       for (const symbol of subscriptions) {
@@ -136,7 +136,7 @@ export class PriceWebSocketHandler {
 
     logger.info('Price WebSocket client disconnected', {
       clientId,
-      remainingClients: this.clients.size
+      remainingClients: this.clients.size,
     });
   }
 
@@ -147,7 +147,10 @@ export class PriceWebSocketHandler {
    */
   async handleSubscribe(clientId, symbols) {
     if (!Array.isArray(symbols) || symbols.length === 0) {
-      this.sendError(clientId, 'Invalid subscription: symbols must be a non-empty array');
+      this.sendError(
+        clientId,
+        'Invalid subscription: symbols must be a non-empty array'
+      );
       return;
     }
 
@@ -162,7 +165,9 @@ export class PriceWebSocketHandler {
     try {
       priceFeedService = serviceContainer.get('PriceFeedAPIService');
     } catch (error) {
-      logger.error('PriceFeedAPIService not available', { error: error.message });
+      logger.error('PriceFeedAPIService not available', {
+        error: error.message,
+      });
       this.sendError(clientId, 'Price service unavailable');
       return;
     }
@@ -174,22 +179,31 @@ export class PriceWebSocketHandler {
       .filter(s => supportedSymbols[s]);
 
     if (validSymbols.length === 0) {
-      this.sendError(clientId, `No valid symbols provided. Supported: ${Object.keys(supportedSymbols).join(', ')}`);
+      this.sendError(
+        clientId,
+        `No valid symbols provided. Supported: ${Object.keys(supportedSymbols).join(', ')}`
+      );
       return;
     }
 
     // Check subscription limit
     const currentCount = clientSubs.size;
     const newSymbols = validSymbols.filter(s => !clientSubs.has(s));
-    
-    if (currentCount + newSymbols.length > this.config.maxSubscriptionsPerClient) {
-      this.sendError(clientId, `Subscription limit exceeded. Maximum: ${this.config.maxSubscriptionsPerClient}`);
+
+    if (
+      currentCount + newSymbols.length >
+      this.config.maxSubscriptionsPerClient
+    ) {
+      this.sendError(
+        clientId,
+        `Subscription limit exceeded. Maximum: ${this.config.maxSubscriptionsPerClient}`
+      );
       return;
     }
 
     // Add subscriptions
     const subscribedSymbols = [];
-    
+
     for (const symbol of validSymbols) {
       if (!clientSubs.has(symbol)) {
         clientSubs.add(symbol);
@@ -203,13 +217,13 @@ export class PriceWebSocketHandler {
       type: 'subscription_confirmed',
       symbols: Array.from(clientSubs),
       added: subscribedSymbols,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     logger.info('Client subscribed to symbols', {
       clientId,
       newSymbols: subscribedSymbols,
-      totalSubscriptions: clientSubs.size
+      totalSubscriptions: clientSubs.size,
     });
 
     // Send initial prices for newly subscribed symbols
@@ -223,7 +237,10 @@ export class PriceWebSocketHandler {
    */
   async handleUnsubscribe(clientId, symbols) {
     if (!Array.isArray(symbols) || symbols.length === 0) {
-      this.sendError(clientId, 'Invalid unsubscription: symbols must be a non-empty array');
+      this.sendError(
+        clientId,
+        'Invalid unsubscription: symbols must be a non-empty array'
+      );
       return;
     }
 
@@ -234,7 +251,7 @@ export class PriceWebSocketHandler {
     }
 
     const unsubscribedSymbols = [];
-    
+
     for (const symbol of symbols) {
       const upperSymbol = symbol.toUpperCase();
       if (clientSubs.has(upperSymbol)) {
@@ -249,13 +266,13 @@ export class PriceWebSocketHandler {
       type: 'unsubscription_confirmed',
       symbols: Array.from(clientSubs),
       removed: unsubscribedSymbols,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     logger.info('Client unsubscribed from symbols', {
       clientId,
       removedSymbols: unsubscribedSymbols,
-      remainingSubscriptions: clientSubs.size
+      remainingSubscriptions: clientSubs.size,
     });
   }
 
@@ -268,11 +285,11 @@ export class PriceWebSocketHandler {
   addClientToSymbol(clientId, symbol, priceFeedService) {
     if (!this.symbolSubscribers.has(symbol)) {
       this.symbolSubscribers.set(symbol, new Set());
-      
+
       // Start real-time subscription for this symbol
       this.startPriceSubscription(symbol, priceFeedService);
     }
-    
+
     this.symbolSubscribers.get(symbol).add(clientId);
   }
 
@@ -283,10 +300,10 @@ export class PriceWebSocketHandler {
    */
   removeClientFromSymbol(clientId, symbol) {
     const subscribers = this.symbolSubscribers.get(symbol);
-    
+
     if (subscribers) {
       subscribers.delete(clientId);
-      
+
       // If no more subscribers, stop the price subscription
       if (subscribers.size === 0) {
         this.stopPriceSubscription(symbol);
@@ -309,7 +326,7 @@ export class PriceWebSocketHandler {
 
     const unsubscribe = priceFeedService.subscribeToRealTimePrices(
       [symbol],
-      (update) => this.handlePriceUpdate(symbol, update)
+      update => this.handlePriceUpdate(symbol, update)
     );
 
     this.priceServiceUnsubscribers.set(symbol, unsubscribe);
@@ -321,7 +338,7 @@ export class PriceWebSocketHandler {
    */
   stopPriceSubscription(symbol) {
     const unsubscribe = this.priceServiceUnsubscribers.get(symbol);
-    
+
     if (unsubscribe) {
       logger.info('Stopping price subscription', { symbol });
       unsubscribe();
@@ -336,7 +353,7 @@ export class PriceWebSocketHandler {
    */
   handlePriceUpdate(symbol, update) {
     const subscribers = this.symbolSubscribers.get(symbol);
-    
+
     if (!subscribers || subscribers.size === 0) {
       return;
     }
@@ -349,21 +366,21 @@ export class PriceWebSocketHandler {
         type: 'price_update',
         symbol,
         data: update.data,
-        timestamp: update.timestamp || Date.now()
+        timestamp: update.timestamp || Date.now(),
       };
     } else if (update.type === 'connection') {
       message = {
         type: 'connection_status',
         symbol,
         status: update.status,
-        timestamp: update.timestamp || Date.now()
+        timestamp: update.timestamp || Date.now(),
       };
     } else if (update.type === 'error') {
       message = {
         type: 'subscription_error',
         symbol,
         message: update.message,
-        timestamp: update.timestamp || Date.now()
+        timestamp: update.timestamp || Date.now(),
       };
     } else {
       // Unknown update type
@@ -385,8 +402,12 @@ export class PriceWebSocketHandler {
   async sendInitialPrices(clientId, symbols, priceFeedService) {
     for (const symbol of symbols) {
       try {
-        const priceData = await priceFeedService.getCryptocurrencyPrice(symbol, 'USD', true);
-        
+        const priceData = await priceFeedService.getCryptocurrencyPrice(
+          symbol,
+          'USD',
+          true
+        );
+
         this.sendToClient(clientId, {
           type: 'price_update',
           symbol,
@@ -396,16 +417,16 @@ export class PriceWebSocketHandler {
             change_24h: priceData.change_24h,
             volume_24h: priceData.volume_24h,
             market_cap: priceData.market_cap,
-            source: priceData.source
+            source: priceData.source,
           },
           initial: true,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       } catch (error) {
-        logger.warn('Failed to send initial price', { 
-          clientId, 
-          symbol, 
-          error: error.message 
+        logger.warn('Failed to send initial price', {
+          clientId,
+          symbol,
+          error: error.message,
         });
       }
     }
@@ -417,11 +438,11 @@ export class PriceWebSocketHandler {
    */
   sendCurrentSubscriptions(clientId) {
     const subscriptions = this.clientSubscriptions.get(clientId);
-    
+
     this.sendToClient(clientId, {
       type: 'subscriptions',
       symbols: subscriptions ? Array.from(subscriptions) : [],
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -432,14 +453,15 @@ export class PriceWebSocketHandler {
    */
   sendToClient(clientId, message) {
     const client = this.clients.get(clientId);
-    
-    if (client && client.ws.readyState === 1) { // WebSocket.OPEN
+
+    if (client && client.ws.readyState === 1) {
+      // WebSocket.OPEN
       try {
         client.ws.send(JSON.stringify(message));
       } catch (error) {
         logger.error('Failed to send message to client', {
           clientId,
-          error: error.message
+          error: error.message,
         });
       }
     }
@@ -454,7 +476,7 @@ export class PriceWebSocketHandler {
     this.sendToClient(clientId, {
       type: 'error',
       message: errorMessage,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -497,9 +519,10 @@ export class PriceWebSocketHandler {
     return {
       connectedClients: this.clients.size,
       activeSubscriptions: this.symbolSubscribers.size,
-      totalClientSubscriptions: Array.from(this.clientSubscriptions.values())
-        .reduce((sum, subs) => sum + subs.size, 0),
-      symbolSubscriberCounts: symbolCounts
+      totalClientSubscriptions: Array.from(
+        this.clientSubscriptions.values()
+      ).reduce((sum, subs) => sum + subs.size, 0),
+      symbolSubscriberCounts: symbolCounts,
     };
   }
 
@@ -530,4 +553,3 @@ export class PriceWebSocketHandler {
     logger.info('PriceWebSocketHandler cleanup complete');
   }
 }
-

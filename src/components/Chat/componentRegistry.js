@@ -1,24 +1,24 @@
 // Component Registry for Chat Interface
 // Maps component names to React component imports for dynamic rendering
 
-import TokenSwap from '../TokenSwap';
-import NetworkStatus from '../NetworkStatus';
-import YourAssets from '../YourAssets';
-import LendingSection from '../LendingSection';
-import PerpetualsSection from '../PerpetualsSection';
-import RecentActivity from '../RecentActivity';
+import TokenSwap from "../TokenSwap";
+import NetworkStatus from "../NetworkStatus";
+import YourAssets from "../YourAssets";
+import LendingSection from "../LendingSection";
+import PerpetualsSection from "../PerpetualsSection";
+import RecentActivity from "../RecentActivity";
 
 /**
  * ComponentRegistry - Maps component names (strings) to React component references
  * This allows the chat interface to dynamically render components based on agent responses
  */
 export const ComponentRegistry = {
-  'TokenSwap': TokenSwap,
-  'NetworkStatus': NetworkStatus,
-  'YourAssets': YourAssets,
-  'LendingSection': LendingSection,
-  'PerpetualsSection': PerpetualsSection,
-  'RecentActivity': RecentActivity
+  TokenSwap: TokenSwap,
+  NetworkStatus: NetworkStatus,
+  YourAssets: YourAssets,
+  LendingSection: LendingSection,
+  PerpetualsSection: PerpetualsSection,
+  RecentActivity: RecentActivity,
 };
 
 /**

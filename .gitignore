@@ -30,6 +30,7 @@ yarn-error.log*
 # IDE and editor files
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~

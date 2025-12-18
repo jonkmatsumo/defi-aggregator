@@ -7,13 +7,15 @@ const mockLogger = {
   error: jest.fn(),
   debug: jest.fn(),
   log: jest.fn(),
-  child: jest.fn(function () { return mockLogger; }),
-  add: jest.fn()
+  child: jest.fn(function () {
+    return mockLogger;
+  }),
+  add: jest.fn(),
 };
 
 // Create a callable format function that also has methods
 // winston.format is used as both a function and has static methods
-const mockFormatInstance = { transform: jest.fn((info) => info) };
+const mockFormatInstance = { transform: jest.fn(info => info) };
 
 const createMockFormat = () => {
   // This is the base format function - when called with a function, it returns a format instance factory
@@ -41,15 +43,15 @@ jest.unstable_mockModule('winston', () => ({
     format: mockFormat,
     transports: {
       Console: jest.fn(),
-      File: jest.fn()
-    }
+      File: jest.fn(),
+    },
   },
   createLogger: jest.fn(() => mockLogger),
   format: mockFormat,
   transports: {
     Console: jest.fn(),
-    File: jest.fn()
-  }
+    File: jest.fn(),
+  },
 }));
 
 // Now import the module under test
@@ -67,7 +69,7 @@ const {
   logCacheOperation,
   logAudit,
   getLoggerStats,
-  resetLoggerStats
+  resetLoggerStats,
 } = loggerModule;
 
 describe('Logger Utilities', () => {
@@ -154,10 +156,12 @@ describe('Logger Utilities', () => {
     it('should log with timestamp and metadata', () => {
       logStructured('info', 'Test message', { data: 'value' });
 
-      expect(logger.info).toHaveBeenCalledWith(expect.objectContaining({
-        message: 'Test message',
-        data: 'value'
-      }));
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Test message',
+          data: 'value',
+        })
+      );
     });
 
     it('should support different log levels', () => {
@@ -210,11 +214,14 @@ describe('Logger Utilities', () => {
     it('should log when duration exceeds threshold', () => {
       logSlowOperation('slow-op', 2000, 1000);
 
-      expect(logger.warn).toHaveBeenCalledWith('Slow operation detected', expect.objectContaining({
-        operation: 'slow-op',
-        duration: 2000,
-        threshold: 1000
-      }));
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Slow operation detected',
+        expect.objectContaining({
+          operation: 'slow-op',
+          duration: 2000,
+          threshold: 1000,
+        })
+      );
     });
 
     it('should not log when duration is below threshold', () => {
@@ -231,7 +238,7 @@ describe('Logger Utilities', () => {
         allowed: false,
         remaining: 0,
         resetTime: Date.now() + 60000,
-        reason: 'limit exceeded'
+        reason: 'limit exceeded',
       });
 
       expect(logger.warn).toHaveBeenCalled();
@@ -241,7 +248,7 @@ describe('Logger Utilities', () => {
       logRateLimitStatus('api-key', {
         allowed: true,
         remaining: 5,
-        resetTime: Date.now() + 60000
+        resetTime: Date.now() + 60000,
       });
 
       expect(logger.debug).toHaveBeenCalled();
@@ -266,11 +273,14 @@ describe('Logger Utilities', () => {
     it('should log cache get with hit status', () => {
       logCacheOperation('get', 'cache-key', true);
 
-      expect(logger.debug).toHaveBeenCalledWith('Cache operation', expect.objectContaining({
-        operation: 'get',
-        key: 'cache-key',
-        hit: true
-      }));
+      expect(logger.debug).toHaveBeenCalledWith(
+        'Cache operation',
+        expect.objectContaining({
+          operation: 'get',
+          key: 'cache-key',
+          hit: true,
+        })
+      );
     });
   });
 
@@ -278,11 +288,14 @@ describe('Logger Utilities', () => {
     it('should log audit events', () => {
       logAudit('user_login', { userId: '123', ip: '192.168.1.1' });
 
-      expect(logger.info).toHaveBeenCalledWith('Audit', expect.objectContaining({
-        type: 'audit',
-        action: 'user_login',
-        userId: '123'
-      }));
+      expect(logger.info).toHaveBeenCalledWith(
+        'Audit',
+        expect.objectContaining({
+          type: 'audit',
+          action: 'user_login',
+          userId: '123',
+        })
+      );
     });
   });
 

@@ -3,16 +3,16 @@ import { jest } from '@jest/globals';
 
 // Mock dependencie
 const mockLLMInterface = {
-  generateResponse: jest.fn()
+  generateResponse: jest.fn(),
 };
 
 const mockToolRegistry = {
   getToolDefinitions: jest.fn().mockReturnValue([]),
-  executeTool: jest.fn()
+  executeTool: jest.fn(),
 };
 
 const mockConfig = {
-  maxHistoryLength: 10
+  maxHistoryLength: 10,
 };
 
 describe('ConversationManager Integration', () => {
@@ -20,7 +20,12 @@ describe('ConversationManager Integration', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    manager = new ConversationManager(mockLLMInterface, mockToolRegistry, { generateIntent: jest.fn() }, mockConfig);
+    manager = new ConversationManager(
+      mockLLMInterface,
+      mockToolRegistry,
+      { generateIntent: jest.fn() },
+      mockConfig
+    );
   });
 
   afterEach(() => {
@@ -41,31 +46,36 @@ describe('ConversationManager Integration', () => {
     mockLLMInterface.generateResponse
       .mockResolvedValueOnce({
         content: null,
-        toolCalls: [{
-          id: toolCallId,
-          type: 'function',
-          function: {
-            name: toolName,
-            arguments: JSON.stringify(toolArgs)
-          }
-        }]
+        toolCalls: [
+          {
+            id: toolCallId,
+            type: 'function',
+            function: {
+              name: toolName,
+              arguments: JSON.stringify(toolArgs),
+            },
+          },
+        ],
       })
-    // 2. Second LLM response (final answer)
+      // 2. Second LLM response (final answer)
       .mockResolvedValueOnce({
         content: 'The price of ETH is $2000.',
-        toolCalls: []
+        toolCalls: [],
       });
 
     mockToolRegistry.executeTool.mockResolvedValue({
       success: true,
       result: { price: 2000 },
-      executionTime: 10
+      executionTime: 10,
     });
 
     await manager.processMessage(sessionId, userMessage);
 
     // Verify tool execution
-    expect(mockToolRegistry.executeTool).toHaveBeenCalledWith(toolName, toolArgs);
+    expect(mockToolRegistry.executeTool).toHaveBeenCalledWith(
+      toolName,
+      toolArgs
+    );
 
     // Verify follow-up LLM call structure
     expect(mockLLMInterface.generateResponse).toHaveBeenCalledTimes(2);
@@ -80,7 +90,9 @@ describe('ConversationManager Integration', () => {
     expect(toolMessage.content).toBe(JSON.stringify({ price: 2000 }));
 
     // Verify assistant message with tool calls is present and has correct format
-    const assistantMessage = messages.find(m => m.role === 'assistant' && m.tool_calls);
+    const assistantMessage = messages.find(
+      m => m.role === 'assistant' && m.tool_calls
+    );
     expect(assistantMessage).toBeDefined();
     expect(assistantMessage.tool_calls[0].id).toBe(toolCallId);
   });
@@ -90,10 +102,12 @@ describe('ConversationManager Integration', () => {
 
     mockLLMInterface.generateResponse.mockResolvedValueOnce({
       content: null,
-      toolCalls: [{
-        // Missing ID and Name
-        function: {}
-      }]
+      toolCalls: [
+        {
+          // Missing ID and Name
+          function: {},
+        },
+      ],
     });
 
     await manager.processMessage(sessionId, 'invalid tool');

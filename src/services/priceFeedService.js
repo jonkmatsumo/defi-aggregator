@@ -1,12 +1,12 @@
 /**
  * Price Feed Service - Frontend Client
- * 
+ *
  * Fetches cryptocurrency prices from backend API and WebSocket.
  * This eliminates CORS issues with external price APIs and centralizes
  * rate limiting, caching, and real-time data handling on the server.
  */
 
-import apiClient from './apiClient';
+import apiClient from "./apiClient";
 
 class PriceFeedService {
   constructor() {
@@ -20,26 +20,26 @@ class PriceFeedService {
     this.reconnectDelay = 1000;
     this.maxReconnectDelay = 30000;
     this.pendingSubscriptions = new Set(); // Symbols waiting to be subscribed after connect
-    
+
     // Map token pairs to backend symbols
     this.pairToSymbol = {
-      'BTC/USDT': 'BTC',
-      'ETH/USDT': 'ETH',
-      'ETH/USD': 'ETH',
-      'SOL/USDT': 'SOL',
-      'MATIC/USDT': 'MATIC',
-      'USDC/USDT': 'USDC',
-      'LINK/USDT': 'LINK',
-      'UNI/USDT': 'UNI'
+      "BTC/USDT": "BTC",
+      "ETH/USDT": "ETH",
+      "ETH/USD": "ETH",
+      "SOL/USDT": "SOL",
+      "MATIC/USDT": "MATIC",
+      "USDC/USDT": "USDC",
+      "LINK/USDT": "LINK",
+      "UNI/USDT": "UNI",
     };
 
     // Supported token pairs
     this.supportedPairs = {
-      'BTC/USDT': { symbol: 'BTC', name: 'Bitcoin' },
-      'ETH/USDT': { symbol: 'ETH', name: 'Ethereum' },
-      'ETH/USD': { symbol: 'ETH', name: 'Ethereum' },
-      'SOL/USDT': { symbol: 'SOL', name: 'Solana' },
-      'MATIC/USDT': { symbol: 'MATIC', name: 'Polygon' }
+      "BTC/USDT": { symbol: "BTC", name: "Bitcoin" },
+      "ETH/USDT": { symbol: "ETH", name: "Ethereum" },
+      "ETH/USD": { symbol: "ETH", name: "Ethereum" },
+      "SOL/USDT": { symbol: "SOL", name: "Solana" },
+      "MATIC/USDT": { symbol: "MATIC", name: "Polygon" },
     };
   }
 
@@ -93,7 +93,7 @@ class PriceFeedService {
     const subscribers = this.subscribers.get(tokenPair);
     if (subscribers) {
       subscribers.delete(callback);
-      
+
       // If no more subscribers for this pair, unsubscribe from backend
       if (subscribers.size === 0) {
         const symbol = this.pairToSymbol[tokenPair];
@@ -106,17 +106,20 @@ class PriceFeedService {
    * Connect to backend WebSocket
    */
   connect() {
-    if (this.wsConnection && this.wsConnection.readyState === WebSocket.CONNECTING) {
+    if (
+      this.wsConnection &&
+      this.wsConnection.readyState === WebSocket.CONNECTING
+    ) {
       return; // Already connecting
     }
 
     const wsUrl = apiClient.getWebSocketUrl();
-    
+
     try {
       this.wsConnection = new WebSocket(wsUrl);
 
       this.wsConnection.onopen = () => {
-        console.log('Price feed WebSocket connected to backend');
+        console.log("Price feed WebSocket connected to backend");
         this.isConnected = true;
         this.reconnectAttempts = 0;
 
@@ -128,30 +131,34 @@ class PriceFeedService {
 
         // Notify subscribers of connection
         this.notifyAllSubscribers({
-          type: 'connection',
-          status: 'connected',
-          timestamp: Date.now()
+          type: "connection",
+          status: "connected",
+          timestamp: Date.now(),
         });
       };
 
-      this.wsConnection.onmessage = (event) => {
+      this.wsConnection.onmessage = event => {
         try {
           const message = JSON.parse(event.data);
           this.handleWebSocketMessage(message);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error("Error parsing WebSocket message:", error);
         }
       };
 
-      this.wsConnection.onclose = (event) => {
-        console.log('Price feed WebSocket disconnected:', event.code, event.reason);
+      this.wsConnection.onclose = event => {
+        console.log(
+          "Price feed WebSocket disconnected:",
+          event.code,
+          event.reason
+        );
         this.isConnected = false;
 
         // Notify subscribers of disconnection
         this.notifyAllSubscribers({
-          type: 'connection',
-          status: 'disconnected',
-          timestamp: Date.now()
+          type: "connection",
+          status: "disconnected",
+          timestamp: Date.now(),
         });
 
         // Attempt reconnection if not manually closed
@@ -160,13 +167,12 @@ class PriceFeedService {
         }
       };
 
-      this.wsConnection.onerror = (error) => {
-        console.error('Price feed WebSocket error:', error);
+      this.wsConnection.onerror = error => {
+        console.error("Price feed WebSocket error:", error);
         this.isConnected = false;
       };
-
     } catch (error) {
-      console.error('Error connecting to WebSocket:', error);
+      console.error("Error connecting to WebSocket:", error);
       this.attemptReconnect();
     }
   }
@@ -177,34 +183,34 @@ class PriceFeedService {
    */
   handleWebSocketMessage(message) {
     switch (message.type) {
-    case 'CONNECTION_ESTABLISHED':
-      // Connection confirmed
-      break;
+      case "CONNECTION_ESTABLISHED":
+        // Connection confirmed
+        break;
 
-    case 'subscription_confirmed':
-      console.log('Subscription confirmed:', message.symbols);
-      break;
+      case "subscription_confirmed":
+        console.log("Subscription confirmed:", message.symbols);
+        break;
 
-    case 'price_update':
-      this.handlePriceUpdate(message);
-      break;
+      case "price_update":
+        this.handlePriceUpdate(message);
+        break;
 
-    case 'connection_status':
-      // Backend connection status to external API
-      this.notifySubscribersForSymbol(message.symbol, {
-        type: 'connection',
-        status: message.status,
-        timestamp: message.timestamp
-      });
-      break;
+      case "connection_status":
+        // Backend connection status to external API
+        this.notifySubscribersForSymbol(message.symbol, {
+          type: "connection",
+          status: message.status,
+          timestamp: message.timestamp,
+        });
+        break;
 
-    case 'error':
-      console.error('WebSocket error from backend:', message.message);
-      break;
+      case "error":
+        console.error("WebSocket error from backend:", message.message);
+        break;
 
-    default:
-      // Ignore other message types (chat messages, etc.)
-      break;
+      default:
+        // Ignore other message types (chat messages, etc.)
+        break;
     }
   }
 
@@ -214,7 +220,7 @@ class PriceFeedService {
    */
   handlePriceUpdate(message) {
     const { symbol, data, timestamp, initial } = message;
-    
+
     // Find token pairs that use this symbol
     const affectedPairs = Object.entries(this.pairToSymbol)
       .filter(([, sym]) => sym === symbol)
@@ -226,7 +232,7 @@ class PriceFeedService {
         price: data.price,
         volume: data.volume_24h || 0,
         change_24h: data.change_24h,
-        timestamp
+        timestamp,
       };
 
       // Add to buffer
@@ -234,10 +240,10 @@ class PriceFeedService {
 
       // Notify subscribers
       this.notifySubscribers(tokenPair, {
-        type: initial ? 'historical' : 'price',
+        type: initial ? "historical" : "price",
         data: priceData,
         buffer: this.dataBuffer.get(tokenPair),
-        timestamp
+        timestamp,
       });
     }
   }
@@ -248,10 +254,12 @@ class PriceFeedService {
    */
   sendSubscription(symbols) {
     if (this.wsConnection && this.wsConnection.readyState === WebSocket.OPEN) {
-      this.wsConnection.send(JSON.stringify({
-        type: 'subscribe',
-        symbols
-      }));
+      this.wsConnection.send(
+        JSON.stringify({
+          type: "subscribe",
+          symbols,
+        })
+      );
     }
   }
 
@@ -261,10 +269,12 @@ class PriceFeedService {
    */
   sendUnsubscription(symbols) {
     if (this.wsConnection && this.wsConnection.readyState === WebSocket.OPEN) {
-      this.wsConnection.send(JSON.stringify({
-        type: 'unsubscribe',
-        symbols
-      }));
+      this.wsConnection.send(
+        JSON.stringify({
+          type: "unsubscribe",
+          symbols,
+        })
+      );
     }
   }
 
@@ -273,11 +283,11 @@ class PriceFeedService {
    */
   attemptReconnect() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached');
+      console.error("Max reconnection attempts reached");
       this.notifyAllSubscribers({
-        type: 'error',
-        message: 'Max reconnection attempts reached',
-        timestamp: Date.now()
+        type: "error",
+        message: "Max reconnection attempts reached",
+        timestamp: Date.now(),
       });
       return;
     }
@@ -287,11 +297,13 @@ class PriceFeedService {
       this.maxReconnectDelay
     );
 
-    console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts + 1})`);
+    console.log(
+      `Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts + 1})`
+    );
 
     setTimeout(() => {
       this.reconnectAttempts++;
-      
+
       // Re-add all active subscriptions to pending
       for (const tokenPair of this.subscribers.keys()) {
         const symbol = this.pairToSymbol[tokenPair];
@@ -299,7 +311,7 @@ class PriceFeedService {
           this.pendingSubscriptions.add(symbol);
         }
       }
-      
+
       this.connect();
     }, delay);
   }
@@ -309,7 +321,7 @@ class PriceFeedService {
    */
   disconnect() {
     if (this.wsConnection) {
-      this.wsConnection.close(1000, 'Manual disconnect');
+      this.wsConnection.close(1000, "Manual disconnect");
       this.wsConnection = null;
       this.isConnected = false;
     }
@@ -325,28 +337,30 @@ class PriceFeedService {
 
     try {
       const result = await apiClient.get(`/api/prices/${symbol}`);
-      
+
       // Generate historical data points for chart
-      const historicalData = this.generateHistoricalData(tokenPair, result.price);
+      const historicalData = this.generateHistoricalData(
+        tokenPair,
+        result.price
+      );
       this.dataBuffer.set(tokenPair, historicalData);
 
       // Notify subscribers with historical data
       this.notifySubscribers(tokenPair, {
-        type: 'historical',
+        type: "historical",
         data: historicalData,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-
     } catch (error) {
       console.error(`Error loading initial data for ${tokenPair}:`, error);
       // Generate mock data as fallback
       const mockData = this.generateMockHistoricalData(tokenPair);
       this.dataBuffer.set(tokenPair, mockData);
-      
+
       this.notifySubscribers(tokenPair, {
-        type: 'historical',
+        type: "historical",
         data: mockData,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }
@@ -360,22 +374,23 @@ class PriceFeedService {
   generateHistoricalData(tokenPair, currentPrice) {
     const data = [];
     const now = Date.now();
-    
+
     for (let i = 0; i < this.bufferSize; i++) {
       const time = now - (this.bufferSize - i) * 60000;
       // Add some variation to create realistic-looking chart
-      const variation = Math.sin(i * 0.1) * (currentPrice * 0.02) + 
-                       (Math.random() - 0.5) * (currentPrice * 0.01);
+      const variation =
+        Math.sin(i * 0.1) * (currentPrice * 0.02) +
+        (Math.random() - 0.5) * (currentPrice * 0.01);
       const price = currentPrice + variation;
-      
+
       data.push({
         time,
         price: parseFloat(price.toFixed(2)),
         volume: Math.random() * 1000,
-        timestamp: time
+        timestamp: time,
       });
     }
-    
+
     return data;
   }
 
@@ -396,11 +411,11 @@ class PriceFeedService {
    */
   getBasePrice(tokenPair) {
     const basePrices = {
-      'BTC/USDT': 42000,
-      'ETH/USDT': 2500,
-      'ETH/USD': 2500,
-      'SOL/USDT': 100,
-      'MATIC/USDT': 0.8
+      "BTC/USDT": 42000,
+      "ETH/USDT": 2500,
+      "ETH/USD": 2500,
+      "SOL/USDT": 100,
+      "MATIC/USDT": 0.8,
     };
     return basePrices[tokenPair] || 100;
   }
@@ -413,11 +428,11 @@ class PriceFeedService {
   addToBuffer(tokenPair, priceData) {
     const buffer = this.dataBuffer.get(tokenPair) || [];
     buffer.push(priceData);
-    
+
     if (buffer.length > this.bufferSize) {
       buffer.shift();
     }
-    
+
     this.dataBuffer.set(tokenPair, buffer);
   }
 
@@ -433,7 +448,10 @@ class PriceFeedService {
         try {
           callback(data);
         } catch (error) {
-          console.error(`Error in subscriber callback for ${tokenPair}:`, error);
+          console.error(
+            `Error in subscriber callback for ${tokenPair}:`,
+            error
+          );
         }
       });
     }
@@ -495,7 +513,7 @@ class PriceFeedService {
    */
   validatePriceData(data) {
     if (!data) return false;
-    if (typeof data.p !== 'string') return false;
+    if (typeof data.p !== "string") return false;
     if (isNaN(parseFloat(data.p))) return false;
     if (parseFloat(data.p) <= 0) return false;
     return true;
@@ -517,8 +535,8 @@ class PriceFeedService {
 const priceFeedService = new PriceFeedService();
 
 // Cleanup on page unload
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
     priceFeedService.cleanup();
   });
 }

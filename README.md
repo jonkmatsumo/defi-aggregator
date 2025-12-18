@@ -85,7 +85,95 @@ npm run build                               # Build for production
 npm test -- --watchAll=false               # Run all tests once
 npm test -- --coverage --watchAll=false    # Run tests with coverage report
 npm test -- --testPathPattern=Chat         # Run specific test files
+npm run lint                                # Run ESLint on client code
+npm run lint:fix                            # Fix ESLint errors automatically
+npm run format                              # Check code formatting with Prettier
+npm run format:fix                          # Fix code formatting automatically
+npm run test:staged                         # Run tests for staged files only
+npm run test:related                       # Run tests for changed files
 ```
+
+## 🔒 Pre-commit Hooks
+
+This project uses [Husky](https://typicode.github.io/husky/) and [lint-staged](https://github.com/okonet/lint-staged) to automatically validate code quality before commits.
+
+### What Runs on Commit
+
+When you run `git commit`, the following checks run automatically:
+
+#### 1. Linting and Formatting
+- **Client files** (`.js`, `.jsx`): ESLint fixes issues, then Prettier formats code
+- **Server files** (`server/**/*.js`): ESLint and Prettier run using server-specific configurations
+- **JSON/Markdown files**: Prettier formats automatically
+- **Package files**: JSON syntax validation + formatting
+
+#### 2. File Validation
+- **Merge conflicts**: Blocks commits with unresolved conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`)
+- **Large files**: Warns about files > 1MB (suggests Git LFS for large assets)
+- **Binary files**: Warns about common binary file types (images, executables, etc.)
+- **Secrets detection**: Warns about potential API keys, passwords, tokens, and private keys in code
+
+#### 3. Testing
+- **Client tests**: Runs related tests when `src/` or `tst/` files are changed
+- **Server tests**: Runs related tests when `server/src/` or `server/tests/` files are changed
+- Uses Jest's `--findRelatedTests` to only run tests for changed files
+- Skips tests if only config files (JSON, Markdown) are changed
+
+### Performance
+
+- Hooks are optimized to run in **< 30 seconds** for typical commits
+- Only **staged files** are checked (not the entire codebase)
+- Tests run only for **related files** (using Jest's `--findRelatedTests`)
+- A warning is displayed if hooks take longer than 30 seconds
+
+### Error Messages
+
+The hooks provide clear, actionable error messages:
+- Shows which step failed and how long it took
+- Provides specific commands to fix issues
+- Displays file names and line numbers when relevant
+- Includes summary of what was checked
+
+### Bypassing Hooks
+
+In emergency situations, you can bypass hooks using:
+
+```bash
+git commit --no-verify
+```
+
+**⚠️ Warning**: Only use `--no-verify` when absolutely necessary (e.g., hotfixes, WIP commits). Bypassing hooks can lead to:
+- Broken CI/CD pipelines
+- Code quality issues
+- Test failures in production
+- Security vulnerabilities (if secrets are committed)
+
+### Troubleshooting
+
+**Hooks not running?**
+```bash
+# Reinstall Husky
+npm run prepare
+# Or manually
+npx husky install
+```
+
+**Hooks too slow?**
+- Check if you're staging too many files at once
+- Consider committing in smaller chunks
+- Run `npm run lint:fix` and `npm run format:fix` manually before committing
+- Large test suites may take longer; consider running tests separately for big changes
+
+**Need to fix formatting/linting?**
+```bash
+npm run lint:fix      # Fix linting issues
+npm run format:fix    # Fix formatting issues
+```
+
+**Secrets detected?**
+- Review the warnings carefully - they may be false positives (test data, placeholders)
+- If real secrets are detected, remove them immediately and rotate any exposed credentials
+- Use environment variables or secure secret management for actual secrets
 
 ## 🧪 Testing
 

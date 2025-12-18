@@ -9,7 +9,7 @@ jest.unstable_mockModule('../../src/utils/logger.js', () => {
     warn: jest.fn(),
     error: jest.fn(),
     debug: jest.fn(),
-    child: jest.fn(() => mockLogger)
+    child: jest.fn(() => mockLogger),
   };
 
   return {
@@ -22,15 +22,15 @@ jest.unstable_mockModule('../../src/utils/logger.js', () => {
       debug: jest.fn(),
       requestStart: jest.fn(),
       requestEnd: jest.fn(),
-      serviceCall: jest.fn()
+      serviceCall: jest.fn(),
     })),
     createTimer: jest.fn(() => ({
       operation: 'test',
       startTime: Date.now(),
       end: jest.fn(() => 100),
-      elapsed: jest.fn(() => 50)
+      elapsed: jest.fn(() => 50),
     })),
-    logSlowOperation: jest.fn()
+    logSlowOperation: jest.fn(),
   };
 });
 
@@ -39,13 +39,17 @@ jest.unstable_mockModule('../../src/utils/metrics.js', () => ({
   metricsCollector: {
     recordRequest: jest.fn(),
     recordError: jest.fn(),
-    recordExternalAPICall: jest.fn()
-  }
+    recordExternalAPICall: jest.fn(),
+  },
 }));
 
 // Import after mocking
-const { requestLoggerMiddleware, errorLoggerMiddleware, logServiceCall, logExternalCall } =
-  await import('../../src/middleware/requestLogger.js');
+const {
+  requestLoggerMiddleware,
+  errorLoggerMiddleware,
+  logServiceCall,
+  logExternalCall,
+} = await import('../../src/middleware/requestLogger.js');
 const { metricsCollector } = await import('../../src/utils/metrics.js');
 const { createRequestLogger } = await import('../../src/utils/logger.js');
 
@@ -213,9 +217,13 @@ describe('Service Call Logging', () => {
   });
 
   it('should log successful service calls', async () => {
-    const result = await logServiceCall('TestService', 'testMethod', async () => {
-      return { data: 'result' };
-    });
+    const result = await logServiceCall(
+      'TestService',
+      'testMethod',
+      async () => {
+        return { data: 'result' };
+      }
+    );
 
     expect(result).toEqual({ data: 'result' });
   });
@@ -239,9 +247,13 @@ describe('External Call Logging', () => {
   });
 
   it('should log successful external calls', async () => {
-    const result = await logExternalCall('CoinGecko', '/api/v3/simple/price', async () => {
-      return { bitcoin: { usd: 50000 } };
-    });
+    const result = await logExternalCall(
+      'CoinGecko',
+      '/api/v3/simple/price',
+      async () => {
+        return { bitcoin: { usd: 50000 } };
+      }
+    );
 
     expect(result).toEqual({ bitcoin: { usd: 50000 } });
     expect(metricsCollector.recordExternalAPICall).toHaveBeenCalledWith(

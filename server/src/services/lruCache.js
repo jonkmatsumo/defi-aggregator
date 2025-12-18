@@ -1,6 +1,5 @@
 import { logger } from '../utils/logger.js';
 
-
 /**
  * LRU (Least Recently Used) Cache implementation with TTL support
  * Provides intelligent cache eviction policies for memory management
@@ -12,7 +11,7 @@ export class LRUCache {
       defaultTTL: 300000, // 5 minutes default TTL
       cleanupInterval: 60000, // 1 minute cleanup interval
       maxMemoryMB: 100, // Maximum memory usage in MB
-      ...config
+      ...config,
     };
 
     // Cache storage
@@ -34,7 +33,7 @@ export class LRUCache {
       ttlEvictions: 0,
       sizeEvictions: 0,
       memoryEvictions: 0,
-      cleanups: 0
+      cleanups: 0,
     };
 
     // Start cleanup interval
@@ -43,7 +42,7 @@ export class LRUCache {
     logger.debug('LRUCache initialized', {
       maxSize: this.config.maxSize,
       defaultTTL: this.config.defaultTTL,
-      maxMemoryMB: this.config.maxMemoryMB
+      maxMemoryMB: this.config.maxMemoryMB,
     });
   }
 
@@ -80,11 +79,15 @@ export class LRUCache {
 
     // Check TTL expiration
     const now = Date.now();
-    if (entry.ttl > 0 && (now - entry.timestamp) > entry.ttl) {
+    if (entry.ttl > 0 && now - entry.timestamp > entry.ttl) {
       this.delete(key);
       this.metrics.misses++;
       this.metrics.ttlEvictions++;
-      logger.debug('Cache entry expired', { key, age: now - entry.timestamp, ttl: entry.ttl });
+      logger.debug('Cache entry expired', {
+        key,
+        age: now - entry.timestamp,
+        ttl: entry.ttl,
+      });
       return null;
     }
 
@@ -126,7 +129,7 @@ export class LRUCache {
         ttl: effectiveTTL,
         accessCount: 1,
         lastAccess: now,
-        size: this.estimateSize(value)
+        size: this.estimateSize(value),
       };
 
       this.cache.set(key, entry);
@@ -137,7 +140,11 @@ export class LRUCache {
     }
 
     this.metrics.sets++;
-    logger.debug('Cache set', { key, ttl: effectiveTTL, cacheSize: this.cache.size });
+    logger.debug('Cache set', {
+      key,
+      ttl: effectiveTTL,
+      cacheSize: this.cache.size,
+    });
   }
 
   /**
@@ -171,7 +178,7 @@ export class LRUCache {
 
     // Check TTL expiration
     const now = Date.now();
-    if (entry.ttl > 0 && (now - entry.timestamp) > entry.ttl) {
+    if (entry.ttl > 0 && now - entry.timestamp > entry.ttl) {
       this.delete(key);
       return false;
     }
@@ -199,9 +206,10 @@ export class LRUCache {
    * @returns {Object} Cache statistics
    */
   getStats() {
-    const hitRate = this.metrics.hits + this.metrics.misses > 0
-      ? (this.metrics.hits / (this.metrics.hits + this.metrics.misses)) * 100
-      : 0;
+    const hitRate =
+      this.metrics.hits + this.metrics.misses > 0
+        ? (this.metrics.hits / (this.metrics.hits + this.metrics.misses)) * 100
+        : 0;
 
     return {
       ...this.metrics,
@@ -209,7 +217,7 @@ export class LRUCache {
       size: this.cache.size,
       maxSize: this.config.maxSize,
       memoryUsageMB: this.getMemoryUsage(),
-      maxMemoryMB: this.config.maxMemoryMB
+      maxMemoryMB: this.config.maxMemoryMB,
     };
   }
 
@@ -248,7 +256,11 @@ export class LRUCache {
       this.metrics.memoryEvictions++;
     }
 
-    logger.debug('LRU eviction', { key: lruKey, reason, remainingSize: this.cache.size });
+    logger.debug('LRU eviction', {
+      key: lruKey,
+      reason,
+      remainingSize: this.cache.size,
+    });
   }
 
   /**
@@ -318,7 +330,7 @@ export class LRUCache {
     let expiredCount = 0;
 
     for (const [key, entry] of this.cache.entries()) {
-      if (entry.ttl > 0 && (now - entry.timestamp) > entry.ttl) {
+      if (entry.ttl > 0 && now - entry.timestamp > entry.ttl) {
         this.delete(key);
         expiredCount++;
         this.metrics.ttlEvictions++;
@@ -329,7 +341,7 @@ export class LRUCache {
       this.metrics.cleanups++;
       logger.debug('Cache cleanup completed', {
         expiredEntries: expiredCount,
-        remainingEntries: this.cache.size
+        remainingEntries: this.cache.size,
       });
     }
   }
@@ -399,7 +411,7 @@ export class LRUCache {
       .map(([key, entry]) => ({
         key,
         accessCount: entry.accessCount,
-        lastAccess: entry.lastAccess
+        lastAccess: entry.lastAccess,
       }))
       .sort((a, b) => b.accessCount - a.accessCount)
       .slice(0, limit);

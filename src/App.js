@@ -1,9 +1,9 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import WalletProvider from './components/WalletProvider';
-import Header from './components/Header';
-import DashboardRoute from './routes/DashboardRoute';
-import ChatRoute from './routes/ChatRoute';
-import './App.css';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import WalletProvider from "./components/WalletProvider";
+import Header from "./components/Header";
+import DashboardRoute from "./routes/DashboardRoute";
+import ChatRoute from "./routes/ChatRoute";
+import "./App.css";
 
 function App() {
   return (
@@ -12,7 +12,7 @@ function App() {
         <div className="App">
           {/* Header remains outside error boundary to stay visible during errors */}
           <Header />
-          
+
           {/* Routes */}
           <Routes>
             <Route path="/" element={<ChatRoute />} />

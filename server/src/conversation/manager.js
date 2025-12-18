@@ -7,13 +7,19 @@ import { EducationalGenerator } from '../content/educationalGenerator.js';
 import { ToolCallValidator } from '../validation/toolCallValidator.js';
 
 export class ConversationManager {
-  constructor(llmInterface, toolRegistry, componentIntentGenerator, options = {}) {
+  constructor(
+    llmInterface,
+    toolRegistry,
+    componentIntentGenerator,
+    options = {}
+  ) {
     this.llmInterface = llmInterface;
     this.toolRegistry = toolRegistry;
     this.componentIntentGenerator = componentIntentGenerator;
     this.systemPromptManager = options.systemPromptManager || null;
     this.intentAnalyzer = options.intentAnalyzer || new IntentAnalyzer();
-    this.educationalGenerator = options.educationalGenerator || new EducationalGenerator();
+    this.educationalGenerator =
+      options.educationalGenerator || new EducationalGenerator();
     this.sessions = new Map(); // sessionId -> ConversationSession
     this.toolResultCache = new Map(); // cacheKey -> { result, cachedAt }
 
@@ -24,7 +30,7 @@ export class ConversationManager {
       cleanupIntervalMs: options.cleanupIntervalMs || 5 * 60 * 1000, // 5 minutes
       toolResultTTL: options.toolResultTTL || 2 * 60 * 1000, // 2 minutes
       maxToolResults: options.maxToolResults || 50,
-      ...options
+      ...options,
     };
 
     // Start periodic cleanup
@@ -35,7 +41,7 @@ export class ConversationManager {
 
     logger.info('ConversationManager initialized', {
       maxHistoryLength: this.options.maxHistoryLength,
-      sessionTimeoutMs: this.options.sessionTimeoutMs
+      sessionTimeoutMs: this.options.sessionTimeoutMs,
     });
   }
 
@@ -44,7 +50,7 @@ export class ConversationManager {
       logger.info('Processing message', {
         sessionId,
         messageLength: userMessage.length,
-        historyLength: messageHistory.length
+        historyLength: messageHistory.length,
       });
 
       // Get or create session
@@ -62,7 +68,7 @@ export class ConversationManager {
         id: uuidv4(),
         role: 'user',
         content: userMessage,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       this.addMessageToSession(session, userMessageObj);
@@ -79,11 +85,14 @@ export class ConversationManager {
       // Prepare system prompt with tool integration
       let systemPrompt = null;
       if (this.systemPromptManager) {
-        systemPrompt = this.systemPromptManager.formatPromptWithTools(availableTools, 'defi_assistant');
+        systemPrompt = this.systemPromptManager.formatPromptWithTools(
+          availableTools,
+          'defi_assistant'
+        );
         logger.debug('System prompt prepared', {
           sessionId,
           promptLength: systemPrompt.length,
-          toolCount: availableTools.length
+          toolCount: availableTools.length,
         });
       }
 
@@ -96,8 +105,10 @@ export class ConversationManager {
 
       logger.debug('LLM response received', {
         sessionId,
-        hasToolCalls: !!(llmResponse.toolCalls && llmResponse.toolCalls.length > 0),
-        responseLength: llmResponse.content?.length || 0
+        hasToolCalls: !!(
+          llmResponse.toolCalls && llmResponse.toolCalls.length > 0
+        ),
+        responseLength: llmResponse.content?.length || 0,
       });
 
       // Execute tool calls if present
@@ -106,7 +117,9 @@ export class ConversationManager {
 
       if (llmResponse.toolCalls && llmResponse.toolCalls.length > 0) {
         // Validate tool calls first
-        const validToolCalls = ToolCallValidator.validate(llmResponse.toolCalls);
+        const validToolCalls = ToolCallValidator.validate(
+          llmResponse.toolCalls
+        );
 
         if (validToolCalls.length > 0) {
           toolResults = await this.executeToolCalls(sessionId, validToolCalls);
@@ -118,7 +131,7 @@ export class ConversationManager {
             role: 'assistant',
             content: llmResponse.content,
             timestamp: Date.now(),
-            toolCalls: validToolCalls // Use validated calls
+            toolCalls: validToolCalls, // Use validated calls
           };
           this.addMessageToSession(session, toolCallMessage);
 
@@ -131,13 +144,16 @@ export class ConversationManager {
               content: JSON.stringify(toolResult.result), // Content must be string
               timestamp: Date.now(),
               tool_call_id: toolResult.toolCallId, // MUST match the id from the tool call
-              name: toolResult.toolName
+              name: toolResult.toolName,
             };
             this.addMessageToSession(session, toolMessage);
           }
 
           // Get updated messages for follow-up LLM call
-          const updatedMessages = this.prepareMessagesForLLM(session, messageHistory);
+          const updatedMessages = this.prepareMessagesForLLM(
+            session,
+            messageHistory
+          );
 
           // Call LLM again with tool results to get final response
           finalResponse = await this.llmInterface.generateResponse(
@@ -149,10 +165,13 @@ export class ConversationManager {
           logger.debug('Follow-up LLM response after tool execution', {
             sessionId,
             toolCount: toolResults.length,
-            finalResponseLength: finalResponse.content?.length || 0
+            finalResponseLength: finalResponse.content?.length || 0,
           });
         } else {
-          logger.warn('All tool calls were invalid', { sessionId, rawToolCalls: llmResponse.toolCalls });
+          logger.warn('All tool calls were invalid', {
+            sessionId,
+            rawToolCalls: llmResponse.toolCalls,
+          });
           // Optionally add a message to the user saying we failed to execute tools?
           // For now, we just proceed with the original response content (which might be empty if it was just tool calls)
         }
@@ -166,14 +185,16 @@ export class ConversationManager {
       );
 
       // Format tool results for user-friendly display
-      const formattedToolResults = toolResults.length > 0
-        ? agentResponseFormatter.formatToolResults(toolResults)
-        : undefined;
+      const formattedToolResults =
+        toolResults.length > 0
+          ? agentResponseFormatter.formatToolResults(toolResults)
+          : undefined;
 
       // Generate educational tips if we have tool results
-      const educationalContent = toolResults.length > 0
-        ? this.educationalGenerator.buildEducationalTips(toolResults)
-        : null;
+      const educationalContent =
+        toolResults.length > 0
+          ? this.educationalGenerator.buildEducationalTips(toolResults)
+          : null;
 
       // Create final assistant response
       const assistantResponse = {
@@ -188,8 +209,8 @@ export class ConversationManager {
         context: {
           intent: intentAnalysis,
           toolsUsed: toolResults.map(tr => tr.toolName),
-          educationalContent: educationalContent || undefined
-        }
+          educationalContent: educationalContent || undefined,
+        },
       };
 
       // Add assistant response to session history
@@ -198,24 +219,26 @@ export class ConversationManager {
       logger.info('Message processed successfully', {
         sessionId,
         responseId: assistantResponse.id,
-        hasUiIntents: !!(assistantResponse.uiIntents),
-        hasToolResults: !!(assistantResponse.toolResults),
-        toolCount: toolResults.length
+        hasUiIntents: !!assistantResponse.uiIntents,
+        hasToolResults: !!assistantResponse.toolResults,
+        toolCount: toolResults.length,
       });
 
       return assistantResponse;
-
     } catch (error) {
       const errorClassification = classifyError(error);
       logError(error, {
         sessionId,
         messageLength: userMessage.length,
         historyLength: messageHistory.length,
-        classification: errorClassification
+        classification: errorClassification,
       });
 
       // Create user-friendly error response
-      const userFriendlyMessage = this.getUserFriendlyErrorMessage(error, errorClassification);
+      const userFriendlyMessage = this.getUserFriendlyErrorMessage(
+        error,
+        errorClassification
+      );
 
       const errorResponse = {
         id: uuidv4(),
@@ -228,8 +251,8 @@ export class ConversationManager {
           code: userFriendlyMessage.code,
           classification: errorClassification,
           retryable: userFriendlyMessage.retryable,
-          suggestions: userFriendlyMessage.suggestions
-        }
+          suggestions: userFriendlyMessage.suggestions,
+        },
       };
 
       // Try to add error response to session if session exists
@@ -248,7 +271,7 @@ export class ConversationManager {
     logger.debug('Executing tool calls', {
       sessionId,
       toolCount: toolCalls.length,
-      tools: toolCalls.map(tc => tc.name || tc.function?.name)
+      tools: toolCalls.map(tc => tc.name || tc.function?.name),
     });
 
     for (const toolCall of toolCalls) {
@@ -257,12 +280,16 @@ export class ConversationManager {
       const toolCallId = toolCall.id;
 
       // Parse parameters if they are a JSON string (OpenAI format)
-      let parameters = toolCall.parameters || toolCall.function?.arguments || {};
+      let parameters =
+        toolCall.parameters || toolCall.function?.arguments || {};
       if (typeof parameters === 'string') {
         try {
           parameters = JSON.parse(parameters);
         } catch (e) {
-          logger.error('Failed to parse tool parameters', { toolName, error: e.message });
+          logger.error('Failed to parse tool parameters', {
+            toolName,
+            error: e.message,
+          });
           parameters = {}; // Fallback
         }
       }
@@ -272,17 +299,24 @@ export class ConversationManager {
           throw new Error('Tool name is undefined');
         }
 
-        const cacheKey = this.generateToolCacheKey(sessionId, toolName, parameters);
+        const cacheKey = this.generateToolCacheKey(
+          sessionId,
+          toolName,
+          parameters
+        );
 
         // Serve from cache if fresh
         const cached = this.toolResultCache.get(cacheKey);
-        if (cached && Date.now() - cached.cachedAt < this.options.toolResultTTL) {
+        if (
+          cached &&
+          Date.now() - cached.cachedAt < this.options.toolResultTTL
+        ) {
           logger.debug('Using cached tool result', { sessionId, toolName });
           results.push({
             ...cached.result,
             toolCallId, // Ensure ID is passed back
             fromCache: true,
-            dataFreshness: 'cached'
+            dataFreshness: 'cached',
           });
           continue;
         }
@@ -296,7 +330,10 @@ export class ConversationManager {
         results.push(resultWithId);
 
         if (result.success) {
-          this.toolResultCache.set(cacheKey, { result: resultWithId, cachedAt: Date.now() });
+          this.toolResultCache.set(cacheKey, {
+            result: resultWithId,
+            cachedAt: Date.now(),
+          });
           this.enforceToolCacheLimit();
         }
 
@@ -304,16 +341,15 @@ export class ConversationManager {
           sessionId,
           toolName: toolName,
           success: result.success,
-          executionTime: result.executionTime
+          executionTime: result.executionTime,
         });
-
       } catch (error) {
         const errorClassification = classifyError(error);
         logError(error, {
           sessionId,
           toolName: toolName,
           parameters: parameters,
-          classification: errorClassification
+          classification: errorClassification,
         });
 
         results.push({
@@ -323,7 +359,7 @@ export class ConversationManager {
           result: null,
           executionTime: 0,
           success: false,
-          error: error.message
+          error: error.message,
         });
       }
     }
@@ -337,11 +373,12 @@ export class ConversationManager {
 
     // Add session messages that aren't already in additional history
     for (const sessionMessage of session.messages) {
-      const isDuplicate = additionalHistory.some(msg =>
-        msg.id === sessionMessage.id ||
-        (msg.content === sessionMessage.content &&
-          msg.role === sessionMessage.role &&
-          Math.abs(msg.timestamp - sessionMessage.timestamp) < 1000)
+      const isDuplicate = additionalHistory.some(
+        msg =>
+          msg.id === sessionMessage.id ||
+          (msg.content === sessionMessage.content &&
+            msg.role === sessionMessage.role &&
+            Math.abs(msg.timestamp - sessionMessage.timestamp) < 1000)
       );
 
       if (!isDuplicate) {
@@ -353,7 +390,11 @@ export class ConversationManager {
     allMessages.sort((a, b) => a.timestamp - b.timestamp);
 
     // Intelligent truncation: drop oldest non-tool messages first
-    const trimmedMessages = this.trimMessages(allMessages, this.options.maxHistoryLength, session.sessionId);
+    const trimmedMessages = this.trimMessages(
+      allMessages,
+      this.options.maxHistoryLength,
+      session.sessionId
+    );
 
     // Convert to LLM format (include tool calls and results for context)
     // Convert to LLM format (include tool calls and results for context)
@@ -361,7 +402,7 @@ export class ConversationManager {
       const llmMessage = {
         role: msg.role,
         content: msg.content,
-        timestamp: msg.timestamp
+        timestamp: msg.timestamp,
       };
 
       // Pass through tool_call_id and name for tool role messages
@@ -398,7 +439,7 @@ export class ConversationManager {
       logger.debug('Trimmed session history', {
         sessionId: session.sessionId,
         removedMessages: excess,
-        remainingMessages: session.messages.length
+        remainingMessages: session.messages.length,
       });
     }
   }
@@ -419,7 +460,7 @@ export class ConversationManager {
       context: {},
       createdAt: Date.now(),
       lastActivity: Date.now(),
-      toolState: {}
+      toolState: {},
     };
 
     this.sessions.set(sessionId, session);
@@ -427,7 +468,7 @@ export class ConversationManager {
     logger.info('Created conversation session', {
       sessionId,
       userId,
-      totalSessions: this.sessions.size
+      totalSessions: this.sessions.size,
     });
 
     return session;
@@ -438,7 +479,7 @@ export class ConversationManager {
     if (deleted) {
       logger.info('Deleted conversation session', {
         sessionId,
-        remainingSessions: this.sessions.size
+        remainingSessions: this.sessions.size,
       });
     }
     return deleted;
@@ -461,7 +502,7 @@ export class ConversationManager {
     if (expiredSessions.length > 0) {
       logger.info('Cleaned up expired sessions', {
         expiredCount: expiredSessions.length,
-        remainingSessions: this.sessions.size
+        remainingSessions: this.sessions.size,
       });
     }
   }
@@ -482,7 +523,8 @@ export class ConversationManager {
       totalSessions: this.sessions.size,
       activeSessions,
       totalMessages,
-      averageMessagesPerSession: this.sessions.size > 0 ? totalMessages / this.sessions.size : 0
+      averageMessagesPerSession:
+        this.sessions.size > 0 ? totalMessages / this.sessions.size : 0,
     };
   }
 
@@ -495,7 +537,9 @@ export class ConversationManager {
 
     const trimmed = [...messages];
     while (trimmed.length > limit) {
-      const idx = trimmed.findIndex(m => m.role !== 'tool' && !(m.toolCalls && m.toolCalls.length > 0));
+      const idx = trimmed.findIndex(
+        m => m.role !== 'tool' && !(m.toolCalls && m.toolCalls.length > 0)
+      );
       if (idx === -1) {
         trimmed.shift();
       } else {
@@ -506,7 +550,7 @@ export class ConversationManager {
     logger.debug('Trimmed conversation history', {
       sessionId,
       removedMessages: messages.length - trimmed.length,
-      remainingMessages: trimmed.length
+      remainingMessages: trimmed.length,
     });
 
     return trimmed;
@@ -535,7 +579,10 @@ export class ConversationManager {
       }
     }
     if (removed > 0) {
-      logger.debug('Cleaned expired tool results', { removed, remaining: this.toolResultCache.size });
+      logger.debug('Cleaned expired tool results', {
+        removed,
+        remaining: this.toolResultCache.size,
+      });
     }
   }
 
@@ -545,16 +592,19 @@ export class ConversationManager {
       price_query: /price|cost|value|worth|btc|eth|\$/.test(lower),
       gas_query: /gas|fee|gwei|transaction fee|network fee/.test(lower),
       lending_query: /lend|borrow|apy|yield|interest|rate/.test(lower),
-      swap_query: /swap|trade|exchange|dex/.test(lower)
+      swap_query: /swap|trade|exchange|dex/.test(lower),
     };
 
-    const primary = Object.entries(intents).find(([_, matched]) => matched)?.[0] || 'general_info';
+    const primary =
+      Object.entries(intents).find(([_, matched]) => matched)?.[0] ||
+      'general_info';
     const confidence = primary === 'general_info' ? 0.3 : 0.8;
     const suggested_tools = [];
     if (primary === 'price_query') suggested_tools.push('get_crypto_price');
     if (primary === 'gas_query') suggested_tools.push('get_gas_prices');
     if (primary === 'lending_query') suggested_tools.push('get_lending_rates');
-    if (primary === 'swap_query') suggested_tools.push('get_crypto_price', 'get_gas_prices');
+    if (primary === 'swap_query')
+      suggested_tools.push('get_crypto_price', 'get_gas_prices');
 
     return { primary, confidence, suggested_tools };
   }
@@ -570,93 +620,116 @@ export class ConversationManager {
     const errorType = classification?.type || 'unknown';
 
     // LLM-specific errors
-    if (errorType === 'llm' || errorMessage.includes('api') || errorMessage.includes('openai')) {
+    if (
+      errorType === 'llm' ||
+      errorMessage.includes('api') ||
+      errorMessage.includes('openai')
+    ) {
       return {
-        content: 'I\'m having trouble connecting to my language processing service right now. Please try again in a moment.',
+        content:
+          "I'm having trouble connecting to my language processing service right now. Please try again in a moment.",
         code: 'LLM_ERROR',
         retryable: true,
         suggestions: [
           'Wait a few seconds and try again',
-          'If the problem persists, the service may be experiencing high demand'
-        ]
+          'If the problem persists, the service may be experiencing high demand',
+        ],
       };
     }
 
     // Tool execution errors
     if (errorType === 'tool' || errorMessage.includes('tool')) {
       return {
-        content: 'I encountered an issue while retrieving the data you requested. Let me know if you\'d like me to try again.',
+        content:
+          "I encountered an issue while retrieving the data you requested. Let me know if you'd like me to try again.",
         code: 'TOOL_ERROR',
         retryable: true,
         suggestions: [
           'Try asking for the same information again',
-          'You can also try asking in a different way'
-        ]
+          'You can also try asking in a different way',
+        ],
       };
     }
 
     // Rate limiting errors
-    if (errorMessage.includes('rate limit') || errorMessage.includes('429') || errorMessage.includes('too many')) {
+    if (
+      errorMessage.includes('rate limit') ||
+      errorMessage.includes('429') ||
+      errorMessage.includes('too many')
+    ) {
       return {
-        content: 'I\'m receiving too many requests right now. Please wait a moment before trying again.',
+        content:
+          "I'm receiving too many requests right now. Please wait a moment before trying again.",
         code: 'RATE_LIMIT',
         retryable: true,
         suggestions: [
           'Wait about 30 seconds before trying again',
-          'Try asking fewer questions at once'
-        ]
+          'Try asking fewer questions at once',
+        ],
       };
     }
 
     // Network/timeout errors
-    if (errorMessage.includes('timeout') || errorMessage.includes('network') || errorMessage.includes('connection')) {
+    if (
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('network') ||
+      errorMessage.includes('connection')
+    ) {
       return {
-        content: 'I\'m having trouble connecting to external services. This could be a temporary issue.',
+        content:
+          "I'm having trouble connecting to external services. This could be a temporary issue.",
         code: 'NETWORK_ERROR',
         retryable: true,
         suggestions: [
           'Check your internet connection',
-          'Try again in a few moments'
-        ]
+          'Try again in a few moments',
+        ],
       };
     }
 
     // Validation errors
-    if (errorType === 'validation' || errorMessage.includes('invalid') || errorMessage.includes('validation')) {
+    if (
+      errorType === 'validation' ||
+      errorMessage.includes('invalid') ||
+      errorMessage.includes('validation')
+    ) {
       return {
-        content: 'I couldn\'t understand some of the information in your request. Could you please rephrase or check the details?',
+        content:
+          "I couldn't understand some of the information in your request. Could you please rephrase or check the details?",
         code: 'VALIDATION_ERROR',
         retryable: false,
         suggestions: [
           'Make sure wallet addresses are valid Ethereum addresses',
           'Check that token symbols are correct (e.g., ETH, BTC, USDC)',
-          'Verify network names are supported (e.g., ethereum, polygon)'
-        ]
+          'Verify network names are supported (e.g., ethereum, polygon)',
+        ],
       };
     }
 
     // Session errors
     if (errorType === 'session' || errorMessage.includes('session')) {
       return {
-        content: 'There was an issue with your conversation session. Please try starting a new conversation.',
+        content:
+          'There was an issue with your conversation session. Please try starting a new conversation.',
         code: 'SESSION_ERROR',
         retryable: false,
         suggestions: [
           'Refresh the page to start a new session',
-          'Clear your browser cache if the issue persists'
-        ]
+          'Clear your browser cache if the issue persists',
+        ],
       };
     }
 
     // Default error response
     return {
-      content: 'I apologize, but I encountered an unexpected error processing your message. Please try again.',
+      content:
+        'I apologize, but I encountered an unexpected error processing your message. Please try again.',
       code: 'UNKNOWN_ERROR',
       retryable: true,
       suggestions: [
         'Try asking your question again',
-        'If the problem continues, please try again later'
-      ]
+        'If the problem continues, please try again later',
+      ],
     };
   }
 

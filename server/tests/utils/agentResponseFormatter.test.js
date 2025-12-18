@@ -1,4 +1,7 @@
-import { AgentResponseFormatter, agentResponseFormatter } from '../../src/utils/agentResponseFormatter.js';
+import {
+  AgentResponseFormatter,
+  agentResponseFormatter,
+} from '../../src/utils/agentResponseFormatter.js';
 
 describe('AgentResponseFormatter', () => {
   let formatter;
@@ -17,7 +20,7 @@ describe('AgentResponseFormatter', () => {
     it('should accept custom options', () => {
       const customFormatter = new AgentResponseFormatter({
         includeTimestamps: false,
-        currency: 'EUR'
+        currency: 'EUR',
       });
 
       expect(customFormatter.options.includeTimestamps).toBe(false);
@@ -33,19 +36,21 @@ describe('AgentResponseFormatter', () => {
     });
 
     it('should format successful tool results', () => {
-      const toolResults = [{
-        toolName: 'get_gas_prices',
-        success: true,
-        result: {
-          network: 'ethereum',
-          gasPrices: {
-            slow: { gwei: 10, usd_cost: 0.30 },
-            standard: { gwei: 15, usd_cost: 0.45 },
-            fast: { gwei: 20, usd_cost: 0.60 }
+      const toolResults = [
+        {
+          toolName: 'get_gas_prices',
+          success: true,
+          result: {
+            network: 'ethereum',
+            gasPrices: {
+              slow: { gwei: 10, usd_cost: 0.3 },
+              standard: { gwei: 15, usd_cost: 0.45 },
+              fast: { gwei: 20, usd_cost: 0.6 },
+            },
+            timestamp: Date.now(),
           },
-          timestamp: Date.now()
-        }
-      }];
+        },
+      ];
 
       const formatted = formatter.formatToolResults(toolResults);
 
@@ -56,11 +61,13 @@ describe('AgentResponseFormatter', () => {
     });
 
     it('should include errors for failed tool results', () => {
-      const toolResults = [{
-        toolName: 'get_crypto_price',
-        success: false,
-        error: 'Rate limit exceeded'
-      }];
+      const toolResults = [
+        {
+          toolName: 'get_crypto_price',
+          success: false,
+          error: 'Rate limit exceeded',
+        },
+      ];
 
       const formatted = formatter.formatToolResults(toolResults);
 
@@ -80,15 +87,15 @@ describe('AgentResponseFormatter', () => {
             gasPrices: {
               slow: { gwei: 10 },
               standard: { gwei: 15 },
-              fast: { gwei: 20 }
-            }
-          }
+              fast: { gwei: 20 },
+            },
+          },
         },
         {
           toolName: 'get_crypto_price',
           success: false,
-          error: 'Service unavailable'
-        }
+          error: 'Service unavailable',
+        },
       ];
 
       const formatted = formatter.formatToolResults(toolResults);
@@ -104,11 +111,11 @@ describe('AgentResponseFormatter', () => {
       const data = {
         network: 'ethereum',
         gasPrices: {
-          slow: { gwei: 10, usd_cost: 0.30 },
+          slow: { gwei: 10, usd_cost: 0.3 },
           standard: { gwei: 15, usd_cost: 0.45 },
-          fast: { gwei: 20, usd_cost: 0.60 }
+          fast: { gwei: 20, usd_cost: 0.6 },
         },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       const formatted = formatter.formatGasPrices(data);
@@ -124,27 +131,31 @@ describe('AgentResponseFormatter', () => {
     it('should provide gas recommendations based on price level', () => {
       const lowGas = {
         network: 'ethereum',
-        gasPrices: { standard: { gwei: 15 } }
+        gasPrices: { standard: { gwei: 15 } },
       };
       expect(formatter.formatGasPrices(lowGas).recommendation).toContain('🟢');
 
       const moderateGas = {
         network: 'ethereum',
-        gasPrices: { standard: { gwei: 40 } }
+        gasPrices: { standard: { gwei: 40 } },
       };
-      expect(formatter.formatGasPrices(moderateGas).recommendation).toContain('🟡');
+      expect(formatter.formatGasPrices(moderateGas).recommendation).toContain(
+        '🟡'
+      );
 
       const highGas = {
         network: 'ethereum',
-        gasPrices: { standard: { gwei: 80 } }
+        gasPrices: { standard: { gwei: 80 } },
       };
       expect(formatter.formatGasPrices(highGas).recommendation).toContain('🟠');
 
       const veryHighGas = {
         network: 'ethereum',
-        gasPrices: { standard: { gwei: 150 } }
+        gasPrices: { standard: { gwei: 150 } },
       };
-      expect(formatter.formatGasPrices(veryHighGas).recommendation).toContain('🔴');
+      expect(formatter.formatGasPrices(veryHighGas).recommendation).toContain(
+        '🔴'
+      );
     });
   });
 
@@ -157,7 +168,7 @@ describe('AgentResponseFormatter', () => {
         change_24h: 2.5,
         volume_24h: 15000000000,
         market_cap: 820000000000,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       const formatted = formatter.formatCryptoPrice(data);
@@ -175,7 +186,7 @@ describe('AgentResponseFormatter', () => {
         symbol: 'ETH',
         price: 2000,
         currency: 'USD',
-        change_24h: -5.5
+        change_24h: -5.5,
       };
 
       const formatted = formatter.formatCryptoPrice(data);
@@ -196,15 +207,15 @@ describe('AgentResponseFormatter', () => {
             borrowAPY: 0.052,
             totalSupply: 4000000,
             totalBorrow: 2000000,
-            utilizationRate: 0.5
+            utilizationRate: 0.5,
           },
           {
             protocol: 'compound',
-            supplyAPY: 0.030,
-            borrowAPY: 0.050
-          }
+            supplyAPY: 0.03,
+            borrowAPY: 0.05,
+          },
         ],
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       const formatted = formatter.formatLendingRates(data);
@@ -223,10 +234,22 @@ describe('AgentResponseFormatter', () => {
         address: '0x1234567890123456789012345678901234567890',
         network: 'ethereum',
         tokens: [
-          { symbol: 'ETH', name: 'Ether', balance: '1.5', balanceUSD: '$3000', decimals: 18 },
-          { symbol: 'USDC', name: 'USD Coin', balance: '1000', balanceUSD: '$1000', decimals: 6 }
+          {
+            symbol: 'ETH',
+            name: 'Ether',
+            balance: '1.5',
+            balanceUSD: '$3000',
+            decimals: 18,
+          },
+          {
+            symbol: 'USDC',
+            name: 'USD Coin',
+            balance: '1000',
+            balanceUSD: '$1000',
+            decimals: 6,
+          },
         ],
-        totalUSD: '4000'
+        totalUSD: '4000',
       };
 
       const formatted = formatter.formatTokenBalance(data);
@@ -240,7 +263,10 @@ describe('AgentResponseFormatter', () => {
 
   describe('formatError', () => {
     it('should format rate limit errors', () => {
-      const result = { toolName: 'get_gas_prices', error: 'Rate limit exceeded' };
+      const result = {
+        toolName: 'get_gas_prices',
+        error: 'Rate limit exceeded',
+      };
       const formatted = formatter.formatError(result);
 
       expect(formatted.code).toBe('RATE_LIMIT');
@@ -248,7 +274,10 @@ describe('AgentResponseFormatter', () => {
     });
 
     it('should format timeout errors', () => {
-      const result = { toolName: 'get_crypto_price', error: 'Request timed out' };
+      const result = {
+        toolName: 'get_crypto_price',
+        error: 'Request timed out',
+      };
       const formatted = formatter.formatError(result);
 
       expect(formatted.code).toBe('TIMEOUT');
@@ -256,7 +285,10 @@ describe('AgentResponseFormatter', () => {
     });
 
     it('should format network errors', () => {
-      const result = { toolName: 'get_lending_rates', error: 'Network connection failed' };
+      const result = {
+        toolName: 'get_lending_rates',
+        error: 'Network connection failed',
+      };
       const formatted = formatter.formatError(result);
 
       expect(formatted.code).toBe('NETWORK_ERROR');
@@ -264,7 +296,10 @@ describe('AgentResponseFormatter', () => {
     });
 
     it('should format not found errors', () => {
-      const result = { toolName: 'get_token_balance', error: 'Resource not found' };
+      const result = {
+        toolName: 'get_token_balance',
+        error: 'Resource not found',
+      };
       const formatted = formatter.formatError(result);
 
       expect(formatted.code).toBe('NOT_FOUND');
@@ -272,7 +307,10 @@ describe('AgentResponseFormatter', () => {
     });
 
     it('should format validation errors', () => {
-      const result = { toolName: 'get_token_balance', error: 'Invalid address format' };
+      const result = {
+        toolName: 'get_token_balance',
+        error: 'Invalid address format',
+      };
       const formatted = formatter.formatError(result);
 
       expect(formatted.code).toBe('VALIDATION_ERROR');
@@ -280,7 +318,10 @@ describe('AgentResponseFormatter', () => {
     });
 
     it('should format service unavailable errors', () => {
-      const result = { toolName: 'get_gas_prices', error: 'Service unavailable' };
+      const result = {
+        toolName: 'get_gas_prices',
+        error: 'Service unavailable',
+      };
       const formatted = formatter.formatError(result);
 
       expect(formatted.code).toBe('SERVICE_UNAVAILABLE');
@@ -288,7 +329,10 @@ describe('AgentResponseFormatter', () => {
     });
 
     it('should format unknown errors with default handling', () => {
-      const result = { toolName: 'get_gas_prices', error: 'Something unexpected happened' };
+      const result = {
+        toolName: 'get_gas_prices',
+        error: 'Something unexpected happened',
+      };
       const formatted = formatter.formatError(result);
 
       expect(formatted.code).toBe('UNKNOWN_ERROR');
@@ -357,4 +401,3 @@ describe('AgentResponseFormatter', () => {
     });
   });
 });
-

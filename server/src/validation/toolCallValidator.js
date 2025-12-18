@@ -2,14 +2,16 @@ import { logger } from '../utils/logger.js';
 
 export class ToolCallValidator {
   /**
-     * Validates a list of tool calls from the LLM.
-     * @param {Array} toolCalls - Array of tool call objects
-     * @returns {Array} - Array of valid tool calls
-     * @throws {ToolError} - If critical validation fails
-     */
+   * Validates a list of tool calls from the LLM.
+   * @param {Array} toolCalls - Array of tool call objects
+   * @returns {Array} - Array of valid tool calls
+   * @throws {ToolError} - If critical validation fails
+   */
   static validate(toolCalls) {
     if (!Array.isArray(toolCalls)) {
-      logger.warn('Tool calls must be an array', { received: typeof toolCalls });
+      logger.warn('Tool calls must be an array', {
+        received: typeof toolCalls,
+      });
       return [];
     }
 
@@ -24,7 +26,7 @@ export class ToolCallValidator {
         errors.push({ call, error: validationResult.error });
         logger.warn('Dropped malformed tool call', {
           call,
-          error: validationResult.error
+          error: validationResult.error,
         });
       }
     }
@@ -32,17 +34,19 @@ export class ToolCallValidator {
     if (errors.length > 0 && validCalls.length === 0) {
       // If all calls failed, we might want to throw or return structured error info
       // For now, we just log. The empty array will effectively be a no-op which is safer than crashing.
-      logger.error('All tool calls failed validation', { errorCount: errors.length });
+      logger.error('All tool calls failed validation', {
+        errorCount: errors.length,
+      });
     }
 
     return validCalls;
   }
 
   /**
-     * Validates a single tool call structure.
-     * OpenAI format: { id: "call_...", type: "function", function: { name: "...", arguments: "..." } }
-     * Internal format might be normalized to: { id: "...", name: "...", parameters: {...} }
-     */
+   * Validates a single tool call structure.
+   * OpenAI format: { id: "call_...", type: "function", function: { name: "...", arguments: "..." } }
+   * Internal format might be normalized to: { id: "...", name: "...", parameters: {...} }
+   */
   static validateSingleCall(call) {
     if (!call || typeof call !== 'object') {
       return { valid: false, error: 'Tool call must be an object' };

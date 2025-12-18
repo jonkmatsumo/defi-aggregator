@@ -15,7 +15,7 @@ describe('RateLimiter Property Tests', () => {
       defaultWindow: 1000, // 1 second for faster tests
       defaultMaxRequests: 10,
       coordinationEnabled: true,
-      burstAllowance: 0 // No burst by default for predictable tests
+      burstAllowance: 0, // No burst by default for predictable tests
     });
   });
 
@@ -29,15 +29,22 @@ describe('RateLimiter Property Tests', () => {
     test('should coordinate rate limits across multiple keys for the same provider', () => {
       fc.assert(
         fc.property(
-          fc.array(fc.string({ minLength: 1, maxLength: 10 }).filter(s => s.trim().length > 0), { minLength: 2, maxLength: 5 }), // Multiple keys
-          fc.string({ minLength: 1, maxLength: 10 }).filter(s => s.trim().length > 0), // Provider name
+          fc.array(
+            fc
+              .string({ minLength: 1, maxLength: 10 })
+              .filter(s => s.trim().length > 0),
+            { minLength: 2, maxLength: 5 }
+          ), // Multiple keys
+          fc
+            .string({ minLength: 1, maxLength: 10 })
+            .filter(s => s.trim().length > 0), // Provider name
           fc.integer({ min: 1, max: 5 }), // Provider max requests
           fc.integer({ min: 100, max: 1000 }), // Window size
           (keys, provider, providerMaxRequests, windowMs) => {
             // Configure provider-level rate limiting
             rateLimiter.configureProvider(provider, {
               maxRequests: providerMaxRequests,
-              windowMs: windowMs
+              windowMs: windowMs,
             });
 
             // Ensure unique keys and configure each key to use the same provider
@@ -46,7 +53,7 @@ describe('RateLimiter Property Tests', () => {
               rateLimiter.configure(key, {
                 maxRequests: 100, // High individual limit
                 windowMs: windowMs,
-                provider: provider
+                provider: provider,
               });
             });
 
@@ -57,7 +64,7 @@ describe('RateLimiter Property Tests', () => {
             for (let i = 0; i < providerMaxRequests + 5; i++) {
               const keyIndex = i % uniqueKeys.length;
               const key = uniqueKeys[keyIndex];
-              
+
               const result = rateLimiter.checkRateLimit(key);
               if (result && result.allowed) {
                 totalAllowedRequests++;
@@ -68,8 +75,10 @@ describe('RateLimiter Property Tests', () => {
 
             // The total allowed requests should not exceed the provider limit
             // even though individual keys have higher limits
-            expect(totalAllowedRequests).toBeLessThanOrEqual(providerMaxRequests);
-            
+            expect(totalAllowedRequests).toBeLessThanOrEqual(
+              providerMaxRequests
+            );
+
             // There should be some blocked requests if we exceeded the provider limit
             if (providerMaxRequests + 5 > providerMaxRequests) {
               expect(totalBlockedRequests).toBeGreaterThan(0);
@@ -89,25 +98,31 @@ describe('RateLimiter Property Tests', () => {
     test('should allow burst requests up to the configured allowance', () => {
       fc.assert(
         fc.property(
-          fc.string({ minLength: 1, maxLength: 10 }).filter(s => s.trim().length > 0), // Key
+          fc
+            .string({ minLength: 1, maxLength: 10 })
+            .filter(s => s.trim().length > 0), // Key
           fc.integer({ min: 5, max: 20 }), // Base max requests
-          fc.float({ min: Math.fround(0.2), max: Math.fround(0.5) }).filter(n => !isNaN(n)), // Burst allowance (minimum 20% to ensure at least 1 extra request)
+          fc
+            .float({ min: Math.fround(0.2), max: Math.fround(0.5) })
+            .filter(n => !isNaN(n)), // Burst allowance (minimum 20% to ensure at least 1 extra request)
           (key, maxRequests, burstAllowance) => {
             // Create a fresh rate limiter for each test to avoid state pollution
             const testRateLimiter = new RateLimiter({
               defaultWindow: 1000,
               defaultMaxRequests: 10,
               coordinationEnabled: true,
-              burstAllowance: 0
+              burstAllowance: 0,
             });
 
             testRateLimiter.configure(key, {
               maxRequests: maxRequests,
               windowMs: 1000,
-              burstAllowance: burstAllowance
+              burstAllowance: burstAllowance,
             });
 
-            const expectedBurstLimit = Math.floor(maxRequests * (1 + burstAllowance));
+            const expectedBurstLimit = Math.floor(
+              maxRequests * (1 + burstAllowance)
+            );
             let allowedRequests = 0;
 
             // Make requests up to burst limit
@@ -136,14 +151,16 @@ describe('RateLimiter Property Tests', () => {
     test('should properly reset rate limits after window expires', async () => {
       fc.assert(
         fc.asyncProperty(
-          fc.string({ minLength: 1, maxLength: 10 }).filter(s => s.trim().length > 0), // Key
+          fc
+            .string({ minLength: 1, maxLength: 10 })
+            .filter(s => s.trim().length > 0), // Key
           fc.integer({ min: 2, max: 10 }), // Max requests
           async (key, maxRequests) => {
             const windowMs = 100; // Short window for testing
-            
+
             rateLimiter.configure(key, {
               maxRequests: maxRequests,
-              windowMs: windowMs
+              windowMs: windowMs,
             });
 
             // Fill up the rate limit
@@ -179,13 +196,15 @@ describe('RateLimiter Property Tests', () => {
     test('should handle concurrent requests correctly', () => {
       fc.assert(
         fc.property(
-          fc.string({ minLength: 1, maxLength: 10 }).filter(s => s.trim().length > 0), // Key
+          fc
+            .string({ minLength: 1, maxLength: 10 })
+            .filter(s => s.trim().length > 0), // Key
           fc.integer({ min: 5, max: 15 }), // Max requests
           fc.integer({ min: 2, max: 5 }), // Number of concurrent batches
           (key, maxRequests, concurrentBatches) => {
             rateLimiter.configure(key, {
               maxRequests: maxRequests,
-              windowMs: 1000
+              windowMs: 1000,
             });
 
             let totalAllowed = 0;
@@ -193,7 +212,11 @@ describe('RateLimiter Property Tests', () => {
 
             // Simulate concurrent requests
             for (let batch = 0; batch < concurrentBatches; batch++) {
-              for (let i = 0; i < Math.ceil(maxRequests / concurrentBatches) + 1; i++) {
+              for (
+                let i = 0;
+                i < Math.ceil(maxRequests / concurrentBatches) + 1;
+                i++
+              ) {
                 const result = rateLimiter.checkRateLimit(key);
                 results.push(result);
                 if (result && result.allowed) {
@@ -208,7 +231,9 @@ describe('RateLimiter Property Tests', () => {
             // Should have some blocked requests if we made more than max
             const totalRequests = results.length;
             if (totalRequests > maxRequests) {
-              const blockedRequests = results.filter(r => !r || !r.allowed).length;
+              const blockedRequests = results.filter(
+                r => !r || !r.allowed
+              ).length;
               expect(blockedRequests).toBeGreaterThan(0);
             }
           }
@@ -220,7 +245,12 @@ describe('RateLimiter Property Tests', () => {
     test('should maintain separate rate limits for different keys', () => {
       fc.assert(
         fc.property(
-          fc.array(fc.string({ minLength: 1, maxLength: 10 }).filter(s => s.trim().length > 0), { minLength: 2, maxLength: 5 }), // Multiple keys (non-empty after trim)
+          fc.array(
+            fc
+              .string({ minLength: 1, maxLength: 10 })
+              .filter(s => s.trim().length > 0),
+            { minLength: 2, maxLength: 5 }
+          ), // Multiple keys (non-empty after trim)
           fc.integer({ min: 3, max: 10 }), // Max requests per key
           (keys, maxRequests) => {
             // Create a fresh rate limiter for each test to avoid state pollution
@@ -228,17 +258,17 @@ describe('RateLimiter Property Tests', () => {
               defaultWindow: 1000,
               defaultMaxRequests: 10,
               coordinationEnabled: true,
-              burstAllowance: 0
+              burstAllowance: 0,
             });
 
             // Ensure unique keys by adding index suffix
             const uniqueKeys = keys.map((key, index) => `${key}_${index}`);
-            
+
             // Configure rate limits for each key
             uniqueKeys.forEach(key => {
               testRateLimiter.configure(key, {
                 maxRequests: maxRequests,
-                windowMs: 1000
+                windowMs: 1000,
               });
             });
 
@@ -263,7 +293,9 @@ describe('RateLimiter Property Tests', () => {
 
             // Verify that keys are tracked separately
             const metrics = testRateLimiter.getMetrics();
-            expect(metrics.activeKeys).toBeGreaterThanOrEqual(uniqueKeys.length);
+            expect(metrics.activeKeys).toBeGreaterThanOrEqual(
+              uniqueKeys.length
+            );
           }
         ),
         { numRuns: 100 }
@@ -280,12 +312,12 @@ describe('RateLimiter Property Tests', () => {
             fc.integer(),
             fc.object()
           ), // Invalid key
-          (invalidKey) => {
+          invalidKey => {
             // Should throw error for invalid key
             expect(() => {
               rateLimiter.configure(invalidKey, {
                 maxRequests: 10,
-                windowMs: 1000
+                windowMs: 1000,
               });
             }).toThrow();
           }
@@ -297,14 +329,19 @@ describe('RateLimiter Property Tests', () => {
     test('should cleanup old request history to prevent memory leaks', () => {
       fc.assert(
         fc.property(
-          fc.array(fc.string({ minLength: 1, maxLength: 10 }).filter(s => s.trim().length > 0), { minLength: 5, maxLength: 20 }), // Multiple keys
+          fc.array(
+            fc
+              .string({ minLength: 1, maxLength: 10 })
+              .filter(s => s.trim().length > 0),
+            { minLength: 5, maxLength: 20 }
+          ), // Multiple keys
           fc.integer({ min: 1, max: 5 }), // Requests per key
           (keys, requestsPerKey) => {
             // Configure keys and make requests
             keys.forEach(key => {
               rateLimiter.configure(key, {
                 maxRequests: requestsPerKey + 10, // High limit to allow all requests
-                windowMs: 1000
+                windowMs: 1000,
               });
 
               // Make requests
@@ -323,7 +360,9 @@ describe('RateLimiter Property Tests', () => {
             const afterCleanupActiveKeys = afterCleanupMetrics.activeKeys;
 
             // Should have fewer or equal active keys after cleanup
-            expect(afterCleanupActiveKeys).toBeLessThanOrEqual(initialActiveKeys);
+            expect(afterCleanupActiveKeys).toBeLessThanOrEqual(
+              initialActiveKeys
+            );
           }
         ),
         { numRuns: 50 }
@@ -343,7 +382,7 @@ describe('RateLimiter Property Tests', () => {
       rateLimiter.configure('test-key', {
         maxRequests: 5,
         windowMs: 1000,
-        provider: 'test-provider'
+        provider: 'test-provider',
       });
 
       // Should allow up to 5 requests
@@ -360,19 +399,19 @@ describe('RateLimiter Property Tests', () => {
     test('should configure provider-level rate limiting', () => {
       rateLimiter.configureProvider('test-provider', {
         maxRequests: 3,
-        windowMs: 1000
+        windowMs: 1000,
       });
 
       rateLimiter.configure('key1', {
         maxRequests: 10,
         windowMs: 1000,
-        provider: 'test-provider'
+        provider: 'test-provider',
       });
 
       rateLimiter.configure('key2', {
         maxRequests: 10,
         windowMs: 1000,
-        provider: 'test-provider'
+        provider: 'test-provider',
       });
 
       // Should allow only 3 requests total across both keys
@@ -384,7 +423,7 @@ describe('RateLimiter Property Tests', () => {
 
     test('should return detailed metrics', () => {
       rateLimiter.configure('test-key', { maxRequests: 5, windowMs: 1000 });
-      
+
       // Make some requests
       rateLimiter.checkRateLimit('test-key');
       rateLimiter.checkRateLimit('test-key');
@@ -400,7 +439,7 @@ describe('RateLimiter Property Tests', () => {
       rateLimiter.configure('burst-key', {
         maxRequests: 5,
         windowMs: 1000,
-        burstAllowance: 0.4 // 40% burst = 2 extra requests
+        burstAllowance: 0.4, // 40% burst = 2 extra requests
       });
 
       // Should allow 5 base + 2 burst = 7 requests

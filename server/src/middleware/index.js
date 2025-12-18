@@ -2,6 +2,5 @@ export {
   requestLoggerMiddleware,
   errorLoggerMiddleware,
   logServiceCall,
-  logExternalCall
+  logExternalCall,
 } from './requestLogger.js';
-

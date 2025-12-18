@@ -3,7 +3,10 @@ import { createServer as createHttpServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { logger, getLoggerStats } from './utils/logger.js';
 import { metricsCollector } from './utils/metrics.js';
-import { requestLoggerMiddleware, errorLoggerMiddleware } from './middleware/requestLogger.js';
+import {
+  requestLoggerMiddleware,
+  errorLoggerMiddleware,
+} from './middleware/requestLogger.js';
 import { WebSocketHandler } from './websocket/handler.js';
 import { ConversationManager } from './conversation/manager.js';
 import { createLLMInterface } from './llm/interface.js';
@@ -12,28 +15,42 @@ import { ComponentIntentGenerator } from './components/intentGenerator.js';
 import { SystemPromptManager } from './prompts/systemPromptManager.js';
 import { IntentAnalyzer } from './nlp/intentAnalyzer.js';
 import { EducationalGenerator } from './content/educationalGenerator.js';
-import { serviceContainer, GasPriceAPIService, LendingAPIService, PriceFeedAPIService, TokenBalanceAPIService } from './services/index.js';
+import {
+  serviceContainer,
+  GasPriceAPIService,
+  LendingAPIService,
+  PriceFeedAPIService,
+  TokenBalanceAPIService,
+} from './services/index.js';
 import { createServiceRoutes } from './routes/serviceRoutes.js';
 
 export async function createServer(config) {
   const app = express();
-  
+
   // Middleware
   app.use(express.json());
-  
+
   // Request logging middleware (before other routes)
-  app.use(requestLoggerMiddleware({
-    slowThreshold: config.logging?.slowThreshold || 1000,
-    excludePaths: ['/health', '/favicon.ico'],
-    logBody: config.logging?.logBody || false,
-    logHeaders: config.logging?.logHeaders || false
-  }));
-  
+  app.use(
+    requestLoggerMiddleware({
+      slowThreshold: config.logging?.slowThreshold || 1000,
+      excludePaths: ['/health', '/favicon.ico'],
+      logBody: config.logging?.logBody || false,
+      logHeaders: config.logging?.logHeaders || false,
+    })
+  );
+
   // CORS handling
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', config.corsOrigin);
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header(
+      'Access-Control-Allow-Headers',
+      'Origin, X-Requested-With, Content-Type, Accept'
+    );
+    res.header(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, DELETE, OPTIONS'
+    );
     next();
   });
 
@@ -43,31 +60,31 @@ export async function createServer(config) {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       version: '1.0.0',
-      environment: config.nodeEnv
+      environment: config.nodeEnv,
     });
   });
 
   // Metrics endpoint - comprehensive metrics from MetricsCollector
   app.get('/metrics', (req, res) => {
     const { format, summary } = req.query;
-    
+
     // Return summary metrics for quick health checks
     if (summary === 'true') {
       return res.json({
         success: true,
         data: metricsCollector.getSummary(),
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
-    
+
     // Get comprehensive metrics
     const metrics = metricsCollector.getMetrics();
-    
+
     // Add server-specific metrics
     metrics.server = {
       environment: config.nodeEnv,
       logLevel: config.logging?.level || 'info',
-      version: '1.0.0'
+      version: '1.0.0',
     };
 
     // Add WebSocket metrics if available
@@ -89,36 +106,58 @@ export async function createServer(config) {
       if (gasPriceService) {
         metrics.services = metrics.services || {};
         metrics.services.gasPrice = gasPriceService.getMetrics();
-        metricsCollector.recordServiceMetrics('GasPriceAPIService', gasPriceService.getMetrics());
+        metricsCollector.recordServiceMetrics(
+          'GasPriceAPIService',
+          gasPriceService.getMetrics()
+        );
       }
-    } catch (e) { /* Service not initialized */ }
+    } catch (e) {
+      /* Service not initialized */
+    }
 
     try {
       const lendingService = serviceContainer.get('LendingAPIService');
       if (lendingService) {
         metrics.services = metrics.services || {};
         metrics.services.lending = lendingService.getMetrics();
-        metricsCollector.recordServiceMetrics('LendingAPIService', lendingService.getMetrics());
+        metricsCollector.recordServiceMetrics(
+          'LendingAPIService',
+          lendingService.getMetrics()
+        );
       }
-    } catch (e) { /* Service not initialized */ }
+    } catch (e) {
+      /* Service not initialized */
+    }
 
     try {
       const priceFeedService = serviceContainer.get('PriceFeedAPIService');
       if (priceFeedService) {
         metrics.services = metrics.services || {};
         metrics.services.priceFeed = priceFeedService.getMetrics();
-        metricsCollector.recordServiceMetrics('PriceFeedAPIService', priceFeedService.getMetrics());
+        metricsCollector.recordServiceMetrics(
+          'PriceFeedAPIService',
+          priceFeedService.getMetrics()
+        );
       }
-    } catch (e) { /* Service not initialized */ }
+    } catch (e) {
+      /* Service not initialized */
+    }
 
     try {
-      const tokenBalanceService = serviceContainer.get('TokenBalanceAPIService');
+      const tokenBalanceService = serviceContainer.get(
+        'TokenBalanceAPIService'
+      );
       if (tokenBalanceService) {
         metrics.services = metrics.services || {};
         metrics.services.tokenBalance = tokenBalanceService.getMetrics();
-        metricsCollector.recordServiceMetrics('TokenBalanceAPIService', tokenBalanceService.getMetrics());
+        metricsCollector.recordServiceMetrics(
+          'TokenBalanceAPIService',
+          tokenBalanceService.getMetrics()
+        );
       }
-    } catch (e) { /* Service not initialized */ }
+    } catch (e) {
+      /* Service not initialized */
+    }
 
     // Prometheus format for monitoring systems
     if (format === 'prometheus') {
@@ -129,7 +168,7 @@ export async function createServer(config) {
     res.json({
       success: true,
       data: metrics,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   });
 
@@ -140,7 +179,7 @@ export async function createServer(config) {
     res.json({
       success: true,
       message: 'Metrics reset successfully',
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   });
 
@@ -155,8 +194,8 @@ export async function createServer(config) {
         server: { status: 'healthy' },
         websocket: { status: 'healthy' },
         llm: { status: 'healthy' },
-        tools: { status: 'healthy' }
-      }
+        tools: { status: 'healthy' },
+      },
     };
 
     // Check component health
@@ -164,9 +203,12 @@ export async function createServer(config) {
       if (server.wsHandler) {
         const wsMetrics = server.wsHandler.getMetrics();
         health.components.websocket = {
-          status: wsMetrics.activeConnections < config.websocket.maxConnections ? 'healthy' : 'degraded',
+          status:
+            wsMetrics.activeConnections < config.websocket.maxConnections
+              ? 'healthy'
+              : 'degraded',
           activeConnections: wsMetrics.activeConnections,
-          maxConnections: config.websocket.maxConnections
+          maxConnections: config.websocket.maxConnections,
         };
       }
 
@@ -175,7 +217,7 @@ export async function createServer(config) {
         health.components.conversations = {
           status: 'healthy',
           activeSessions: convMetrics.activeSessions,
-          totalMessages: convMetrics.totalMessages
+          totalMessages: convMetrics.totalMessages,
         };
       }
     } catch (error) {
@@ -195,20 +237,22 @@ export async function createServer(config) {
     return new GasPriceAPIService({
       apiKeys: {
         etherscan: config.apiKeys?.etherscan || process.env.ETHERSCAN_API_KEY,
-        polygonscan: config.apiKeys?.polygonscan || process.env.POLYGONSCAN_API_KEY,
+        polygonscan:
+          config.apiKeys?.polygonscan || process.env.POLYGONSCAN_API_KEY,
         bscscan: config.apiKeys?.bscscan || process.env.BSCSCAN_API_KEY,
         arbiscan: config.apiKeys?.arbiscan || process.env.ARBISCAN_API_KEY,
-        optimistic: config.apiKeys?.optimistic || process.env.OPTIMISTIC_API_KEY
+        optimistic:
+          config.apiKeys?.optimistic || process.env.OPTIMISTIC_API_KEY,
       },
       cacheTimeout: config.services?.gasPriceCache || 300000, // 5 minutes
-      rateLimitMax: config.services?.rateLimitMax || 60
+      rateLimitMax: config.services?.rateLimitMax || 60,
     });
   });
 
   serviceContainer.register('LendingAPIService', () => {
     return new LendingAPIService({
       cacheTimeout: config.services?.lendingCache || 300000, // 5 minutes
-      rateLimitMax: config.services?.rateLimitMax || 30
+      rateLimitMax: config.services?.rateLimitMax || 30,
     });
   });
 
@@ -216,10 +260,11 @@ export async function createServer(config) {
     return new PriceFeedAPIService({
       apiKeys: {
         coinGecko: config.apiKeys?.coinGecko || process.env.COINGECKO_API_KEY,
-        coinMarketCap: config.apiKeys?.coinMarketCap || process.env.COINMARKETCAP_API_KEY
+        coinMarketCap:
+          config.apiKeys?.coinMarketCap || process.env.COINMARKETCAP_API_KEY,
       },
       cacheTimeout: config.services?.priceFeedCache || 60000, // 1 minute
-      rateLimitMax: config.services?.rateLimitMax || 120
+      rateLimitMax: config.services?.rateLimitMax || 120,
     });
   });
 
@@ -227,10 +272,10 @@ export async function createServer(config) {
     return new TokenBalanceAPIService({
       apiKeys: {
         alchemy: config.apiKeys?.alchemy || process.env.ALCHEMY_API_KEY,
-        infura: config.apiKeys?.infura || process.env.INFURA_API_KEY
+        infura: config.apiKeys?.infura || process.env.INFURA_API_KEY,
       },
       cacheTimeout: config.services?.tokenBalanceCache || 30000, // 30 seconds
-      rateLimitMax: config.services?.rateLimitMax || 50
+      rateLimitMax: config.services?.rateLimitMax || 50,
     });
   });
 
@@ -246,7 +291,7 @@ export async function createServer(config) {
   const systemPromptManager = new SystemPromptManager({
     defaultContext: 'defi_assistant',
     includeToolExamples: true,
-    includeEducationalGuidance: true
+    includeEducationalGuidance: true,
   });
   const intentAnalyzer = new IntentAnalyzer();
   const educationalGenerator = new EducationalGenerator();
@@ -261,25 +306,31 @@ export async function createServer(config) {
   server.conversationManager = conversationManager;
 
   // Initialize WebSocket server
-  const wss = new WebSocketServer({ 
+  const wss = new WebSocketServer({
     server,
-    maxPayload: 16 * 1024 * 1024 // 16MB
+    maxPayload: 16 * 1024 * 1024, // 16MB
   });
 
-  const wsHandler = new WebSocketHandler(wss, conversationManager, config.websocket);
+  const wsHandler = new WebSocketHandler(
+    wss,
+    conversationManager,
+    config.websocket
+  );
 
   // Store reference to wsHandler for cleanup
   server.wsHandler = wsHandler;
 
   // Error logging middleware (after all routes)
-  app.use(errorLoggerMiddleware({
-    includeStackTrace: config.nodeEnv !== 'production'
-  }));
+  app.use(
+    errorLoggerMiddleware({
+      includeStackTrace: config.nodeEnv !== 'production',
+    })
+  );
 
   logger.info('Server components initialized successfully', {
     port: config.port,
     environment: config.nodeEnv,
-    logLevel: config.logging?.level || 'info'
+    logLevel: config.logging?.level || 'info',
   });
 
   return server;
@@ -292,51 +343,67 @@ export async function createServer(config) {
  */
 function formatPrometheusMetrics(metrics) {
   const lines = [];
-  
+
   // Request metrics
   lines.push('# HELP http_requests_total Total number of HTTP requests');
   lines.push('# TYPE http_requests_total counter');
   lines.push(`http_requests_total ${metrics.requests?.total || 0}`);
-  
+
   // Response time metrics
   if (metrics.responseTimes?.overall) {
-    lines.push('# HELP http_request_duration_ms HTTP request duration in milliseconds');
+    lines.push(
+      '# HELP http_request_duration_ms HTTP request duration in milliseconds'
+    );
     lines.push('# TYPE http_request_duration_ms gauge');
-    lines.push(`http_request_duration_ms_avg ${metrics.responseTimes.overall.avg || 0}`);
-    lines.push(`http_request_duration_ms_p50 ${metrics.responseTimes.overall.p50 || 0}`);
-    lines.push(`http_request_duration_ms_p95 ${metrics.responseTimes.overall.p95 || 0}`);
-    lines.push(`http_request_duration_ms_p99 ${metrics.responseTimes.overall.p99 || 0}`);
+    lines.push(
+      `http_request_duration_ms_avg ${metrics.responseTimes.overall.avg || 0}`
+    );
+    lines.push(
+      `http_request_duration_ms_p50 ${metrics.responseTimes.overall.p50 || 0}`
+    );
+    lines.push(
+      `http_request_duration_ms_p95 ${metrics.responseTimes.overall.p95 || 0}`
+    );
+    lines.push(
+      `http_request_duration_ms_p99 ${metrics.responseTimes.overall.p99 || 0}`
+    );
   }
-  
+
   // Error metrics
   lines.push('# HELP http_errors_total Total number of HTTP errors');
   lines.push('# TYPE http_errors_total counter');
   lines.push(`http_errors_total ${metrics.errors?.total || 0}`);
-  
+
   // Cache metrics
   lines.push('# HELP cache_hits_total Total number of cache hits');
   lines.push('# TYPE cache_hits_total counter');
   lines.push(`cache_hits_total ${metrics.cache?.hits || 0}`);
   lines.push(`cache_misses_total ${metrics.cache?.misses || 0}`);
-  
+
   // Rate limit metrics
-  lines.push('# HELP rate_limit_exceeded_total Total number of rate limit exceeded events');
+  lines.push(
+    '# HELP rate_limit_exceeded_total Total number of rate limit exceeded events'
+  );
   lines.push('# TYPE rate_limit_exceeded_total counter');
   lines.push(`rate_limit_exceeded_total ${metrics.rateLimits?.exceeded || 0}`);
-  
+
   // Memory metrics
   if (metrics.system?.memory) {
     lines.push('# HELP process_memory_bytes Process memory usage in bytes');
     lines.push('# TYPE process_memory_bytes gauge');
-    lines.push(`process_memory_heap_used_bytes ${metrics.system.memory.heapUsed}`);
-    lines.push(`process_memory_heap_total_bytes ${metrics.system.memory.heapTotal}`);
+    lines.push(
+      `process_memory_heap_used_bytes ${metrics.system.memory.heapUsed}`
+    );
+    lines.push(
+      `process_memory_heap_total_bytes ${metrics.system.memory.heapTotal}`
+    );
     lines.push(`process_memory_rss_bytes ${metrics.system.memory.rss}`);
   }
-  
+
   // Uptime
   lines.push('# HELP process_uptime_seconds Process uptime in seconds');
   lines.push('# TYPE process_uptime_seconds gauge');
   lines.push(`process_uptime_seconds ${metrics.uptime?.seconds || 0}`);
-  
+
   return lines.join('\n');
 }

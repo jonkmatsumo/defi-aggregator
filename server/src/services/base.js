@@ -17,7 +17,7 @@ export class BaseService {
       retryDelay: 1000,
       useAdvancedCaching: true,
       useAdvancedRateLimit: true,
-      ...config
+      ...config,
     };
 
     // Initialize caching (always use simple caching for backward compatibility)
@@ -30,7 +30,7 @@ export class BaseService {
         defaultStrategy: config.cacheStrategy || 'lru',
         maxCaches: config.maxCaches || 5,
         globalMaxSize: config.globalMaxSize || 2000,
-        globalMaxMemoryMB: config.globalMaxMemoryMB || 100
+        globalMaxMemoryMB: config.globalMaxMemoryMB || 100,
       });
       this.cacheName = config.cacheName || this.constructor.name.toLowerCase();
     }
@@ -44,10 +44,10 @@ export class BaseService {
         defaultWindow: this.config.rateLimitWindow,
         defaultMaxRequests: this.config.rateLimitMax,
         coordinationEnabled: config.coordinationEnabled !== false,
-        burstAllowance: config.burstAllowance || 0.2
+        burstAllowance: config.burstAllowance || 0.2,
       });
     }
-    
+
     // Initialize metrics
     this.metrics = {
       requests: 0,
@@ -56,12 +56,12 @@ export class BaseService {
       errors: 0,
       rateLimitExceeded: 0,
       averageResponseTime: 0,
-      totalResponseTime: 0
+      totalResponseTime: 0,
     };
 
-    logger.debug('Base service initialized', { 
+    logger.debug('Base service initialized', {
       serviceName: this.constructor.name,
-      config: this.config 
+      config: this.config,
     });
   }
 
@@ -76,7 +76,11 @@ export class BaseService {
       const data = this.cachingService.get(this.cacheName, key, options);
       if (data !== null) {
         this.metrics.cacheHits++;
-        logger.debug('Advanced cache hit', { key, cacheName: this.cacheName, serviceName: this.constructor.name });
+        logger.debug('Advanced cache hit', {
+          key,
+          cacheName: this.cacheName,
+          serviceName: this.constructor.name,
+        });
       } else {
         this.metrics.cacheMisses++;
       }
@@ -86,9 +90,16 @@ export class BaseService {
       const data = this.cache.get(key);
       const timestamp = this.cacheTimestamps.get(key);
 
-      if (data && timestamp && (Date.now() - timestamp) < this.config.cacheTimeout) {
+      if (
+        data &&
+        timestamp &&
+        Date.now() - timestamp < this.config.cacheTimeout
+      ) {
         this.metrics.cacheHits++;
-        logger.debug('Simple cache hit', { key, serviceName: this.constructor.name });
+        logger.debug('Simple cache hit', {
+          key,
+          serviceName: this.constructor.name,
+        });
         return data;
       }
 
@@ -113,14 +124,21 @@ export class BaseService {
     if (this.config.useAdvancedCaching && this.cachingService) {
       this.cachingService.set(this.cacheName, key, data, {
         ttl: options.ttl || this.config.cacheTimeout,
-        ...options
+        ...options,
       });
-      logger.debug('Advanced cache set', { key, cacheName: this.cacheName, serviceName: this.constructor.name });
+      logger.debug('Advanced cache set', {
+        key,
+        cacheName: this.cacheName,
+        serviceName: this.constructor.name,
+      });
     } else {
       // Use simple caching
       this.cache.set(key, data);
       this.cacheTimestamps.set(key, Date.now());
-      logger.debug('Simple cache set', { key, serviceName: this.constructor.name });
+      logger.debug('Simple cache set', {
+        key,
+        serviceName: this.constructor.name,
+      });
     }
   }
 
@@ -132,21 +150,33 @@ export class BaseService {
     if (this.config.useAdvancedCaching && this.cachingService) {
       if (key) {
         this.cachingService.delete(this.cacheName, key);
-        logger.debug('Advanced cache cleared for key', { key, cacheName: this.cacheName, serviceName: this.constructor.name });
+        logger.debug('Advanced cache cleared for key', {
+          key,
+          cacheName: this.cacheName,
+          serviceName: this.constructor.name,
+        });
       } else {
         this.cachingService.clear(this.cacheName);
-        logger.debug('Advanced cache cleared', { cacheName: this.cacheName, serviceName: this.constructor.name });
+        logger.debug('Advanced cache cleared', {
+          cacheName: this.cacheName,
+          serviceName: this.constructor.name,
+        });
       }
     } else {
       // Use simple caching
       if (key) {
         this.cache.delete(key);
         this.cacheTimestamps.delete(key);
-        logger.debug('Simple cache cleared for key', { key, serviceName: this.constructor.name });
+        logger.debug('Simple cache cleared for key', {
+          key,
+          serviceName: this.constructor.name,
+        });
       } else {
         this.cache.clear();
         this.cacheTimestamps.clear();
-        logger.debug('Simple cache cleared', { serviceName: this.constructor.name });
+        logger.debug('Simple cache cleared', {
+          serviceName: this.constructor.name,
+        });
       }
     }
   }
@@ -162,10 +192,10 @@ export class BaseService {
       const result = this.rateLimiter.checkRateLimit(key, options);
       if (!result.allowed) {
         this.metrics.rateLimitExceeded++;
-        logger.warn('Advanced rate limit exceeded', { 
-          key, 
+        logger.warn('Advanced rate limit exceeded', {
+          key,
           reason: result.reason,
-          serviceName: this.constructor.name 
+          serviceName: this.constructor.name,
         });
       }
       return result.allowed;
@@ -183,11 +213,11 @@ export class BaseService {
       // Check if we're within the limit
       if (requests.length >= this.config.rateLimitMax) {
         this.metrics.rateLimitExceeded++;
-        logger.warn('Simple rate limit exceeded', { 
-          key, 
-          requests: requests.length, 
+        logger.warn('Simple rate limit exceeded', {
+          key,
+          requests: requests.length,
           limit: this.config.rateLimitMax,
-          serviceName: this.constructor.name 
+          serviceName: this.constructor.name,
         });
         return false;
       }
@@ -208,9 +238,16 @@ export class BaseService {
   configureRateLimit(key, config) {
     if (this.config.useAdvancedRateLimit && this.rateLimiter) {
       this.rateLimiter.configure(key, config);
-      logger.debug('Rate limit configured', { key, config, serviceName: this.constructor.name });
+      logger.debug('Rate limit configured', {
+        key,
+        config,
+        serviceName: this.constructor.name,
+      });
     } else {
-      logger.warn('Advanced rate limiting not enabled, configuration ignored', { key, serviceName: this.constructor.name });
+      logger.warn('Advanced rate limiting not enabled, configuration ignored', {
+        key,
+        serviceName: this.constructor.name,
+      });
     }
   }
 
@@ -222,9 +259,16 @@ export class BaseService {
   configureProviderRateLimit(provider, config) {
     if (this.config.useAdvancedRateLimit && this.rateLimiter) {
       this.rateLimiter.configureProvider(provider, config);
-      logger.debug('Provider rate limit configured', { provider, config, serviceName: this.constructor.name });
+      logger.debug('Provider rate limit configured', {
+        provider,
+        config,
+        serviceName: this.constructor.name,
+      });
     } else {
-      logger.warn('Advanced rate limiting not enabled, provider configuration ignored', { provider, serviceName: this.constructor.name });
+      logger.warn(
+        'Advanced rate limiting not enabled, provider configuration ignored',
+        { provider, serviceName: this.constructor.name }
+      );
     }
   }
 
@@ -235,10 +279,10 @@ export class BaseService {
    * @returns {*} Operation result
    */
   async executeWithRetry(operation, options = {}) {
-    const { 
-      attempts = this.config.retryAttempts, 
+    const {
+      attempts = this.config.retryAttempts,
       delay = this.config.retryDelay,
-      backoff = true 
+      backoff = true,
     } = options;
 
     let lastError;
@@ -247,14 +291,13 @@ export class BaseService {
       try {
         const startTime = Date.now();
         const result = await operation();
-        
+
         // Update metrics
         const responseTime = Date.now() - startTime;
         this.updateResponseTimeMetrics(responseTime);
         this.metrics.requests++;
 
         return result;
-
       } catch (error) {
         lastError = error;
         this.metrics.errors++;
@@ -263,7 +306,7 @@ export class BaseService {
           attempt,
           maxAttempts: attempts,
           error: error.message,
-          serviceName: this.constructor.name
+          serviceName: this.constructor.name,
         });
 
         // Don't wait after the last attempt
@@ -277,7 +320,7 @@ export class BaseService {
     logger.error('Operation failed after all retry attempts', {
       attempts,
       error: lastError.message,
-      serviceName: this.constructor.name
+      serviceName: this.constructor.name,
     });
 
     throw lastError;
@@ -289,7 +332,8 @@ export class BaseService {
    */
   updateResponseTimeMetrics(responseTime) {
     this.metrics.totalResponseTime += responseTime;
-    this.metrics.averageResponseTime = this.metrics.totalResponseTime / this.metrics.requests;
+    this.metrics.averageResponseTime =
+      this.metrics.totalResponseTime / this.metrics.requests;
   }
 
   /**
@@ -311,7 +355,9 @@ export class BaseService {
     });
 
     if (missing.length > 0) {
-      throw new ServiceError(`Missing required configuration: ${missing.join(', ')}`);
+      throw new ServiceError(
+        `Missing required configuration: ${missing.join(', ')}`
+      );
     }
   }
 
@@ -337,7 +383,7 @@ export class BaseService {
       operation,
       error: error.message,
       serviceName: this.constructor.name,
-      ...context
+      ...context,
     };
 
     if (error instanceof ServiceError) {
@@ -345,7 +391,7 @@ export class BaseService {
     } else {
       logger.error('Unexpected error occurred', {
         ...errorInfo,
-        stack: error.stack
+        stack: error.stack,
       });
     }
 
@@ -359,7 +405,7 @@ export class BaseService {
   getMetrics() {
     const baseMetrics = {
       ...this.metrics,
-      serviceName: this.constructor.name
+      serviceName: this.constructor.name,
     };
 
     if (this.config.useAdvancedCaching && this.cachingService) {
@@ -390,8 +436,10 @@ export class BaseService {
       errors: 0,
       rateLimitExceeded: 0,
       averageResponseTime: 0,
-      totalResponseTime: 0
+      totalResponseTime: 0,
     };
-    logger.debug('Service metrics reset', { serviceName: this.constructor.name });
+    logger.debug('Service metrics reset', {
+      serviceName: this.constructor.name,
+    });
   }
 }

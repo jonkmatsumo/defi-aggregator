@@ -1,20 +1,22 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from "@testing-library/react";
 import {
   useApiData,
   useGasPrices,
   useCryptoPrice,
   useLendingRates,
   useTokenBalances,
-  usePortfolio
-} from '../../src/hooks/useApiData';
-import apiClient from '../../src/services/apiClient';
+  usePortfolio,
+} from "../../src/hooks/useApiData";
+import apiClient from "../../src/services/apiClient";
 
 // Mock the apiClient
-jest.mock('../../src/services/apiClient', () => ({
+jest.mock("../../src/services/apiClient", () => ({
   __esModule: true,
   default: {
     get: jest.fn(),
-    getCacheKey: jest.fn((endpoint, params) => `cache:${endpoint}:${JSON.stringify(params)}`)
+    getCacheKey: jest.fn(
+      (endpoint, params) => `cache:${endpoint}:${JSON.stringify(params)}`
+    ),
   },
   APIError: class APIError extends Error {
     constructor(message, status, code) {
@@ -22,29 +24,29 @@ jest.mock('../../src/services/apiClient', () => ({
       this.status = status;
       this.code = code;
     }
-  }
+  },
 }));
 
 // Mock localStorage
 const localStorageMock = {
   getItem: jest.fn(),
   setItem: jest.fn(),
-  removeItem: jest.fn()
+  removeItem: jest.fn(),
 };
-Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+Object.defineProperty(window, "localStorage", { value: localStorageMock });
 
-describe('useApiData', () => {
+describe("useApiData", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset the mock implementation to a default resolved value
     apiClient.get.mockReset();
   });
 
-  describe('Basic Functionality', () => {
-    it('should fetch data on mount', async () => {
+  describe("Basic Functionality", () => {
+    it("should fetch data on mount", async () => {
       apiClient.get.mockResolvedValue({ value: 42 });
 
-      const { result } = renderHook(() => useApiData('/api/test'));
+      const { result } = renderHook(() => useApiData("/api/test"));
 
       // Initially loading
       expect(result.current.loading).toBe(true);
@@ -57,11 +59,11 @@ describe('useApiData', () => {
       expect(result.current.error).toBeNull();
     });
 
-    it('should set error on failure', async () => {
-      const error = new Error('Fetch failed');
+    it("should set error on failure", async () => {
+      const error = new Error("Fetch failed");
       apiClient.get.mockRejectedValue(error);
 
-      const { result } = renderHook(() => useApiData('/api/test'));
+      const { result } = renderHook(() => useApiData("/api/test"));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -71,21 +73,23 @@ describe('useApiData', () => {
       expect(result.current.data).toBeNull();
     });
 
-    it('should not fetch when disabled', () => {
-      const { result } = renderHook(() => useApiData('/api/test', { enabled: false }));
+    it("should not fetch when disabled", () => {
+      const { result } = renderHook(() =>
+        useApiData("/api/test", { enabled: false })
+      );
 
       expect(apiClient.get).not.toHaveBeenCalled();
       expect(result.current.loading).toBe(false);
     });
 
-    it('should pass params to API client', async () => {
-      apiClient.get.mockResolvedValue({ data: 'test' });
+    it("should pass params to API client", async () => {
+      apiClient.get.mockResolvedValue({ data: "test" });
 
-      renderHook(() => useApiData('/api/test', { params: { id: 1 } }));
+      renderHook(() => useApiData("/api/test", { params: { id: 1 } }));
 
       await waitFor(() => {
         expect(apiClient.get).toHaveBeenCalledWith(
-          '/api/test',
+          "/api/test",
           { id: 1 },
           expect.any(Object)
         );
@@ -93,32 +97,32 @@ describe('useApiData', () => {
     });
   });
 
-  describe('Refetch Functionality', () => {
-    it('should provide refetch function', async () => {
-      apiClient.get.mockResolvedValue({ value: 'data' });
+  describe("Refetch Functionality", () => {
+    it("should provide refetch function", async () => {
+      apiClient.get.mockResolvedValue({ value: "data" });
 
-      const { result } = renderHook(() => useApiData('/api/test'));
+      const { result } = renderHook(() => useApiData("/api/test"));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
       // Verify refetch is a function that can be called
-      expect(typeof result.current.refetch).toBe('function');
-      expect(result.current.data).toEqual({ value: 'data' });
+      expect(typeof result.current.refetch).toBe("function");
+      expect(result.current.data).toEqual({ value: "data" });
     });
   });
 
-  describe('Cached Data Handling', () => {
-    it('should set isCached flag for cached data', async () => {
+  describe("Cached Data Handling", () => {
+    it("should set isCached flag for cached data", async () => {
       apiClient.get.mockResolvedValue({
-        value: 'cached',
+        value: "cached",
         _cached: true,
         _cachedAt: Date.now() - 60000,
-        _stale: false
+        _stale: false,
       });
 
-      const { result } = renderHook(() => useApiData('/api/test'));
+      const { result } = renderHook(() => useApiData("/api/test"));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -128,15 +132,15 @@ describe('useApiData', () => {
       expect(result.current.isStale).toBe(false);
     });
 
-    it('should set isStale flag for stale cached data', async () => {
+    it("should set isStale flag for stale cached data", async () => {
       apiClient.get.mockResolvedValue({
-        value: 'stale',
+        value: "stale",
         _cached: true,
         _cachedAt: Date.now() - 600000,
-        _stale: true
+        _stale: true,
       });
 
-      const { result } = renderHook(() => useApiData('/api/test'));
+      const { result } = renderHook(() => useApiData("/api/test"));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -146,11 +150,11 @@ describe('useApiData', () => {
       expect(result.current.isStale).toBe(true);
     });
 
-    it('should set lastUpdated to current time for fresh data', async () => {
+    it("should set lastUpdated to current time for fresh data", async () => {
       const beforeFetch = Date.now();
-      apiClient.get.mockResolvedValue({ value: 'fresh' });
+      apiClient.get.mockResolvedValue({ value: "fresh" });
 
-      const { result } = renderHook(() => useApiData('/api/test'));
+      const { result } = renderHook(() => useApiData("/api/test"));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -161,14 +165,14 @@ describe('useApiData', () => {
     });
   });
 
-  describe('Transform Function', () => {
-    it('should apply transform to data', async () => {
+  describe("Transform Function", () => {
+    it("should apply transform to data", async () => {
       apiClient.get.mockResolvedValue({ value: 10 });
 
-      const transform = jest.fn((data) => ({ ...data, doubled: data.value * 2 }));
+      const transform = jest.fn(data => ({ ...data, doubled: data.value * 2 }));
 
       const { result } = renderHook(() =>
-        useApiData('/api/test', { transform })
+        useApiData("/api/test", { transform })
       );
 
       await waitFor(() => {
@@ -180,12 +184,12 @@ describe('useApiData', () => {
     });
   });
 
-  describe('Initial Data', () => {
-    it('should use initial data when disabled', () => {
+  describe("Initial Data", () => {
+    it("should use initial data when disabled", () => {
       const { result } = renderHook(() =>
-        useApiData('/api/test', {
+        useApiData("/api/test", {
           initialData: { initial: true },
-          enabled: false
+          enabled: false,
         })
       );
 
@@ -194,112 +198,116 @@ describe('useApiData', () => {
   });
 });
 
-describe('Specialized Hooks', () => {
+describe("Specialized Hooks", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     apiClient.get.mockReset();
   });
 
-  describe('useGasPrices', () => {
-    it('should fetch gas prices for network', async () => {
-      apiClient.get.mockResolvedValue({ gasPrice: '30 gwei' });
+  describe("useGasPrices", () => {
+    it("should fetch gas prices for network", async () => {
+      apiClient.get.mockResolvedValue({ gasPrice: "30 gwei" });
 
-      const { result } = renderHook(() => useGasPrices('ethereum'));
+      const { result } = renderHook(() => useGasPrices("ethereum"));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
       expect(apiClient.get).toHaveBeenCalledWith(
-        '/api/gas-prices/ethereum',
+        "/api/gas-prices/ethereum",
         {},
         expect.objectContaining({
-          cacheTTL: 30000
+          cacheTTL: 30000,
         })
       );
     });
   });
 
-  describe('useCryptoPrice', () => {
-    it('should fetch price for symbol', async () => {
+  describe("useCryptoPrice", () => {
+    it("should fetch price for symbol", async () => {
       apiClient.get.mockResolvedValue({ price: 50000 });
 
-      const { result } = renderHook(() => useCryptoPrice('BTC'));
+      const { result } = renderHook(() => useCryptoPrice("BTC"));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
       expect(apiClient.get).toHaveBeenCalledWith(
-        '/api/prices/BTC',
-        { currency: 'USD' },
+        "/api/prices/BTC",
+        { currency: "USD" },
         expect.any(Object)
       );
     });
 
-    it('should use custom currency', async () => {
+    it("should use custom currency", async () => {
       apiClient.get.mockResolvedValue({ price: 42000 });
 
-      const { result } = renderHook(() => useCryptoPrice('BTC', { currency: 'EUR' }));
+      const { result } = renderHook(() =>
+        useCryptoPrice("BTC", { currency: "EUR" })
+      );
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
       expect(apiClient.get).toHaveBeenCalledWith(
-        '/api/prices/BTC',
-        { currency: 'EUR' },
+        "/api/prices/BTC",
+        { currency: "EUR" },
         expect.any(Object)
       );
     });
 
-    it('should not fetch without symbol', () => {
-      const { result } = renderHook(() => useCryptoPrice(''));
+    it("should not fetch without symbol", () => {
+      const { result } = renderHook(() => useCryptoPrice(""));
 
       expect(apiClient.get).not.toHaveBeenCalled();
       expect(result.current.loading).toBe(false);
     });
   });
 
-  describe('useLendingRates', () => {
-    it('should fetch lending rates for token', async () => {
+  describe("useLendingRates", () => {
+    it("should fetch lending rates for token", async () => {
       apiClient.get.mockResolvedValue({ rates: [] });
 
-      const { result } = renderHook(() => useLendingRates('USDC'));
+      const { result } = renderHook(() => useLendingRates("USDC"));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
       expect(apiClient.get).toHaveBeenCalledWith(
-        '/api/lending-rates/USDC',
-        { protocols: 'aave,compound' },
+        "/api/lending-rates/USDC",
+        { protocols: "aave,compound" },
         expect.any(Object)
       );
     });
 
-    it('should use custom protocols', async () => {
+    it("should use custom protocols", async () => {
       apiClient.get.mockResolvedValue({ rates: [] });
 
-      const { result } = renderHook(() => useLendingRates('USDC', { protocols: ['aave'] }));
+      const { result } = renderHook(() =>
+        useLendingRates("USDC", { protocols: ["aave"] })
+      );
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
       expect(apiClient.get).toHaveBeenCalledWith(
-        '/api/lending-rates/USDC',
-        { protocols: 'aave' },
+        "/api/lending-rates/USDC",
+        { protocols: "aave" },
         expect.any(Object)
       );
     });
   });
 
-  describe('useTokenBalances', () => {
-    it('should fetch balances for valid address', async () => {
+  describe("useTokenBalances", () => {
+    it("should fetch balances for valid address", async () => {
       apiClient.get.mockResolvedValue({ balances: [] });
 
-      const validAddress = '0x1234567890123456789012345678901234567890';
+      const validAddress = "0x1234567890123456789012345678901234567890";
       const { result } = renderHook(() => useTokenBalances(validAddress));
 
       await waitFor(() => {
@@ -308,23 +316,25 @@ describe('Specialized Hooks', () => {
 
       expect(apiClient.get).toHaveBeenCalledWith(
         `/api/balances/${validAddress}`,
-        { network: 'ethereum' },
+        { network: "ethereum" },
         expect.any(Object)
       );
     });
 
-    it('should not fetch for invalid address', () => {
-      const { result } = renderHook(() => useTokenBalances('invalid'));
+    it("should not fetch for invalid address", () => {
+      const { result } = renderHook(() => useTokenBalances("invalid"));
 
       expect(apiClient.get).not.toHaveBeenCalled();
       expect(result.current.loading).toBe(false);
     });
 
-    it('should use custom network', async () => {
+    it("should use custom network", async () => {
       apiClient.get.mockResolvedValue({ balances: [] });
 
-      const validAddress = '0x1234567890123456789012345678901234567890';
-      const { result } = renderHook(() => useTokenBalances(validAddress, { network: 'polygon' }));
+      const validAddress = "0x1234567890123456789012345678901234567890";
+      const { result } = renderHook(() =>
+        useTokenBalances(validAddress, { network: "polygon" })
+      );
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -332,17 +342,17 @@ describe('Specialized Hooks', () => {
 
       expect(apiClient.get).toHaveBeenCalledWith(
         expect.any(String),
-        { network: 'polygon' },
+        { network: "polygon" },
         expect.any(Object)
       );
     });
   });
 
-  describe('usePortfolio', () => {
-    it('should fetch portfolio for valid address', async () => {
+  describe("usePortfolio", () => {
+    it("should fetch portfolio for valid address", async () => {
       apiClient.get.mockResolvedValue({ totalValue: 1000 });
 
-      const validAddress = '0x1234567890123456789012345678901234567890';
+      const validAddress = "0x1234567890123456789012345678901234567890";
       const { result } = renderHook(() => usePortfolio(validAddress));
 
       await waitFor(() => {
@@ -351,13 +361,13 @@ describe('Specialized Hooks', () => {
 
       expect(apiClient.get).toHaveBeenCalledWith(
         `/api/portfolio/${validAddress}`,
-        { networks: 'ethereum,polygon' },
+        { networks: "ethereum,polygon" },
         expect.any(Object)
       );
     });
 
-    it('should not fetch for invalid address', () => {
-      const { result } = renderHook(() => usePortfolio('invalid'));
+    it("should not fetch for invalid address", () => {
+      const { result } = renderHook(() => usePortfolio("invalid"));
 
       expect(apiClient.get).not.toHaveBeenCalled();
       expect(result.current.loading).toBe(false);

@@ -65,7 +65,8 @@
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -134,7 +135,9 @@
   line-height: 1.5;
   word-wrap: break-word;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .message-bubble:hover {
@@ -216,7 +219,9 @@
 }
 
 @keyframes pulse {
-  0%, 60%, 100% {
+  0%,
+  60%,
+  100% {
     opacity: 0.3;
     transform: scale(0.8);
   }
@@ -275,7 +280,9 @@
   font-size: 16px;
   color: #e2e8f0;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
   font-family: inherit;
 }
 
@@ -302,7 +309,10 @@
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
   white-space: nowrap;
 }
 
@@ -484,7 +494,8 @@
 
 /* Smooth transitions for all interactive elements */
 .chat-interface * {
-  transition-property: background-color, border-color, color, opacity, transform, box-shadow;
+  transition-property:
+    background-color, border-color, color, opacity, transform, box-shadow;
   transition-duration: 0.2s;
   transition-timing-function: ease;
 }

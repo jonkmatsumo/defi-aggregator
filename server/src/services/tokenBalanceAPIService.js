@@ -21,91 +21,91 @@ export class TokenBalanceAPIService extends BaseService {
           chainId: 1,
           nativeSymbol: 'ETH',
           nativeName: 'Ether',
-          nativeDecimals: 18
+          nativeDecimals: 18,
         },
         polygon: {
           rpcUrl: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY || ''}`,
           chainId: 137,
           nativeSymbol: 'MATIC',
           nativeName: 'MATIC',
-          nativeDecimals: 18
+          nativeDecimals: 18,
         },
         bsc: {
           rpcUrl: 'https://bsc-dataseed.binance.org',
           chainId: 56,
           nativeSymbol: 'BNB',
           nativeName: 'BNB',
-          nativeDecimals: 18
+          nativeDecimals: 18,
         },
         arbitrum: {
           rpcUrl: 'https://arb1.arbitrum.io/rpc',
           chainId: 42161,
           nativeSymbol: 'ETH',
           nativeName: 'Ether',
-          nativeDecimals: 18
+          nativeDecimals: 18,
         },
         optimism: {
           rpcUrl: 'https://mainnet.optimism.io',
           chainId: 10,
           nativeSymbol: 'ETH',
           nativeName: 'Ether',
-          nativeDecimals: 18
-        }
+          nativeDecimals: 18,
+        },
       },
       commonTokens: {
         ethereum: {
           '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2': {
             symbol: 'WETH',
             name: 'Wrapped Ether',
-            decimals: 18
+            decimals: 18,
           },
           '0xA0b86a33E6441b8C4C8C8C8C8C8C8C8C8C8C8C8': {
             symbol: 'USDC',
             name: 'USD Coin',
-            decimals: 6
+            decimals: 6,
           },
           '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599': {
             symbol: 'WBTC',
             name: 'Wrapped Bitcoin',
-            decimals: 8
-          }
+            decimals: 8,
+          },
         },
         polygon: {
           '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270': {
             symbol: 'WMATIC',
             name: 'Wrapped MATIC',
-            decimals: 18
+            decimals: 18,
           },
           '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174': {
             symbol: 'USDC',
             name: 'USD Coin',
-            decimals: 6
-          }
+            decimals: 6,
+          },
         },
         bsc: {
           '0xbb4CdB9CBd36B01bD1cBaEF2aF378a0C60Cb8C8C': {
             symbol: 'WBNB',
             name: 'Wrapped BNB',
-            decimals: 18
+            decimals: 18,
           },
           '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d': {
             symbol: 'USDC',
             name: 'USD Coin',
-            decimals: 18
-          }
-        }
+            decimals: 18,
+          },
+        },
       },
       cache: {
         enabled: true,
-        ttl: 30000 // 30 seconds for balance data
+        ttl: 30000, // 30 seconds for balance data
       },
       rateLimit: {
         maxRequests: 50,
-        windowMs: 60000 // 1 minute
+        windowMs: 60000, // 1 minute
       },
       timeout: 15000,
       retryAttempts: 2,
-      retryDelay: 1000
+      retryDelay: 1000,
     });
 
     // Set validation schema
@@ -120,64 +120,64 @@ export class TokenBalanceAPIService extends BaseService {
       timeout: this.config.timeout,
       retryAttempts: this.config.retryAttempts,
       retryDelay: this.config.retryDelay,
-      userAgent: 'TokenBalance-Service/1.0.0'
+      userAgent: 'TokenBalance-Service/1.0.0',
     });
 
     // ERC-20 ABI for token operations
     this.erc20Abi = [
       {
-        'constant': true,
-        'inputs': [{ 'name': '_owner', 'type': 'address' }],
-        'name': 'balanceOf',
-        'outputs': [{ 'name': 'balance', 'type': 'uint256' }],
-        'type': 'function'
+        constant: true,
+        inputs: [{ name: '_owner', type: 'address' }],
+        name: 'balanceOf',
+        outputs: [{ name: 'balance', type: 'uint256' }],
+        type: 'function',
       },
       {
-        'constant': true,
-        'inputs': [],
-        'name': 'decimals',
-        'outputs': [{ 'name': '', 'type': 'uint8' }],
-        'type': 'function'
+        constant: true,
+        inputs: [],
+        name: 'decimals',
+        outputs: [{ name: '', type: 'uint8' }],
+        type: 'function',
       },
       {
-        'constant': true,
-        'inputs': [],
-        'name': 'symbol',
-        'outputs': [{ 'name': '', 'type': 'string' }],
-        'type': 'function'
+        constant: true,
+        inputs: [],
+        name: 'symbol',
+        outputs: [{ name: '', type: 'string' }],
+        type: 'function',
       },
       {
-        'constant': true,
-        'inputs': [],
-        'name': 'name',
-        'outputs': [{ 'name': '', 'type': 'string' }],
-        'type': 'function'
+        constant: true,
+        inputs: [],
+        name: 'name',
+        outputs: [{ name: '', type: 'string' }],
+        type: 'function',
       },
       {
-        'constant': true,
-        'inputs': [],
-        'name': 'totalSupply',
-        'outputs': [{ 'name': '', 'type': 'uint256' }],
-        'type': 'function'
-      }
+        constant: true,
+        inputs: [],
+        name: 'totalSupply',
+        outputs: [{ name: '', type: 'uint256' }],
+        type: 'function',
+      },
     ];
 
     // Mock price data for USD calculations
     this.mockPrices = {
-      'ETH': 2000,
-      'WETH': 2000,
-      'USDC': 1,
-      'WBTC': 42000,
-      'MATIC': 1.5,
-      'WMATIC': 1.5,
-      'BNB': 300,
-      'WBNB': 300
+      ETH: 2000,
+      WETH: 2000,
+      USDC: 1,
+      WBTC: 42000,
+      MATIC: 1.5,
+      WMATIC: 1.5,
+      BNB: 300,
+      WBNB: 300,
     };
 
     logger.info('TokenBalanceAPIService initialized', {
       supportedNetworks: Object.keys(this.config.networks),
       cacheEnabled: this.config.cache.enabled,
-      cacheTTL: this.config.cache.ttl
+      cacheTTL: this.config.cache.ttl,
     });
   }
 
@@ -187,38 +187,42 @@ export class TokenBalanceAPIService extends BaseService {
    */
   createValidationSchema() {
     return Joi.object({
-      networks: Joi.object().pattern(
-        Joi.string(),
-        Joi.object({
-          rpcUrl: Joi.string().uri().required(),
-          chainId: Joi.number().positive().required(),
-          nativeSymbol: Joi.string().required(),
-          nativeName: Joi.string().required(),
-          nativeDecimals: Joi.number().positive().required()
-        })
-      ).required(),
-      commonTokens: Joi.object().pattern(
-        Joi.string(),
-        Joi.object().pattern(
+      networks: Joi.object()
+        .pattern(
           Joi.string(),
           Joi.object({
-            symbol: Joi.string().required(),
-            name: Joi.string().required(),
-            decimals: Joi.number().positive().required()
+            rpcUrl: Joi.string().uri().required(),
+            chainId: Joi.number().positive().required(),
+            nativeSymbol: Joi.string().required(),
+            nativeName: Joi.string().required(),
+            nativeDecimals: Joi.number().positive().required(),
           })
         )
-      ).default({}),
+        .required(),
+      commonTokens: Joi.object()
+        .pattern(
+          Joi.string(),
+          Joi.object().pattern(
+            Joi.string(),
+            Joi.object({
+              symbol: Joi.string().required(),
+              name: Joi.string().required(),
+              decimals: Joi.number().positive().required(),
+            })
+          )
+        )
+        .default({}),
       cache: Joi.object({
         enabled: Joi.boolean().default(true),
-        ttl: Joi.number().positive().default(30000)
+        ttl: Joi.number().positive().default(30000),
       }).default(),
       rateLimit: Joi.object({
         maxRequests: Joi.number().positive().default(50),
-        windowMs: Joi.number().positive().default(60000)
+        windowMs: Joi.number().positive().default(60000),
       }).default(),
       timeout: Joi.number().positive().default(15000),
       retryAttempts: Joi.number().min(0).max(5).default(2),
-      retryDelay: Joi.number().positive().default(1000)
+      retryDelay: Joi.number().positive().default(1000),
     });
   }
 
@@ -240,7 +244,10 @@ export class TokenBalanceAPIService extends BaseService {
       if (this.config.cache.enabled) {
         const cached = this.getCachedData(cacheKey);
         if (cached) {
-          logger.debug('Native balance cache hit', { address: address.slice(0, 10) + '...', network });
+          logger.debug('Native balance cache hit', {
+            address: address.slice(0, 10) + '...',
+            network,
+          });
           return cached;
         }
       }
@@ -248,7 +255,9 @@ export class TokenBalanceAPIService extends BaseService {
       // Check rate limiting
       const rateLimitKey = `native_balance_${network}`;
       if (!this.checkRateLimit(rateLimitKey)) {
-        throw new ServiceError(`Rate limit exceeded for native balance queries on ${network}`);
+        throw new ServiceError(
+          `Rate limit exceeded for native balance queries on ${network}`
+        );
       }
 
       const networkConfig = this.config.networks[network];
@@ -258,7 +267,10 @@ export class TokenBalanceAPIService extends BaseService {
 
       // If balance is 0, return null
       if (!balance || balance === '0' || parseFloat(balance) === 0) {
-        logger.debug('Native balance is 0, returning null', { address: address.slice(0, 10) + '...', network });
+        logger.debug('Native balance is 0, returning null', {
+          address: address.slice(0, 10) + '...',
+          network,
+        });
         return null;
       }
 
@@ -270,7 +282,7 @@ export class TokenBalanceAPIService extends BaseService {
         balance,
         balanceUSD: this.calculateUSDValue(balance, networkConfig.nativeSymbol),
         decimals: networkConfig.nativeDecimals,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       // Cache the result
@@ -282,13 +294,15 @@ export class TokenBalanceAPIService extends BaseService {
         address: address.slice(0, 10) + '...',
         network,
         balance: balance.slice(0, 10) + '...',
-        symbol: networkConfig.nativeSymbol
+        symbol: networkConfig.nativeSymbol,
       });
 
       return result;
-
     } catch (error) {
-      this.handleError(error, 'getNativeBalance', { address: address?.slice(0, 10) + '...', network });
+      this.handleError(error, 'getNativeBalance', {
+        address: address?.slice(0, 10) + '...',
+        network,
+      });
     }
   }
 
@@ -315,7 +329,7 @@ export class TokenBalanceAPIService extends BaseService {
           logger.debug('Token balance cache hit', {
             address: address.slice(0, 10) + '...',
             tokenAddress: tokenAddress.slice(0, 10) + '...',
-            network
+            network,
           });
           return cached;
         }
@@ -324,7 +338,9 @@ export class TokenBalanceAPIService extends BaseService {
       // Check rate limiting
       const rateLimitKey = `token_balance_${network}`;
       if (!this.checkRateLimit(rateLimitKey)) {
-        throw new ServiceError(`Rate limit exceeded for token balance queries on ${network}`);
+        throw new ServiceError(
+          `Rate limit exceeded for token balance queries on ${network}`
+        );
       }
 
       const networkConfig = this.config.networks[network];
@@ -333,8 +349,12 @@ export class TokenBalanceAPIService extends BaseService {
       const [metadata, balance] = await Promise.all([
         this.getTokenMetadata(tokenAddress, network),
         this.executeWithRetry(async () => {
-          return await this.fetchTokenBalanceFromRPC(address, tokenAddress, networkConfig);
-        })
+          return await this.fetchTokenBalanceFromRPC(
+            address,
+            tokenAddress,
+            networkConfig
+          );
+        }),
       ]);
 
       // If balance is 0, return null
@@ -342,7 +362,7 @@ export class TokenBalanceAPIService extends BaseService {
         logger.debug('Token balance is 0, returning null', {
           address: address.slice(0, 10) + '...',
           tokenAddress: tokenAddress.slice(0, 10) + '...',
-          network
+          network,
         });
         return null;
       }
@@ -358,7 +378,7 @@ export class TokenBalanceAPIService extends BaseService {
         balance: formattedBalance,
         balanceUSD: this.calculateUSDValue(formattedBalance, metadata.symbol),
         decimals: metadata.decimals,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       // Cache the result
@@ -371,16 +391,15 @@ export class TokenBalanceAPIService extends BaseService {
         tokenAddress: tokenAddress.slice(0, 10) + '...',
         network,
         balance: formattedBalance.slice(0, 10) + '...',
-        symbol: metadata.symbol
+        symbol: metadata.symbol,
       });
 
       return result;
-
     } catch (error) {
       this.handleError(error, 'getTokenBalance', {
         address: address?.slice(0, 10) + '...',
         tokenAddress: tokenAddress?.slice(0, 10) + '...',
-        network
+        network,
       });
     }
   }
@@ -405,7 +424,10 @@ export class TokenBalanceAPIService extends BaseService {
       if (this.config.cache.enabled) {
         const cached = this.getCachedData(cacheKey);
         if (cached) {
-          logger.debug('All token balances cache hit', { address: address.slice(0, 10) + '...', network });
+          logger.debug('All token balances cache hit', {
+            address: address.slice(0, 10) + '...',
+            network,
+          });
           return cached;
         }
       }
@@ -415,33 +437,49 @@ export class TokenBalanceAPIService extends BaseService {
 
       // Fetch native balance
       const nativeBalance = await this.getNativeBalance(address, network);
-      if (nativeBalance && (includeZero || parseFloat(nativeBalance.balance) > 0)) {
+      if (
+        nativeBalance &&
+        (includeZero || parseFloat(nativeBalance.balance) > 0)
+      ) {
         balances.push(nativeBalance);
         if (includeUSDValues && nativeBalance.balanceUSD) {
-          totalUSD += parseFloat(nativeBalance.balanceUSD.replace(/[^0-9.-]/g, '')) || 0;
+          totalUSD +=
+            parseFloat(nativeBalance.balanceUSD.replace(/[^0-9.-]/g, '')) || 0;
         }
       }
 
       // Fetch common token balances
       const commonTokens = this.config.commonTokens[network] || {};
-      const tokenPromises = Object.keys(commonTokens).map(async (tokenAddress) => {
-        try {
-          const tokenBalance = await this.getTokenBalance(address, tokenAddress, network);
-          if (tokenBalance && (includeZero || parseFloat(tokenBalance.balance) > 0)) {
-            if (includeUSDValues && tokenBalance.balanceUSD) {
-              totalUSD += parseFloat(tokenBalance.balanceUSD.replace(/[^0-9.-]/g, '')) || 0;
+      const tokenPromises = Object.keys(commonTokens).map(
+        async tokenAddress => {
+          try {
+            const tokenBalance = await this.getTokenBalance(
+              address,
+              tokenAddress,
+              network
+            );
+            if (
+              tokenBalance &&
+              (includeZero || parseFloat(tokenBalance.balance) > 0)
+            ) {
+              if (includeUSDValues && tokenBalance.balanceUSD) {
+                totalUSD +=
+                  parseFloat(
+                    tokenBalance.balanceUSD.replace(/[^0-9.-]/g, '')
+                  ) || 0;
+              }
+              return tokenBalance;
             }
-            return tokenBalance;
+            return null;
+          } catch (error) {
+            logger.warn('Failed to fetch token balance', {
+              tokenAddress: tokenAddress.slice(0, 10) + '...',
+              error: error.message,
+            });
+            return null;
           }
-          return null;
-        } catch (error) {
-          logger.warn('Failed to fetch token balance', {
-            tokenAddress: tokenAddress.slice(0, 10) + '...',
-            error: error.message
-          });
-          return null;
         }
-      });
+      );
 
       const tokenBalances = (await Promise.all(tokenPromises)).filter(Boolean);
       balances.push(...tokenBalances);
@@ -451,7 +489,7 @@ export class TokenBalanceAPIService extends BaseService {
         network,
         tokens: balances,
         totalUSD: includeUSDValues ? totalUSD.toFixed(2) : null,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       // Cache the result
@@ -463,13 +501,15 @@ export class TokenBalanceAPIService extends BaseService {
         address: address.slice(0, 10) + '...',
         network,
         tokenCount: balances.length,
-        totalUSD: result.totalUSD
+        totalUSD: result.totalUSD,
       });
 
       return result;
-
     } catch (error) {
-      this.handleError(error, 'getAllTokenBalances', { address: address?.slice(0, 10) + '...', network });
+      this.handleError(error, 'getAllTokenBalances', {
+        address: address?.slice(0, 10) + '...',
+        network,
+      });
     }
   }
 
@@ -491,7 +531,10 @@ export class TokenBalanceAPIService extends BaseService {
       if (this.config.cache.enabled) {
         const cached = this.getCachedData(cacheKey);
         if (cached) {
-          logger.debug('Token metadata cache hit', { tokenAddress: tokenAddress.slice(0, 10) + '...', network });
+          logger.debug('Token metadata cache hit', {
+            tokenAddress: tokenAddress.slice(0, 10) + '...',
+            network,
+          });
           return cached;
         }
       }
@@ -512,7 +555,10 @@ export class TokenBalanceAPIService extends BaseService {
       // Fetch from blockchain
       const networkConfig = this.config.networks[network];
       const metadata = await this.executeWithRetry(async () => {
-        return await this.fetchTokenMetadataFromRPC(tokenAddress, networkConfig);
+        return await this.fetchTokenMetadataFromRPC(
+          tokenAddress,
+          networkConfig
+        );
       });
 
       // Cache the result
@@ -523,13 +569,15 @@ export class TokenBalanceAPIService extends BaseService {
       logger.debug('Token metadata fetched from RPC', {
         tokenAddress: tokenAddress.slice(0, 10) + '...',
         network,
-        symbol: metadata.symbol
+        symbol: metadata.symbol,
       });
 
       return metadata;
-
     } catch (error) {
-      this.handleError(error, 'getTokenMetadata', { tokenAddress: tokenAddress?.slice(0, 10) + '...', network });
+      this.handleError(error, 'getTokenMetadata', {
+        tokenAddress: tokenAddress?.slice(0, 10) + '...',
+        network,
+      });
     }
   }
 
@@ -556,44 +604,55 @@ export class TokenBalanceAPIService extends BaseService {
       if (this.config.cache.enabled) {
         const cached = this.getCachedData(cacheKey);
         if (cached) {
-          logger.debug('Portfolio value cache hit', { address: address.slice(0, 10) + '...', networks });
+          logger.debug('Portfolio value cache hit', {
+            address: address.slice(0, 10) + '...',
+            networks,
+          });
           return cached;
         }
       }
 
       // Fetch balances for all networks concurrently
-      const networkPromises = networks.map(async (network) => {
+      const networkPromises = networks.map(async network => {
         try {
-          const balances = await this.getAllTokenBalances(address, network, { includeUSDValues: true });
+          const balances = await this.getAllTokenBalances(address, network, {
+            includeUSDValues: true,
+          });
           const networkValue = parseFloat(balances.totalUSD || '0');
 
           return {
             network,
             valueUSD: networkValue,
             tokenCount: balances.tokens.length,
-            tokens: balances.tokens
+            tokens: balances.tokens,
           };
         } catch (error) {
-          logger.warn('Failed to fetch portfolio for network', { network, error: error.message });
+          logger.warn('Failed to fetch portfolio for network', {
+            network,
+            error: error.message,
+          });
           return {
             network,
             valueUSD: 0,
             tokenCount: 0,
             tokens: [],
-            error: error.message
+            error: error.message,
           };
         }
       });
 
       const networkResults = await Promise.all(networkPromises);
-      const totalUSD = networkResults.reduce((sum, result) => sum + result.valueUSD, 0);
+      const totalUSD = networkResults.reduce(
+        (sum, result) => sum + result.valueUSD,
+        0
+      );
 
       const result = {
         address,
         networks,
         totalUSD: totalUSD.toFixed(2),
         breakdown: networkResults,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       // Cache the result
@@ -604,13 +663,15 @@ export class TokenBalanceAPIService extends BaseService {
       logger.debug('Portfolio value calculated successfully', {
         address: address.slice(0, 10) + '...',
         networks,
-        totalUSD: result.totalUSD
+        totalUSD: result.totalUSD,
       });
 
       return result;
-
     } catch (error) {
-      this.handleError(error, 'getPortfolioValue', { address: address?.slice(0, 10) + '...', networks });
+      this.handleError(error, 'getPortfolioValue', {
+        address: address?.slice(0, 10) + '...',
+        networks,
+      });
     }
   }
 
@@ -643,13 +704,17 @@ export class TokenBalanceAPIService extends BaseService {
       jsonrpc: '2.0',
       method: 'eth_getBalance',
       params: [address, 'latest'],
-      id: 1
+      id: 1,
     };
 
-    const response = await this.apiClient.post(networkConfig.rpcUrl, rpcPayload, {
-      rateLimitKey: `rpc_${networkConfig.chainId}`,
-      rateLimit: this.config.rateLimit
-    });
+    const response = await this.apiClient.post(
+      networkConfig.rpcUrl,
+      rpcPayload,
+      {
+        rateLimitKey: `rpc_${networkConfig.chainId}`,
+        rateLimit: this.config.rateLimit,
+      }
+    );
 
     if (response.error) {
       throw new ServiceError(`RPC error: ${response.error.message}`);
@@ -675,17 +740,24 @@ export class TokenBalanceAPIService extends BaseService {
     const rpcPayload = {
       jsonrpc: '2.0',
       method: 'eth_call',
-      params: [{
-        to: tokenAddress,
-        data: data
-      }, 'latest'],
-      id: 1
+      params: [
+        {
+          to: tokenAddress,
+          data: data,
+        },
+        'latest',
+      ],
+      id: 1,
     };
 
-    const response = await this.apiClient.post(networkConfig.rpcUrl, rpcPayload, {
-      rateLimitKey: `rpc_${networkConfig.chainId}`,
-      rateLimit: this.config.rateLimit
-    });
+    const response = await this.apiClient.post(
+      networkConfig.rpcUrl,
+      rpcPayload,
+      {
+        rateLimitKey: `rpc_${networkConfig.chainId}`,
+        rateLimit: this.config.rateLimit,
+      }
+    );
 
     if (response.error) {
       throw new ServiceError(`RPC error: ${response.error.message}`);
@@ -706,24 +778,24 @@ export class TokenBalanceAPIService extends BaseService {
       const [symbol, name, decimals] = await Promise.all([
         this.callTokenFunction(tokenAddress, '0x95d89b41', networkConfig), // symbol()
         this.callTokenFunction(tokenAddress, '0x06fdde03', networkConfig), // name()
-        this.callTokenFunction(tokenAddress, '0x313ce567', networkConfig)  // decimals()
+        this.callTokenFunction(tokenAddress, '0x313ce567', networkConfig), // decimals()
       ]);
 
       return {
         symbol: this.decodeString(symbol) || 'UNKNOWN',
         name: this.decodeString(name) || 'Unknown Token',
-        decimals: parseInt(decimals, 16) || 18
+        decimals: parseInt(decimals, 16) || 18,
       };
     } catch (error) {
       logger.warn('Failed to fetch token metadata from RPC, using fallback', {
         tokenAddress: tokenAddress.slice(0, 10) + '...',
-        error: error.message
+        error: error.message,
       });
 
       return {
         symbol: tokenAddress.slice(0, 6).toUpperCase(),
         name: 'Unknown Token',
-        decimals: 18
+        decimals: 18,
       };
     }
   }
@@ -739,17 +811,24 @@ export class TokenBalanceAPIService extends BaseService {
     const rpcPayload = {
       jsonrpc: '2.0',
       method: 'eth_call',
-      params: [{
-        to: tokenAddress,
-        data: functionSignature
-      }, 'latest'],
-      id: 1
+      params: [
+        {
+          to: tokenAddress,
+          data: functionSignature,
+        },
+        'latest',
+      ],
+      id: 1,
     };
 
-    const response = await this.apiClient.post(networkConfig.rpcUrl, rpcPayload, {
-      rateLimitKey: `rpc_${networkConfig.chainId}`,
-      rateLimit: this.config.rateLimit
-    });
+    const response = await this.apiClient.post(
+      networkConfig.rpcUrl,
+      rpcPayload,
+      {
+        rateLimitKey: `rpc_${networkConfig.chainId}`,
+        rateLimit: this.config.rateLimit,
+      }
+    );
 
     if (response.error) {
       throw new ServiceError(`RPC error: ${response.error.message}`);
@@ -784,7 +863,10 @@ export class TokenBalanceAPIService extends BaseService {
 
       return result.trim();
     } catch (error) {
-      logger.warn('Failed to decode string from hex', { hex, error: error.message });
+      logger.warn('Failed to decode string from hex', {
+        hex,
+        error: error.message,
+      });
       return '';
     }
   }
@@ -800,7 +882,9 @@ export class TokenBalanceAPIService extends BaseService {
 
     try {
       // Convert hex to decimal if needed
-      const balanceInt = balance.startsWith('0x') ? BigInt(balance) : BigInt(balance);
+      const balanceInt = balance.startsWith('0x')
+        ? BigInt(balance)
+        : BigInt(balance);
       const divisor = BigInt(10 ** decimals);
       const wholePart = balanceInt / divisor;
       const fractionalPart = balanceInt % divisor;
@@ -818,7 +902,11 @@ export class TokenBalanceAPIService extends BaseService {
 
       return `${wholePart}.${trimmedFractional}`;
     } catch (error) {
-      logger.warn('Failed to format balance', { balance, decimals, error: error.message });
+      logger.warn('Failed to format balance', {
+        balance,
+        decimals,
+        error: error.message,
+      });
       return '0';
     }
   }
@@ -835,7 +923,11 @@ export class TokenBalanceAPIService extends BaseService {
       const value = parseFloat(balance) * price;
       return value > 0 ? `$${value.toLocaleString()}` : '$0';
     } catch (error) {
-      logger.warn('Failed to calculate USD value', { balance, symbol, error: error.message });
+      logger.warn('Failed to calculate USD value', {
+        balance,
+        symbol,
+        error: error.message,
+      });
       return '$0';
     }
   }
@@ -864,7 +956,9 @@ export class TokenBalanceAPIService extends BaseService {
     }
 
     if (!this.config.networks[network]) {
-      throw new ServiceError(`Unsupported network: ${network}. Supported networks: ${Object.keys(this.config.networks).join(', ')}`);
+      throw new ServiceError(
+        `Unsupported network: ${network}. Supported networks: ${Object.keys(this.config.networks).join(', ')}`
+      );
     }
   }
 }

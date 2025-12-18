@@ -1,9 +1,9 @@
 /**
  * Frontend API Client for Backend Communication
- * 
+ *
  * All external data fetching goes through our backend server.
  * This eliminates CORS issues and keeps API credentials secure.
- * 
+ *
  * Features:
  * - Automatic retry with exponential backoff
  * - Local storage caching for offline/error fallback
@@ -11,11 +11,11 @@
  * - Structured error handling
  */
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-const WS_BASE_URL = process.env.REACT_APP_WS_URL || 'ws://localhost:3001';
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+const WS_BASE_URL = process.env.REACT_APP_WS_URL || "ws://localhost:3001";
 
 // Cache configuration
-const CACHE_PREFIX = 'defi_cache:';
+const CACHE_PREFIX = "defi_cache:";
 const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 class APIClient {
@@ -40,7 +40,7 @@ class APIClient {
       retries = this.defaultRetries,
       retryDelay = this.defaultRetryDelay,
       useCache = true,
-      cacheTTL = DEFAULT_CACHE_TTL
+      cacheTTL = DEFAULT_CACHE_TTL,
     } = options;
 
     const url = new URL(`${this.baseUrl}${endpoint}`);
@@ -55,13 +55,17 @@ class APIClient {
     // Try to fetch with retries
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const result = await this.fetchWithTimeout(url.toString(), {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
-        }, timeout);
+        const result = await this.fetchWithTimeout(
+          url.toString(),
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          },
+          timeout
+        );
 
         // Cache successful response
         if (useCache) {
@@ -69,7 +73,6 @@ class APIClient {
         }
 
         return result;
-
       } catch (error) {
         const isLastAttempt = attempt === retries;
 
@@ -78,7 +81,7 @@ class APIClient {
           const delay = retryDelay * Math.pow(2, attempt);
           console.warn(
             `API request failed (attempt ${attempt + 1}/${retries + 1}), ` +
-            `retrying in ${delay}ms:`,
+              `retrying in ${delay}ms:`,
             error.message
           );
           await this.sleep(delay);
@@ -91,13 +94,13 @@ class APIClient {
           if (cachedData !== null) {
             console.warn(
               `API request failed after ${retries + 1} attempts, ` +
-              `returning cached data from ${new Date(cachedData._cachedAt).toLocaleString()}`
+                `returning cached data from ${new Date(cachedData._cachedAt).toLocaleString()}`
             );
             return {
               ...cachedData.data,
               _cached: true,
               _cachedAt: cachedData._cachedAt,
-              _stale: cachedData._stale
+              _stale: cachedData._stale,
             };
           }
         }
@@ -119,20 +122,23 @@ class APIClient {
     const {
       timeout = this.defaultTimeout,
       retries = this.defaultRetries,
-      retryDelay = this.defaultRetryDelay
+      retryDelay = this.defaultRetryDelay,
     } = options;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        return await this.fetchWithTimeout(`${this.baseUrl}${endpoint}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
+        return await this.fetchWithTimeout(
+          `${this.baseUrl}${endpoint}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify(body),
           },
-          body: JSON.stringify(body)
-        }, timeout);
-
+          timeout
+        );
       } catch (error) {
         const isLastAttempt = attempt === retries;
 
@@ -140,7 +146,7 @@ class APIClient {
           const delay = retryDelay * Math.pow(2, attempt);
           console.warn(
             `API POST request failed (attempt ${attempt + 1}/${retries + 1}), ` +
-            `retrying in ${delay}ms:`,
+              `retrying in ${delay}ms:`,
             error.message
           );
           await this.sleep(delay);
@@ -166,7 +172,7 @@ class APIClient {
     try {
       const response = await fetch(url, {
         ...options,
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
@@ -176,7 +182,7 @@ class APIClient {
         throw new APIError(
           errorData.error?.message || `HTTP ${response.status}`,
           response.status,
-          errorData.error?.code || 'HTTP_ERROR'
+          errorData.error?.code || "HTTP_ERROR"
         );
       }
 
@@ -184,19 +190,18 @@ class APIClient {
 
       if (!data.success) {
         throw new APIError(
-          data.error?.message || 'API request failed',
+          data.error?.message || "API request failed",
           400,
-          data.error?.code || 'API_ERROR'
+          data.error?.code || "API_ERROR"
         );
       }
 
       return data.data;
-
     } catch (error) {
       clearTimeout(timeoutId);
 
-      if (error.name === 'AbortError') {
-        throw new APIError('Request timeout', 408, 'TIMEOUT');
+      if (error.name === "AbortError") {
+        throw new APIError("Request timeout", 408, "TIMEOUT");
       }
 
       if (error instanceof APIError) {
@@ -204,11 +209,7 @@ class APIClient {
       }
 
       // Network error
-      throw new APIError(
-        error.message || 'Network error',
-        0,
-        'NETWORK_ERROR'
-      );
+      throw new APIError(error.message || "Network error", 0, "NETWORK_ERROR");
     }
   }
 
@@ -219,14 +220,14 @@ class APIClient {
   async healthCheck() {
     try {
       const response = await fetch(`${this.baseUrl}/health`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
+        method: "GET",
+        headers: { Accept: "application/json" },
       });
 
       if (!response.ok) return false;
 
       const data = await response.json();
-      return data.status === 'healthy';
+      return data.status === "healthy";
     } catch {
       return false;
     }
@@ -254,8 +255,8 @@ class APIClient {
     const sortedParams = Object.keys(params)
       .sort()
       .map(key => `${key}=${params[key]}`)
-      .join('&');
-    return `${CACHE_PREFIX}${endpoint}${sortedParams ? '?' + sortedParams : ''}`;
+      .join("&");
+    return `${CACHE_PREFIX}${endpoint}${sortedParams ? "?" + sortedParams : ""}`;
   }
 
   /**
@@ -276,10 +277,10 @@ class APIClient {
       return {
         data,
         _cachedAt: timestamp,
-        _stale: isExpired
+        _stale: isExpired,
       };
     } catch (error) {
-      console.warn('Error reading from cache:', error);
+      console.warn("Error reading from cache:", error);
       return null;
     }
   }
@@ -295,12 +296,12 @@ class APIClient {
       const cacheEntry = {
         data,
         timestamp: Date.now(),
-        ttl
+        ttl,
       };
       localStorage.setItem(cacheKey, JSON.stringify(cacheEntry));
     } catch (error) {
       // Handle quota exceeded or other storage errors
-      console.warn('Error writing to cache:', error);
+      console.warn("Error writing to cache:", error);
       this.clearOldCache();
     }
   }
@@ -319,7 +320,7 @@ class APIClient {
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));
     } catch (error) {
-      console.warn('Error clearing cache:', error);
+      console.warn("Error clearing cache:", error);
     }
   }
 
@@ -346,7 +347,7 @@ class APIClient {
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));
     } catch (error) {
-      console.warn('Error clearing old cache:', error);
+      console.warn("Error clearing old cache:", error);
     }
   }
 
@@ -366,17 +367,17 @@ class APIClient {
 class APIError extends Error {
   constructor(message, status, code) {
     super(message);
-    this.name = 'APIError';
+    this.name = "APIError";
     this.status = status;
     this.code = code;
   }
 
   isNetworkError() {
-    return this.code === 'NETWORK_ERROR';
+    return this.code === "NETWORK_ERROR";
   }
 
   isTimeout() {
-    return this.code === 'TIMEOUT';
+    return this.code === "TIMEOUT";
   }
 
   isServerError() {
@@ -393,21 +394,21 @@ class APIError extends Error {
    */
   getUserMessage() {
     if (this.isNetworkError()) {
-      return 'Unable to connect to the server. Please check your internet connection.';
+      return "Unable to connect to the server. Please check your internet connection.";
     }
     if (this.isTimeout()) {
-      return 'The request took too long. Please try again.';
+      return "The request took too long. Please try again.";
     }
     if (this.isServerError()) {
-      return 'The server is experiencing issues. Please try again later.';
+      return "The server is experiencing issues. Please try again later.";
     }
     if (this.status === 404) {
-      return 'The requested resource was not found.';
+      return "The requested resource was not found.";
     }
     if (this.status === 429) {
-      return 'Too many requests. Please wait a moment and try again.';
+      return "Too many requests. Please wait a moment and try again.";
     }
-    return this.message || 'An unexpected error occurred.';
+    return this.message || "An unexpected error occurred.";
   }
 
   /**

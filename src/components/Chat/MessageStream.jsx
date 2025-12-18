@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import Message from './Message';
+import { useEffect, useRef } from "react";
+import Message from "./Message";
 
 const MessageStream = ({ messages, isLoading }) => {
   const messagesEndRef = useRef(null);
@@ -7,7 +7,7 @@ const MessageStream = ({ messages, isLoading }) => {
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isLoading]);
 
@@ -19,11 +19,10 @@ const MessageStream = ({ messages, isLoading }) => {
           <div className="welcome-icon">💬</div>
           <h2 className="welcome-title">Welcome to DeFi Chat</h2>
           <p className="welcome-text">
-            I can help you with swaps, checking gas prices, viewing your assets, and more.
+            I can help you with swaps, checking gas prices, viewing your assets,
+            and more.
           </p>
-          <p className="welcome-text">
-            What would you like to do?
-          </p>
+          <p className="welcome-text">What would you like to do?</p>
         </div>
       </div>
     );
@@ -32,14 +31,14 @@ const MessageStream = ({ messages, isLoading }) => {
   return (
     <div className="message-stream">
       <div className="message-list">
-        {messages.map((message) => (
+        {messages.map(message => (
           <Message
             key={message.id}
             message={message}
-            isUser={message.role === 'user'}
+            isUser={message.role === "user"}
           />
         ))}
-        
+
         {/* Loading indicator */}
         {isLoading && (
           <div className="loading-container">
@@ -52,7 +51,7 @@ const MessageStream = ({ messages, isLoading }) => {
             </div>
           </div>
         )}
-        
+
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />
       </div>

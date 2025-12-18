@@ -9,8 +9,8 @@ jest.mock('../../src/utils/logger.js', () => ({
     debug: jest.fn(),
     info: jest.fn(),
     warn: jest.fn(),
-    error: jest.fn()
-  }
+    error: jest.fn(),
+  },
 }));
 
 describe('TokenBalanceAPIService', () => {
@@ -20,7 +20,7 @@ describe('TokenBalanceAPIService', () => {
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
-    
+
     // Create mock API client
     mockApiClient = {
       setCredentials: jest.fn(),
@@ -29,9 +29,9 @@ describe('TokenBalanceAPIService', () => {
       get: jest.fn(),
       post: jest.fn(),
       request: jest.fn(),
-      getMetrics: jest.fn(() => ({ totalRequests: 0, successfulRequests: 0 }))
+      getMetrics: jest.fn(() => ({ totalRequests: 0, successfulRequests: 0 })),
     };
-    
+
     // Create service instance with test configuration
     service = new TokenBalanceAPIService({
       networks: {
@@ -40,23 +40,23 @@ describe('TokenBalanceAPIService', () => {
           chainId: 1,
           nativeSymbol: 'ETH',
           nativeName: 'Ether',
-          nativeDecimals: 18
+          nativeDecimals: 18,
         },
         polygon: {
           rpcUrl: 'https://test-rpc.polygon.org',
           chainId: 137,
           nativeSymbol: 'MATIC',
           nativeName: 'MATIC',
-          nativeDecimals: 18
-        }
+          nativeDecimals: 18,
+        },
       },
       cache: {
-        enabled: false // Disable cache for testing
+        enabled: false, // Disable cache for testing
       },
       rateLimit: {
         maxRequests: 1000,
-        windowMs: 1000
-      }
+        windowMs: 1000,
+      },
     });
 
     // Replace the API client with our mock after construction
@@ -75,48 +75,50 @@ describe('TokenBalanceAPIService', () => {
      */
     describe('Property 4: Token balance service backend migration completeness', () => {
       test('should provide all required methods from frontend service interface', () => {
-        fc.assert(fc.property(
-          fc.constantFrom('ethereum', 'polygon'),
-          fc.hexaString({ minLength: 40, maxLength: 40 }).map(s => '0x' + s),
-          (network, _address) => {
-            // Test that all required methods exist and are functions
-            expect(typeof service.getNativeBalance).toBe('function');
-            expect(typeof service.getTokenBalance).toBe('function');
-            expect(typeof service.getAllTokenBalances).toBe('function');
-            expect(typeof service.getTokenMetadata).toBe('function');
-            expect(typeof service.getPortfolioValue).toBe('function');
-            expect(typeof service.getSupportedNetworks).toBe('function');
-            expect(typeof service.getCommonTokens).toBe('function');
+        fc.assert(
+          fc.property(
+            fc.constantFrom('ethereum', 'polygon'),
+            fc.hexaString({ minLength: 40, maxLength: 40 }).map(s => '0x' + s),
+            (network, _address) => {
+              // Test that all required methods exist and are functions
+              expect(typeof service.getNativeBalance).toBe('function');
+              expect(typeof service.getTokenBalance).toBe('function');
+              expect(typeof service.getAllTokenBalances).toBe('function');
+              expect(typeof service.getTokenMetadata).toBe('function');
+              expect(typeof service.getPortfolioValue).toBe('function');
+              expect(typeof service.getSupportedNetworks).toBe('function');
+              expect(typeof service.getCommonTokens).toBe('function');
 
-            // Test that service has proper configuration
-            expect(service.config).toBeDefined();
-            expect(service.config.networks).toBeDefined();
-            expect(service.config.networks[network]).toBeDefined();
-            
-            // Test that service supports multiple networks
-            const supportedNetworks = service.getSupportedNetworks();
-            expect(Array.isArray(supportedNetworks)).toBe(true);
-            expect(supportedNetworks.length).toBeGreaterThan(0);
-            expect(supportedNetworks).toContain(network);
+              // Test that service has proper configuration
+              expect(service.config).toBeDefined();
+              expect(service.config.networks).toBeDefined();
+              expect(service.config.networks[network]).toBeDefined();
 
-            // Test that service has blockchain RPC integration capability
-            expect(service.apiClient).toBeDefined();
-            expect(typeof service.fetchNativeBalanceFromRPC).toBe('function');
-            expect(typeof service.fetchTokenBalanceFromRPC).toBe('function');
-            expect(typeof service.fetchTokenMetadataFromRPC).toBe('function');
-          }
-        ), { numRuns: 100 });
+              // Test that service supports multiple networks
+              const supportedNetworks = service.getSupportedNetworks();
+              expect(Array.isArray(supportedNetworks)).toBe(true);
+              expect(supportedNetworks.length).toBeGreaterThan(0);
+              expect(supportedNetworks).toContain(network);
+
+              // Test that service has blockchain RPC integration capability
+              expect(service.apiClient).toBeDefined();
+              expect(typeof service.fetchNativeBalanceFromRPC).toBe('function');
+              expect(typeof service.fetchTokenBalanceFromRPC).toBe('function');
+              expect(typeof service.fetchTokenMetadataFromRPC).toBe('function');
+            }
+          ),
+          { numRuns: 100 }
+        );
       });
 
       test('should support multiple networks as specified in requirements', () => {
-        fc.assert(fc.property(
-          fc.constantFrom('ethereum', 'polygon'),
-          (network) => {
+        fc.assert(
+          fc.property(fc.constantFrom('ethereum', 'polygon'), network => {
             const supportedNetworks = service.getSupportedNetworks();
-            
+
             // Verify network is supported
             expect(supportedNetworks).toContain(network);
-            
+
             // Verify network configuration exists
             const networkConfig = service.config.networks[network];
             expect(networkConfig).toBeDefined();
@@ -125,56 +127,60 @@ describe('TokenBalanceAPIService', () => {
             expect(networkConfig.nativeSymbol).toBeDefined();
             expect(networkConfig.nativeName).toBeDefined();
             expect(networkConfig.nativeDecimals).toBeDefined();
-            
+
             // Verify common tokens can be retrieved
             const commonTokens = service.getCommonTokens(network);
             expect(typeof commonTokens).toBe('object');
-          }
-        ), { numRuns: 100 });
+          }),
+          { numRuns: 100 }
+        );
       });
 
       test('should provide structured balance data responses with USD values', async () => {
-        await fc.assert(fc.asyncProperty(
-          fc.hexaString({ minLength: 40, maxLength: 40 }).map(s => '0x' + s),
-          fc.constantFrom('ethereum', 'polygon'),
-          async (address, network) => {
-            // Mock successful RPC response
-            mockApiClient.post.mockResolvedValue({
-              jsonrpc: '2.0',
-              result: '0x1bc16d674ec80000', // 2 ETH in wei
-              id: 1
-            });
+        await fc.assert(
+          fc.asyncProperty(
+            fc.hexaString({ minLength: 40, maxLength: 40 }).map(s => '0x' + s),
+            fc.constantFrom('ethereum', 'polygon'),
+            async (address, network) => {
+              // Mock successful RPC response
+              mockApiClient.post.mockResolvedValue({
+                jsonrpc: '2.0',
+                result: '0x1bc16d674ec80000', // 2 ETH in wei
+                id: 1,
+              });
 
-            const result = await service.getNativeBalance(address, network);
-            
-            // The test should always return a result with mocked data
-            expect(result).toBeDefined();
-            expect(result).not.toBeNull();
-            
-            // Verify structured response format
-            expect(result).toHaveProperty('address');
-            expect(result).toHaveProperty('network');
-            expect(result).toHaveProperty('symbol');
-            expect(result).toHaveProperty('name');
-            expect(result).toHaveProperty('balance');
-            expect(result).toHaveProperty('balanceUSD');
-            expect(result).toHaveProperty('decimals');
-            expect(result).toHaveProperty('timestamp');
+              const result = await service.getNativeBalance(address, network);
 
-            // Verify data types
-            expect(typeof result.address).toBe('string');
-            expect(typeof result.network).toBe('string');
-            expect(typeof result.symbol).toBe('string');
-            expect(typeof result.name).toBe('string');
-            expect(typeof result.balance).toBe('string');
-            expect(typeof result.balanceUSD).toBe('string');
-            expect(typeof result.decimals).toBe('number');
-            expect(typeof result.timestamp).toBe('number');
+              // The test should always return a result with mocked data
+              expect(result).toBeDefined();
+              expect(result).not.toBeNull();
 
-            // Verify USD value format
-            expect(result.balanceUSD).toMatch(/^\$[\d,]+(\.\d+)?$/);
-          }
-        ), { numRuns: 10 });
+              // Verify structured response format
+              expect(result).toHaveProperty('address');
+              expect(result).toHaveProperty('network');
+              expect(result).toHaveProperty('symbol');
+              expect(result).toHaveProperty('name');
+              expect(result).toHaveProperty('balance');
+              expect(result).toHaveProperty('balanceUSD');
+              expect(result).toHaveProperty('decimals');
+              expect(result).toHaveProperty('timestamp');
+
+              // Verify data types
+              expect(typeof result.address).toBe('string');
+              expect(typeof result.network).toBe('string');
+              expect(typeof result.symbol).toBe('string');
+              expect(typeof result.name).toBe('string');
+              expect(typeof result.balance).toBe('string');
+              expect(typeof result.balanceUSD).toBe('string');
+              expect(typeof result.decimals).toBe('number');
+              expect(typeof result.timestamp).toBe('number');
+
+              // Verify USD value format
+              expect(result.balanceUSD).toMatch(/^\$[\d,]+(\.\d+)?$/);
+            }
+          ),
+          { numRuns: 10 }
+        );
       });
     });
 
@@ -184,38 +190,50 @@ describe('TokenBalanceAPIService', () => {
      */
     describe('Property 13: Structured error response provision', () => {
       test('should provide structured error responses with error codes and messages', async () => {
-        await fc.assert(fc.asyncProperty(
-          fc.oneof(
-            fc.constant(''), // Empty address
-            fc.constant('invalid'), // Invalid format
-            fc.hexaString({ minLength: 39, maxLength: 39 }).map(s => '0x' + s), // Wrong length
-            fc.string().filter(s => !s.startsWith('0x')) // No 0x prefix
+        await fc.assert(
+          fc.asyncProperty(
+            fc.oneof(
+              fc.constant(''), // Empty address
+              fc.constant('invalid'), // Invalid format
+              fc
+                .hexaString({ minLength: 39, maxLength: 39 })
+                .map(s => '0x' + s), // Wrong length
+              fc.string().filter(s => !s.startsWith('0x')) // No 0x prefix
+            ),
+            fc.constantFrom('ethereum', 'polygon'),
+            async (invalidAddress, network) => {
+              // Should throw an error for invalid addresses
+              await expect(
+                service.getNativeBalance(invalidAddress, network)
+              ).rejects.toThrow(/address|format|invalid|required/i);
+            }
           ),
-          fc.constantFrom('ethereum', 'polygon'),
-          async (invalidAddress, network) => {
-            // Should throw an error for invalid addresses
-            await expect(service.getNativeBalance(invalidAddress, network))
-              .rejects.toThrow(/address|format|invalid|required/i);
-          }
-        ), { numRuns: 100 });
+          { numRuns: 100 }
+        );
       });
 
       test('should provide structured error responses for network failures', async () => {
-        await fc.assert(fc.asyncProperty(
-          fc.hexaString({ minLength: 40, maxLength: 40 }).map(s => '0x' + s),
-          fc.constantFrom('ethereum', 'polygon'),
-          async (address, network) => {
-            // Mock network failure
-            mockApiClient.post.mockRejectedValue(new Error('Network timeout'));
+        await fc.assert(
+          fc.asyncProperty(
+            fc.hexaString({ minLength: 40, maxLength: 40 }).map(s => '0x' + s),
+            fc.constantFrom('ethereum', 'polygon'),
+            async (address, network) => {
+              // Mock network failure
+              mockApiClient.post.mockRejectedValue(
+                new Error('Network timeout')
+              );
 
-            // Should throw an error for network failures
-            await expect(service.getNativeBalance(address, network))
-              .rejects.toThrow();
-            
-            // Verify the error was thrown (we can't check the specific error in this pattern)
-            expect(mockApiClient.post).toHaveBeenCalled();
-          }
-        ), { numRuns: 5 });
+              // Should throw an error for network failures
+              await expect(
+                service.getNativeBalance(address, network)
+              ).rejects.toThrow();
+
+              // Verify the error was thrown (we can't check the specific error in this pattern)
+              expect(mockApiClient.post).toHaveBeenCalled();
+            }
+          ),
+          { numRuns: 5 }
+        );
       }, 15000);
     });
 
@@ -225,56 +243,86 @@ describe('TokenBalanceAPIService', () => {
      */
     describe('Property 14: Error classification accuracy', () => {
       test('should accurately classify different types of errors', async () => {
-        await fc.assert(fc.asyncProperty(
-          fc.hexaString({ minLength: 40, maxLength: 40 }).map(s => '0x' + s),
-          fc.constantFrom('ethereum', 'polygon'),
-          fc.oneof(
-            fc.constant({ type: 'network', error: new Error('Network timeout') }),
-            fc.constant({ type: 'rpc', error: new Error('RPC error: Invalid method') }),
-            fc.constant({ type: 'http', error: new Error('HTTP 500: Internal Server Error') }),
-            fc.constant({ type: 'auth', error: new Error('HTTP 401: Unauthorized') })
-          ),
-          async (address, network, errorCase) => {
-            // Mock the specific error type
-            mockApiClient.post.mockRejectedValue(errorCase.error);
+        await fc.assert(
+          fc.asyncProperty(
+            fc.hexaString({ minLength: 40, maxLength: 40 }).map(s => '0x' + s),
+            fc.constantFrom('ethereum', 'polygon'),
+            fc.oneof(
+              fc.constant({
+                type: 'network',
+                error: new Error('Network timeout'),
+              }),
+              fc.constant({
+                type: 'rpc',
+                error: new Error('RPC error: Invalid method'),
+              }),
+              fc.constant({
+                type: 'http',
+                error: new Error('HTTP 500: Internal Server Error'),
+              }),
+              fc.constant({
+                type: 'auth',
+                error: new Error('HTTP 401: Unauthorized'),
+              })
+            ),
+            async (address, network, errorCase) => {
+              // Mock the specific error type
+              mockApiClient.post.mockRejectedValue(errorCase.error);
 
-            // Should throw an error for all error cases
-            await expect(service.getNativeBalance(address, network))
-              .rejects.toThrow();
-            
-            // Verify the API client was called
-            expect(mockApiClient.post).toHaveBeenCalled();
-          }
-        ), { numRuns: 5 });
+              // Should throw an error for all error cases
+              await expect(
+                service.getNativeBalance(address, network)
+              ).rejects.toThrow();
+
+              // Verify the API client was called
+              expect(mockApiClient.post).toHaveBeenCalled();
+            }
+          ),
+          { numRuns: 5 }
+        );
       }, 15000);
 
       test('should classify validation errors accurately', async () => {
-        await fc.assert(fc.asyncProperty(
-          fc.oneof(
-            fc.constant(''), // Empty address
-            fc.constant('invalid'), // Invalid format
-            fc.constant('0x123') // Too short
+        await fc.assert(
+          fc.asyncProperty(
+            fc.oneof(
+              fc.constant(''), // Empty address
+              fc.constant('invalid'), // Invalid format
+              fc.constant('0x123') // Too short
+            ),
+            fc.constantFrom('ethereum', 'polygon'),
+            async (invalidInput, network) => {
+              const errorPromise = service.getNativeBalance(
+                invalidInput,
+                network
+              );
+              await expect(errorPromise).rejects.toBeInstanceOf(ServiceError);
+            }
           ),
-          fc.constantFrom('ethereum', 'polygon'),
-          async (invalidInput, network) => {
-            const errorPromise = service.getNativeBalance(invalidInput, network);
-            await expect(errorPromise).rejects.toBeInstanceOf(ServiceError);
-          }
-        ), { numRuns: 10 });
+          { numRuns: 10 }
+        );
       });
 
       test('should classify runtime errors accurately', async () => {
-        await fc.assert(fc.asyncProperty(
-          fc.constant('0x1234567890123456789012345678901234567890'), // Valid format
-          fc.constantFrom('ethereum', 'polygon'),
-          async (validInput, network) => {
-            // Mock runtime error for valid input
-            mockApiClient.post.mockRejectedValue(new Error('Network error'));
-            
-            const errorPromise = service.getNativeBalance(validInput, network);
-            await expect(errorPromise).rejects.toThrow(/network|error|timeout|connection|failed/i);
-          }
-        ), { numRuns: 5 });
+        await fc.assert(
+          fc.asyncProperty(
+            fc.constant('0x1234567890123456789012345678901234567890'), // Valid format
+            fc.constantFrom('ethereum', 'polygon'),
+            async (validInput, network) => {
+              // Mock runtime error for valid input
+              mockApiClient.post.mockRejectedValue(new Error('Network error'));
+
+              const errorPromise = service.getNativeBalance(
+                validInput,
+                network
+              );
+              await expect(errorPromise).rejects.toThrow(
+                /network|error|timeout|connection|failed/i
+              );
+            }
+          ),
+          { numRuns: 5 }
+        );
       }, 15000);
     });
   });
@@ -283,7 +331,7 @@ describe('TokenBalanceAPIService', () => {
     describe('Constructor and Configuration', () => {
       test('should initialize with default configuration', () => {
         const defaultService = new TokenBalanceAPIService();
-        
+
         expect(defaultService.config).toBeDefined();
         expect(defaultService.config.networks).toBeDefined();
         expect(defaultService.apiClient).toBeDefined();
@@ -293,11 +341,11 @@ describe('TokenBalanceAPIService', () => {
       test('should merge custom configuration with defaults', () => {
         const customConfig = {
           cache: { ttl: 60000 },
-          timeout: 20000
+          timeout: 20000,
         };
-        
+
         const customService = new TokenBalanceAPIService(customConfig);
-        
+
         expect(customService.config.cache.ttl).toBe(60000);
         expect(customService.config.timeout).toBe(20000);
       });
@@ -306,7 +354,7 @@ describe('TokenBalanceAPIService', () => {
     describe('Address Validation', () => {
       test('should validate correct Ethereum addresses', () => {
         const validAddress = '0x1234567890123456789012345678901234567890';
-        
+
         expect(() => service.validateAddress(validAddress)).not.toThrow();
       });
 
@@ -318,7 +366,7 @@ describe('TokenBalanceAPIService', () => {
           '1234567890123456789012345678901234567890', // No 0x prefix
           '0x123456789012345678901234567890123456789', // Too short
           '0x12345678901234567890123456789012345678901', // Too long
-          '0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG' // Invalid hex
+          '0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG', // Invalid hex
         ];
 
         invalidAddresses.forEach(address => {
@@ -330,14 +378,20 @@ describe('TokenBalanceAPIService', () => {
     describe('Network Validation', () => {
       test('should validate supported networks', () => {
         const supportedNetworks = service.getSupportedNetworks();
-        
+
         supportedNetworks.forEach(network => {
           expect(() => service.validateNetwork(network)).not.toThrow();
         });
       });
 
       test('should reject unsupported networks', () => {
-        const unsupportedNetworks = ['bitcoin', 'litecoin', '', null, undefined];
+        const unsupportedNetworks = [
+          'bitcoin',
+          'litecoin',
+          '',
+          null,
+          undefined,
+        ];
 
         unsupportedNetworks.forEach(network => {
           expect(() => service.validateNetwork(network)).toThrow(ServiceError);
@@ -374,8 +428,9 @@ describe('TokenBalanceAPIService', () => {
     describe('String Decoding', () => {
       test('should decode hex strings correctly', () => {
         // Mock hex string for "USDC"
-        const hexString = '0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000455534443000000000000000000000000000000000000000000000000000000000';
-        
+        const hexString =
+          '0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000455534443000000000000000000000000000000000000000000000000000000000';
+
         const decoded = service.decodeString(hexString);
         expect(decoded).toBe('USDC');
       });

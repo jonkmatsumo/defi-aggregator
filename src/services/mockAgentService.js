@@ -1,6 +1,6 @@
 /**
  * Mock Agent Service
- * 
+ *
  * Simulates an agent backend for testing the chat UI without LLM integration.
  * Provides pattern-based responses with UI intents for component rendering.
  */
@@ -24,65 +24,82 @@ function delay(ms) {
  */
 function determineUIIntent(message) {
   const lowerMessage = message.toLowerCase();
-  
+
   // Gas/fees pattern
-  if (lowerMessage.includes('gas') || lowerMessage.includes('fee')) {
+  if (lowerMessage.includes("gas") || lowerMessage.includes("fee")) {
     return {
-      type: 'RENDER_COMPONENT',
-      component: 'NetworkStatus',
-      props: {}
+      type: "RENDER_COMPONENT",
+      component: "NetworkStatus",
+      props: {},
     };
   }
-  
+
   // Swap/trade pattern
-  if (lowerMessage.includes('swap') || lowerMessage.includes('exchange') || lowerMessage.includes('trade')) {
+  if (
+    lowerMessage.includes("swap") ||
+    lowerMessage.includes("exchange") ||
+    lowerMessage.includes("trade")
+  ) {
     return {
-      type: 'RENDER_COMPONENT',
-      component: 'TokenSwap',
-      props: {}
+      type: "RENDER_COMPONENT",
+      component: "TokenSwap",
+      props: {},
     };
   }
-  
+
   // Lend/APY pattern
-  if (lowerMessage.includes('lend') || lowerMessage.includes('lending') || 
-      lowerMessage.includes('apy') || lowerMessage.includes('earn')) {
+  if (
+    lowerMessage.includes("lend") ||
+    lowerMessage.includes("lending") ||
+    lowerMessage.includes("apy") ||
+    lowerMessage.includes("earn")
+  ) {
     return {
-      type: 'RENDER_COMPONENT',
-      component: 'LendingSection',
-      props: {}
+      type: "RENDER_COMPONENT",
+      component: "LendingSection",
+      props: {},
     };
   }
-  
+
   // Balance/assets pattern
-  if (lowerMessage.includes('balance') || lowerMessage.includes('asset') || 
-      lowerMessage.includes('portfolio')) {
+  if (
+    lowerMessage.includes("balance") ||
+    lowerMessage.includes("asset") ||
+    lowerMessage.includes("portfolio")
+  ) {
     return {
-      type: 'RENDER_COMPONENT',
-      component: 'YourAssets',
-      props: {}
+      type: "RENDER_COMPONENT",
+      component: "YourAssets",
+      props: {},
     };
   }
-  
+
   // Perpetual/leverage pattern
-  if (lowerMessage.includes('perpetual') || lowerMessage.includes('perp') || 
-      lowerMessage.includes('leverage')) {
+  if (
+    lowerMessage.includes("perpetual") ||
+    lowerMessage.includes("perp") ||
+    lowerMessage.includes("leverage")
+  ) {
     return {
-      type: 'RENDER_COMPONENT',
-      component: 'PerpetualsSection',
-      props: {}
+      type: "RENDER_COMPONENT",
+      component: "PerpetualsSection",
+      props: {},
     };
   }
-  
+
   // Activity/history pattern
-  if (lowerMessage.includes('activity') || lowerMessage.includes('history') || 
-      lowerMessage.includes('transaction')) {
+  if (
+    lowerMessage.includes("activity") ||
+    lowerMessage.includes("history") ||
+    lowerMessage.includes("transaction")
+  ) {
     return {
-      type: 'RENDER_COMPONENT',
-      component: 'RecentActivity',
-      props: {}
+      type: "RENDER_COMPONENT",
+      component: "RecentActivity",
+      props: {},
     };
   }
-  
+
   // No matching pattern
   return null;
 }
@@ -92,42 +109,59 @@ function determineUIIntent(message) {
  */
 function generateResponse(message) {
   const lowerMessage = message.toLowerCase();
-  
-  if (lowerMessage.includes('gas') || lowerMessage.includes('fee')) {
+
+  if (lowerMessage.includes("gas") || lowerMessage.includes("fee")) {
     return "Here are the current gas prices:";
   }
-  
-  if (lowerMessage.includes('swap') || lowerMessage.includes('exchange') || lowerMessage.includes('trade')) {
+
+  if (
+    lowerMessage.includes("swap") ||
+    lowerMessage.includes("exchange") ||
+    lowerMessage.includes("trade")
+  ) {
     return "I can help you swap tokens:";
   }
-  
-  if (lowerMessage.includes('lend') || lowerMessage.includes('lending') || 
-      lowerMessage.includes('apy') || lowerMessage.includes('earn')) {
+
+  if (
+    lowerMessage.includes("lend") ||
+    lowerMessage.includes("lending") ||
+    lowerMessage.includes("apy") ||
+    lowerMessage.includes("earn")
+  ) {
     return "Here are the current lending rates:";
   }
-  
-  if (lowerMessage.includes('balance') || lowerMessage.includes('asset') || 
-      lowerMessage.includes('portfolio')) {
+
+  if (
+    lowerMessage.includes("balance") ||
+    lowerMessage.includes("asset") ||
+    lowerMessage.includes("portfolio")
+  ) {
     return "Here are your current assets:";
   }
-  
-  if (lowerMessage.includes('perpetual') || lowerMessage.includes('perp') || 
-      lowerMessage.includes('leverage')) {
+
+  if (
+    lowerMessage.includes("perpetual") ||
+    lowerMessage.includes("perp") ||
+    lowerMessage.includes("leverage")
+  ) {
     return "You can open leveraged positions here:";
   }
-  
-  if (lowerMessage.includes('activity') || lowerMessage.includes('history') || 
-      lowerMessage.includes('transaction')) {
+
+  if (
+    lowerMessage.includes("activity") ||
+    lowerMessage.includes("history") ||
+    lowerMessage.includes("transaction")
+  ) {
     return "Here's your recent activity:";
   }
-  
+
   // Default response
   return "I can help you with swaps, checking gas prices, viewing your assets, and more. What would you like to do?";
 }
 
 /**
  * AgentService Interface
- * 
+ *
  * Abstract interface for agent communication.
  * Can be implemented by both mock and real LLM services.
  */
@@ -139,13 +173,13 @@ class AgentService {
    * @returns {Promise<Object>} Agent response with id, role, content, timestamp, and optional uiIntent
    */
   async sendMessage(message, history) {
-    throw new Error('sendMessage must be implemented by subclass');
+    throw new Error("sendMessage must be implemented by subclass");
   }
 }
 
 /**
  * MockAgentService
- * 
+ *
  * Mock implementation of AgentService for testing and development.
  * Uses pattern matching to simulate intelligent responses.
  */
@@ -171,27 +205,28 @@ class MockAgentService extends AgentService {
   async sendMessage(message, history = []) {
     // Simulate network delay - configurable for testing
     if (this.maxDelay > 0) {
-      const delayMs = this.minDelay + Math.random() * (this.maxDelay - this.minDelay);
+      const delayMs =
+        this.minDelay + Math.random() * (this.maxDelay - this.minDelay);
       await delay(delayMs);
     }
-    
+
     // Generate response based on message content
     const content = generateResponse(message);
     const uiIntent = determineUIIntent(message);
-    
+
     // Build response object
     const response = {
       id: generateId(),
-      role: 'assistant',
+      role: "assistant",
       content: content,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
+
     // Only include uiIntent if one was determined
     if (uiIntent) {
       response.uiIntent = uiIntent;
     }
-    
+
     return response;
   }
 }

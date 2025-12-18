@@ -60,7 +60,7 @@ export class ServiceConfig {
     logger.info('Service configuration loaded', {
       hasValidationSchema: !!this.validationSchema,
       environmentPrefix: this.environmentPrefix,
-      configKeys: Object.keys(config)
+      configKeys: Object.keys(config),
     });
 
     return config;
@@ -84,7 +84,7 @@ export class ServiceConfig {
         logger.debug('Environment variable loaded', {
           envKey: key,
           configKey,
-          valueType: typeof parsedValue
+          valueType: typeof parsedValue,
         });
       }
     }
@@ -97,10 +97,7 @@ export class ServiceConfig {
    * @returns {string} Configuration key
    */
   envKeyToConfigKey(envKey, prefix) {
-    return envKey
-      .substring(prefix.length)
-      .toLowerCase()
-      .replace(/_/g, '.');
+    return envKey.substring(prefix.length).toLowerCase().replace(/_/g, '.');
   }
 
   /**
@@ -126,12 +123,17 @@ export class ServiceConfig {
     }
 
     // Handle JSON values
-    if ((value.startsWith('{') && value.endsWith('}')) ||
-      (value.startsWith('[') && value.endsWith(']'))) {
+    if (
+      (value.startsWith('{') && value.endsWith('}')) ||
+      (value.startsWith('[') && value.endsWith(']'))
+    ) {
       try {
         return JSON.parse(value);
       } catch (error) {
-        logger.warn('Failed to parse JSON environment value', { value, error: error.message });
+        logger.warn('Failed to parse JSON environment value', {
+          value,
+          error: error.message,
+        });
       }
     }
 
@@ -206,14 +208,14 @@ export class ServiceConfig {
     const { error, value } = this.validationSchema.validate(config, {
       abortEarly: false,
       allowUnknown: true,
-      stripUnknown: false
+      stripUnknown: false,
     });
 
     if (error) {
       const errorMessage = `Configuration validation failed: ${error.details.map(d => d.message).join(', ')}`;
       logger.error('Configuration validation error', {
         error: errorMessage,
-        details: error.details
+        details: error.details,
       });
       throw new ServiceError(errorMessage);
     }
@@ -252,7 +254,7 @@ export class ServiceConfig {
     }
 
     logger.debug('Configuration merged', {
-      additionalKeys: Object.keys(additionalConfig)
+      additionalKeys: Object.keys(additionalConfig),
     });
   }
 
@@ -267,7 +269,11 @@ export class ServiceConfig {
 
     for (const key in source) {
       if (source.hasOwnProperty(key)) {
-        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        if (
+          source[key] &&
+          typeof source[key] === 'object' &&
+          !Array.isArray(source[key])
+        ) {
           result[key] = this.deepMerge(result[key] || {}, source[key]);
         } else {
           result[key] = source[key];
@@ -286,7 +292,7 @@ export class ServiceConfig {
    */
   static createServiceSchema(serviceName, serviceSchema) {
     return Joi.object({
-      [serviceName]: serviceSchema
+      [serviceName]: serviceSchema,
     });
   }
 
@@ -303,12 +309,12 @@ export class ServiceConfig {
       retryDelay: Joi.number().positive().default(1000),
       rateLimit: Joi.object({
         maxRequests: Joi.number().positive().default(100),
-        windowMs: Joi.number().positive().default(60000)
+        windowMs: Joi.number().positive().default(60000),
       }).default(),
       cache: Joi.object({
         enabled: Joi.boolean().default(true),
-        ttl: Joi.number().positive().default(300000)
-      }).default()
+        ttl: Joi.number().positive().default(300000),
+      }).default(),
     });
   }
 }

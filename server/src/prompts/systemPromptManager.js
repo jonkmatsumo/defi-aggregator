@@ -11,14 +11,14 @@ export class SystemPromptManager {
       defaultContext: 'defi_assistant',
       includeToolExamples: true,
       includeEducationalGuidance: true,
-      ...config
+      ...config,
     };
-    
+
     this.initializePrompts();
-    
+
     logger.info('SystemPromptManager initialized', {
       defaultContext: this.config.defaultContext,
-      promptCount: this.prompts.size
+      promptCount: this.prompts.size,
     });
   }
 
@@ -35,14 +35,14 @@ export class SystemPromptManager {
           'blockchain networks and gas fees',
           'DeFi protocols and lending rates',
           'token swapping and DEX operations',
-          'yield farming and liquidity provision'
+          'yield farming and liquidity provision',
         ],
-        personality: 'knowledgeable, helpful, and educational'
+        personality: 'knowledgeable, helpful, and educational',
       },
       corePrompt: this.createDeFiAssistantPrompt(),
       toolGuidelines: this.createToolUsageGuidelines(),
       responsePatterns: this.createResponsePatterns(),
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
     });
 
     // Fallback prompt for error scenarios
@@ -50,12 +50,12 @@ export class SystemPromptManager {
       identity: {
         role: 'Assistant',
         expertise: ['general assistance'],
-        personality: 'helpful and apologetic'
+        personality: 'helpful and apologetic',
       },
       corePrompt: this.createFallbackPrompt(),
       toolGuidelines: '',
       responsePatterns: this.createBasicResponsePatterns(),
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
     });
   }
 
@@ -187,13 +187,16 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
   getSystemPrompt(context = null) {
     const promptContext = context || this.config.defaultContext;
     const promptData = this.prompts.get(promptContext);
-    
+
     if (!promptData) {
-      logger.warn('System prompt not found, using fallback', { 
+      logger.warn('System prompt not found, using fallback', {
         requestedContext: promptContext,
-        availableContexts: Array.from(this.prompts.keys())
+        availableContexts: Array.from(this.prompts.keys()),
       });
-      return this.prompts.get('fallback')?.corePrompt || 'You are a helpful assistant.';
+      return (
+        this.prompts.get('fallback')?.corePrompt ||
+        'You are a helpful assistant.'
+      );
     }
 
     return promptData.corePrompt;
@@ -205,11 +208,14 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
   formatPromptWithTools(toolDefinitions, context = null) {
     const promptContext = context || this.config.defaultContext;
     const promptData = this.prompts.get(promptContext);
-    
+
     if (!promptData) {
-      logger.warn('System prompt not found for tool formatting, using fallback', { 
-        requestedContext: promptContext 
-      });
+      logger.warn(
+        'System prompt not found for tool formatting, using fallback',
+        {
+          requestedContext: promptContext,
+        }
+      );
       return this.getSystemPrompt('fallback');
     }
 
@@ -223,20 +229,25 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
     // Add tool definitions if provided
     if (toolDefinitions && toolDefinitions.length > 0) {
       fullPrompt += '\n\n## Available Tools\n\n';
-      fullPrompt += 'You have access to the following tools for real-time data:\n\n';
-      
+      fullPrompt +=
+        'You have access to the following tools for real-time data:\n\n';
+
       for (const tool of toolDefinitions) {
         fullPrompt += `### ${tool.name}\n`;
         fullPrompt += `${tool.description}\n\n`;
-        
+
         if (tool.parameters && tool.parameters.properties) {
           fullPrompt += 'Parameters:\n';
-          for (const [paramName, paramDef] of Object.entries(tool.parameters.properties)) {
+          for (const [paramName, paramDef] of Object.entries(
+            tool.parameters.properties
+          )) {
             // Clean parameter name for display
             const cleanParamName = paramName.trim() || 'parameter';
-            const required = tool.parameters.required?.includes(paramName) ? ' (required)' : ' (optional)';
+            const required = tool.parameters.required?.includes(paramName)
+              ? ' (required)'
+              : ' (optional)';
             fullPrompt += `- ${cleanParamName}${required}: ${paramDef.description || 'No description'}\n`;
-            
+
             if (paramDef.examples && Array.isArray(paramDef.examples)) {
               fullPrompt += `  Examples: ${paramDef.examples.join(', ')}\n`;
             }
@@ -254,7 +265,7 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
     logger.debug('System prompt formatted with tools', {
       context: promptContext,
       toolCount: toolDefinitions?.length || 0,
-      promptLength: fullPrompt.length
+      promptLength: fullPrompt.length,
     });
 
     return fullPrompt;
@@ -271,7 +282,7 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
         corePrompt: promptContent,
         toolGuidelines: '',
         responsePatterns: '',
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       });
     } else {
       // Structured update
@@ -279,13 +290,13 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
       this.prompts.set(context, {
         ...existing,
         ...promptContent,
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       });
     }
 
-    logger.info('System prompt updated', { 
+    logger.info('System prompt updated', {
       context,
-      promptLength: this.prompts.get(context).corePrompt.length
+      promptLength: this.prompts.get(context).corePrompt.length,
     });
   }
 
@@ -295,7 +306,7 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
   getPromptMetadata(context = null) {
     const promptContext = context || this.config.defaultContext;
     const promptData = this.prompts.get(promptContext);
-    
+
     if (!promptData) {
       return null;
     }
@@ -306,7 +317,7 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
       lastUpdated: promptData.lastUpdated,
       hasToolGuidelines: !!promptData.toolGuidelines,
       hasResponsePatterns: !!promptData.responsePatterns,
-      promptLength: promptData.corePrompt.length
+      promptLength: promptData.corePrompt.length,
     };
   }
 
@@ -323,41 +334,48 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
   validatePromptCompleteness(context = null) {
     const promptContext = context || this.config.defaultContext;
     const promptData = this.prompts.get(promptContext);
-    
+
     if (!promptData) {
       return {
         valid: false,
         missing: ['prompt_data'],
-        context: promptContext
+        context: promptContext,
       };
     }
 
     const missing = [];
-    
+
     // Check required sections
     if (!promptData.corePrompt || promptData.corePrompt.length < 100) {
       missing.push('core_prompt');
     }
-    
+
     if (!promptData.identity || !promptData.identity.role) {
       missing.push('identity_role');
     }
-    
-    if (!promptData.identity || !promptData.identity.expertise || promptData.identity.expertise.length === 0) {
+
+    if (
+      !promptData.identity ||
+      !promptData.identity.expertise ||
+      promptData.identity.expertise.length === 0
+    ) {
       missing.push('expertise_areas');
     }
 
     // Check for DeFi-specific content in main prompt
     if (promptContext === 'defi_assistant') {
       const prompt = promptData.corePrompt.toLowerCase();
-      if (!prompt.includes('defi') && !prompt.includes('decentralized finance')) {
+      if (
+        !prompt.includes('defi') &&
+        !prompt.includes('decentralized finance')
+      ) {
         missing.push('defi_context');
       }
-      
+
       if (!prompt.includes('cryptocurrency') && !prompt.includes('crypto')) {
         missing.push('cryptocurrency_expertise');
       }
-      
+
       if (!prompt.includes('blockchain')) {
         missing.push('blockchain_expertise');
       }
@@ -370,7 +388,7 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
       promptLength: promptData.corePrompt.length,
       hasIdentity: !!promptData.identity,
       hasToolGuidelines: !!promptData.toolGuidelines,
-      hasResponsePatterns: !!promptData.responsePatterns
+      hasResponsePatterns: !!promptData.responsePatterns,
     };
   }
 
@@ -380,28 +398,39 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
   validateToolInstructions(context = null) {
     const promptContext = context || this.config.defaultContext;
     const promptData = this.prompts.get(promptContext);
-    
+
     if (!promptData) {
       return {
         valid: false,
         missing: ['prompt_data'],
-        context: promptContext
+        context: promptContext,
       };
     }
 
     const missing = [];
-    const fullContent = (promptData.corePrompt + ' ' + (promptData.toolGuidelines || '')).toLowerCase();
-    
+    const fullContent = (
+      promptData.corePrompt +
+      ' ' +
+      (promptData.toolGuidelines || '')
+    ).toLowerCase();
+
     // Check for tool usage instructions
     if (!fullContent.includes('tool') && !fullContent.includes('function')) {
       missing.push('tool_references');
     }
-    
-    if (!fullContent.includes('real-time') && !fullContent.includes('current')) {
+
+    if (
+      !fullContent.includes('real-time') &&
+      !fullContent.includes('current')
+    ) {
       missing.push('real_time_data_instructions');
     }
-    
-    if (!fullContent.includes('price') && !fullContent.includes('gas') && !fullContent.includes('lending')) {
+
+    if (
+      !fullContent.includes('price') &&
+      !fullContent.includes('gas') &&
+      !fullContent.includes('lending')
+    ) {
       missing.push('specific_tool_guidance');
     }
 
@@ -410,7 +439,7 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
       missing,
       context: promptContext,
       hasToolGuidelines: !!promptData.toolGuidelines,
-      toolGuidelinesLength: promptData.toolGuidelines?.length || 0
+      toolGuidelinesLength: promptData.toolGuidelines?.length || 0,
     };
   }
 
@@ -420,34 +449,44 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
   validateExpertiseSpecification(context = null) {
     const promptContext = context || this.config.defaultContext;
     const promptData = this.prompts.get(promptContext);
-    
+
     if (!promptData) {
       return {
         valid: false,
         missing: ['prompt_data'],
-        context: promptContext
+        context: promptContext,
       };
     }
 
     const missing = [];
-    
+
     // Check identity expertise
-    if (!promptData.identity || !promptData.identity.expertise || promptData.identity.expertise.length === 0) {
+    if (
+      !promptData.identity ||
+      !promptData.identity.expertise ||
+      promptData.identity.expertise.length === 0
+    ) {
       missing.push('expertise_list');
     }
-    
+
     // Check for DeFi-specific expertise
     if (promptContext === 'defi_assistant' && promptData.identity?.expertise) {
       const expertise = promptData.identity.expertise.join(' ').toLowerCase();
-      
-      if (!expertise.includes('cryptocurrency') && !expertise.includes('crypto')) {
+
+      if (
+        !expertise.includes('cryptocurrency') &&
+        !expertise.includes('crypto')
+      ) {
         missing.push('cryptocurrency_expertise');
       }
-      
-      if (!expertise.includes('defi') && !expertise.includes('decentralized finance')) {
+
+      if (
+        !expertise.includes('defi') &&
+        !expertise.includes('decentralized finance')
+      ) {
         missing.push('defi_expertise');
       }
-      
+
       if (!expertise.includes('blockchain')) {
         missing.push('blockchain_expertise');
       }
@@ -464,7 +503,7 @@ For current prices, gas fees, or real-time data, I recommend checking reliable s
       missing,
       context: promptContext,
       expertiseCount: promptData.identity?.expertise?.length || 0,
-      expertise: promptData.identity?.expertise || []
+      expertise: promptData.identity?.expertise || [],
     };
   }
 }

@@ -35,7 +35,7 @@ export class ServiceContainer {
     this.services.set(name, {
       name,
       factory,
-      dependencies
+      dependencies,
     });
 
     if (singleton) {
@@ -44,10 +44,10 @@ export class ServiceContainer {
 
     this.dependencies.set(name, dependencies);
 
-    logger.debug('Service registered', { 
-      serviceName: name, 
-      singleton, 
-      dependencies 
+    logger.debug('Service registered', {
+      serviceName: name,
+      singleton,
+      dependencies,
     });
   }
 
@@ -81,14 +81,15 @@ export class ServiceContainer {
 
       logger.debug('Service instance created', { serviceName: name });
       return instance;
-
     } catch (error) {
       logger.error('Failed to create service instance', {
         serviceName: name,
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
-      throw new ServiceError(`Failed to create service ${name}: ${error.message}`);
+      throw new ServiceError(
+        `Failed to create service ${name}: ${error.message}`
+      );
     }
   }
 
@@ -118,7 +119,9 @@ export class ServiceContainer {
    */
   checkCircularDependencies(serviceName, visited) {
     if (visited.has(serviceName)) {
-      throw new ServiceError(`Circular dependency detected: ${Array.from(visited).join(' -> ')} -> ${serviceName}`);
+      throw new ServiceError(
+        `Circular dependency detected: ${Array.from(visited).join(' -> ')} -> ${serviceName}`
+      );
     }
 
     visited.add(serviceName);
@@ -166,7 +169,7 @@ export class ServiceContainer {
       registeredServices: this.services.size,
       activeInstances: this.instances.size,
       singletonServices: this.singletons.size,
-      services: Array.from(this.services.keys())
+      services: Array.from(this.services.keys()),
     };
   }
 }

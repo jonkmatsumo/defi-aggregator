@@ -12,7 +12,7 @@ export class RateLimiter {
       defaultMaxRequests: 100, // 100 requests per window default
       coordinationEnabled: true,
       burstAllowance: 0.2, // Allow 20% burst above limit
-      ...config
+      ...config,
     };
 
     // Rate limit tracking per key
@@ -29,13 +29,13 @@ export class RateLimiter {
       allowedRequests: 0,
       blockedRequests: 0,
       burstRequests: 0,
-      coordinationBlocks: 0
+      coordinationBlocks: 0,
     };
 
     logger.debug('RateLimiter initialized', {
       defaultWindow: this.config.defaultWindow,
       defaultMaxRequests: this.config.defaultMaxRequests,
-      coordinationEnabled: this.config.coordinationEnabled
+      coordinationEnabled: this.config.coordinationEnabled,
     });
   }
 
@@ -52,9 +52,12 @@ export class RateLimiter {
     const rateLimitConfig = {
       maxRequests: config.maxRequests || this.config.defaultMaxRequests,
       windowMs: config.windowMs || this.config.defaultWindow,
-      burstAllowance: config.burstAllowance !== undefined ? config.burstAllowance : this.config.burstAllowance,
+      burstAllowance:
+        config.burstAllowance !== undefined
+          ? config.burstAllowance
+          : this.config.burstAllowance,
       provider: config.provider || null, // For global coordination
-      priority: config.priority || 'normal' // high, normal, low
+      priority: config.priority || 'normal', // high, normal, low
     };
 
     this.rateLimitConfigs.set(key, rateLimitConfig);
@@ -63,7 +66,7 @@ export class RateLimiter {
       key,
       maxRequests: rateLimitConfig.maxRequests,
       windowMs: rateLimitConfig.windowMs,
-      provider: rateLimitConfig.provider
+      provider: rateLimitConfig.provider,
     });
   }
 
@@ -80,7 +83,7 @@ export class RateLimiter {
     const providerConfig = {
       maxRequests: config.maxRequests,
       windowMs: config.windowMs,
-      description: config.description || provider
+      description: config.description || provider,
     };
 
     this.providerConfigs.set(provider, providerConfig);
@@ -88,7 +91,7 @@ export class RateLimiter {
     logger.debug('Provider rate limit configured', {
       provider,
       maxRequests: providerConfig.maxRequests,
-      windowMs: providerConfig.windowMs
+      windowMs: providerConfig.windowMs,
     });
   }
 
@@ -120,7 +123,10 @@ export class RateLimiter {
 
     // Check global provider coordination if enabled
     if (this.config.coordinationEnabled && config.provider) {
-      const coordinationResult = this.checkProviderCoordination(config.provider, now);
+      const coordinationResult = this.checkProviderCoordination(
+        config.provider,
+        now
+      );
       if (!coordinationResult.allowed) {
         this.metrics.coordinationBlocks++;
         return coordinationResult;
@@ -135,7 +141,7 @@ export class RateLimiter {
       allowed: true,
       reason: 'within_limits',
       remaining: this.getRemainingRequests(key, config, now),
-      resetTime: windowStart + config.windowMs
+      resetTime: windowStart + config.windowMs,
     };
   }
 
@@ -164,7 +170,9 @@ export class RateLimiter {
 
     // Check if we can allow burst requests (only if burst allowance > 0)
     if (config.burstAllowance > 0) {
-      const burstLimit = Math.floor(config.maxRequests * (1 + config.burstAllowance));
+      const burstLimit = Math.floor(
+        config.maxRequests * (1 + config.burstAllowance)
+      );
       if (currentRequestCount <= burstLimit) {
         this.metrics.burstRequests++;
         logger.debug('Burst request allowed', {
@@ -172,7 +180,7 @@ export class RateLimiter {
           currentRequests: requests.length,
           currentRequestCount,
           baseLimit: config.maxRequests,
-          burstLimit
+          burstLimit,
         });
         return { allowed: true, reason: 'burst_allowed' };
       }
@@ -181,7 +189,9 @@ export class RateLimiter {
     // Rate limit exceeded
     const oldestRequest = Math.min(...requests);
     const resetTime = oldestRequest + config.windowMs;
-    const burstLimit = Math.floor(config.maxRequests * (1 + config.burstAllowance));
+    const burstLimit = Math.floor(
+      config.maxRequests * (1 + config.burstAllowance)
+    );
 
     logger.warn('Rate limit exceeded', {
       key,
@@ -189,7 +199,7 @@ export class RateLimiter {
       currentRequestCount,
       limit: config.maxRequests,
       burstLimit,
-      resetTime: new Date(resetTime).toISOString()
+      resetTime: new Date(resetTime).toISOString(),
     });
 
     return {
@@ -197,7 +207,7 @@ export class RateLimiter {
       reason: 'rate_limit_exceeded',
       requests: requests.length,
       limit: config.maxRequests,
-      resetTime
+      resetTime,
     };
   }
 
@@ -227,7 +237,7 @@ export class RateLimiter {
         provider,
         requests: requests.length,
         limit: providerConfig.maxRequests,
-        resetTime: new Date(resetTime).toISOString()
+        resetTime: new Date(resetTime).toISOString(),
       });
 
       return {
@@ -236,7 +246,7 @@ export class RateLimiter {
         provider,
         requests: requests.length,
         limit: providerConfig.maxRequests,
-        resetTime
+        resetTime,
       };
     }
 
@@ -320,7 +330,11 @@ export class RateLimiter {
       }
 
       const timeUntilReset = this.getTimeUntilReset(key);
-      const waitDuration = Math.min(checkInterval, timeUntilReset, maxWaitTime - waitTime);
+      const waitDuration = Math.min(
+        checkInterval,
+        timeUntilReset,
+        maxWaitTime - waitTime
+      );
 
       if (waitDuration <= 0) {
         break;
@@ -329,7 +343,7 @@ export class RateLimiter {
       logger.debug('Waiting for rate limit reset', {
         key,
         waitDuration,
-        timeUntilReset
+        timeUntilReset,
       });
 
       await this.sleep(waitDuration);
@@ -375,7 +389,7 @@ export class RateLimiter {
         cleanedKeys,
         cleanedProviders,
         remainingKeys: this.requestHistory.size,
-        remainingProviders: this.globalRequestHistory.size
+        remainingProviders: this.globalRequestHistory.size,
       });
     }
   }
@@ -387,13 +401,14 @@ export class RateLimiter {
   getMetrics() {
     return {
       ...this.metrics,
-      successRate: this.metrics.totalRequests > 0
-        ? (this.metrics.allowedRequests / this.metrics.totalRequests) * 100
-        : 0,
+      successRate:
+        this.metrics.totalRequests > 0
+          ? (this.metrics.allowedRequests / this.metrics.totalRequests) * 100
+          : 0,
       activeKeys: this.requestHistory.size,
       activeProviders: this.globalRequestHistory.size,
       configuredKeys: this.rateLimitConfigs.size,
-      configuredProviders: this.providerConfigs.size
+      configuredProviders: this.providerConfigs.size,
     };
   }
 
@@ -408,7 +423,7 @@ export class RateLimiter {
       allowedRequests: 0,
       blockedRequests: 0,
       burstRequests: 0,
-      coordinationBlocks: 0
+      coordinationBlocks: 0,
     };
 
     logger.info('Rate limiter state reset');

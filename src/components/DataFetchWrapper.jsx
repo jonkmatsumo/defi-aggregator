@@ -1,17 +1,17 @@
-import React from 'react';
-import Skeleton from './Skeleton';
-import ErrorState from './ErrorState';
-import StaleDataBanner from './StaleDataBanner';
+import React from "react";
+import Skeleton from "./Skeleton";
+import ErrorState from "./ErrorState";
+import StaleDataBanner from "./StaleDataBanner";
 
 /**
  * DataFetchWrapper Component
- * 
+ *
  * A wrapper component that handles data fetching states:
  * - Loading: Shows skeleton placeholder
  * - Error: Shows error state with retry button
  * - Cached/Stale: Shows banner indicating data may be outdated
  * - Success: Renders children with data
- * 
+ *
  * @param {Object} props - Component props
  * @param {any} props.data - The fetched data
  * @param {boolean} props.loading - Whether data is loading
@@ -29,10 +29,10 @@ const DataFetchWrapper = ({
   error,
   onRetry,
   children,
-  skeletonType = 'card',
+  skeletonType = "card",
   skeletonCount = 1,
   minHeight = 200,
-  emptyMessage = 'No data available'
+  emptyMessage = "No data available",
 }) => {
   // Show loading skeleton
   if (loading) {
@@ -47,10 +47,7 @@ const DataFetchWrapper = ({
   if (error) {
     return (
       <div style={{ minHeight: `${minHeight}px` }}>
-        <ErrorState
-          error={error}
-          onRetry={onRetry}
-        />
+        <ErrorState error={error} onRetry={onRetry} />
       </div>
     );
   }
@@ -58,15 +55,17 @@ const DataFetchWrapper = ({
   // No data
   if (!data || (Array.isArray(data) && data.length === 0)) {
     return (
-      <div style={{
-        minHeight: `${minHeight}px`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#a0aec0',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        fontSize: '14px'
-      }}>
+      <div
+        style={{
+          minHeight: `${minHeight}px`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#a0aec0",
+          fontFamily: "system-ui, -apple-system, sans-serif",
+          fontSize: "14px",
+        }}
+      >
         {emptyMessage}
       </div>
     );
@@ -87,9 +86,9 @@ const DataFetchWrapper = ({
           onRefresh={onRetry}
         />
       )}
-      
+
       {/* Render children with data */}
-      {typeof children === 'function' ? children(data) : children}
+      {typeof children === "function" ? children(data) : children}
     </div>
   );
 };
@@ -104,8 +103,8 @@ export const InlineDataFetchWrapper = ({
   error,
   onRetry,
   children,
-  loadingContent = '...',
-  errorContent = '-'
+  loadingContent = "...",
+  errorContent = "-",
 }) => {
   if (loading) {
     return <span style={{ opacity: 0.5 }}>{loadingContent}</span>;
@@ -114,7 +113,7 @@ export const InlineDataFetchWrapper = ({
   if (error) {
     return (
       <span
-        style={{ color: '#ef4444', cursor: 'pointer' }}
+        style={{ color: "#ef4444", cursor: "pointer" }}
         onClick={onRetry}
         title="Click to retry"
       >
@@ -124,11 +123,10 @@ export const InlineDataFetchWrapper = ({
   }
 
   if (!data) {
-    return <span style={{ color: '#a0aec0' }}>-</span>;
+    return <span style={{ color: "#a0aec0" }}>-</span>;
   }
 
-  return typeof children === 'function' ? children(data) : children;
+  return typeof children === "function" ? children(data) : children;
 };
 
 export default DataFetchWrapper;
-

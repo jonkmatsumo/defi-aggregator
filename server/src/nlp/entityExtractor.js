@@ -23,7 +23,8 @@ export class EntityExtractor {
 
     // Protocols
     this.protocols.forEach(protocol => {
-      if (lower.includes(protocol)) entities.push({ type: 'protocol', value: protocol });
+      if (lower.includes(protocol))
+        entities.push({ type: 'protocol', value: protocol });
     });
 
     // Token symbols (simple heuristic: uppercase words 2-6 chars)
@@ -34,4 +35,3 @@ export class EntityExtractor {
     return entities;
   }
 }
-

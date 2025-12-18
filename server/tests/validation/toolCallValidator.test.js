@@ -13,7 +13,7 @@ describe('ToolCallValidator', () => {
         { id: 'call_1', function: { name: 'valid_tool', arguments: '{}' } }, // Valid OpenAI format
         { id: null, function: { name: 'invalid_id' } }, // Invalid ID
         { id: 'call_2', name: 'valid_normalized' }, // Valid normalized format
-        { id: 'call_3' } // Missing name
+        { id: 'call_3' }, // Missing name
       ];
 
       const result = ToolCallValidator.validate(toolCalls);
@@ -36,8 +36,8 @@ describe('ToolCallValidator', () => {
         type: 'function',
         function: {
           name: 'get_weather',
-          arguments: '{"location": "London"}'
-        }
+          arguments: '{"location": "London"}',
+        },
       };
       expect(ToolCallValidator.validateSingleCall(call).valid).toBe(true);
     });
@@ -46,14 +46,14 @@ describe('ToolCallValidator', () => {
       const call = {
         id: 'call_456',
         name: 'get_weather',
-        parameters: { location: 'London' }
+        parameters: { location: 'London' },
       };
       expect(ToolCallValidator.validateSingleCall(call).valid).toBe(true);
     });
 
     it('should reject missing ID', () => {
       const call = {
-        name: 'get_weather'
+        name: 'get_weather',
       };
       expect(ToolCallValidator.validateSingleCall(call).valid).toBe(false);
       expect(ToolCallValidator.validateSingleCall(call).error).toContain('ID');
@@ -61,10 +61,12 @@ describe('ToolCallValidator', () => {
 
     it('should reject missing name', () => {
       const call = {
-        id: 'call_789'
+        id: 'call_789',
       };
       expect(ToolCallValidator.validateSingleCall(call).valid).toBe(false);
-      expect(ToolCallValidator.validateSingleCall(call).error).toContain('name');
+      expect(ToolCallValidator.validateSingleCall(call).error).toContain(
+        'name'
+      );
     });
 
     it('should reject non-object input', () => {

@@ -15,14 +15,14 @@ export class GasPriceAPIService extends BaseService {
       rateLimitMax: 60, // 60 requests per minute per network
       retryAttempts: 3,
       retryDelay: 2000,
-      ...config
+      ...config,
     });
 
     // Initialize API client
     this.apiClient = new APIClient({
       timeout: 15000,
       retryAttempts: 2,
-      userAgent: 'DeFi-Backend-GasPrice/1.0.0'
+      userAgent: 'DeFi-Backend-GasPrice/1.0.0',
     });
 
     // Supported networks configuration
@@ -33,9 +33,9 @@ export class GasPriceAPIService extends BaseService {
         nativeCurrency: { symbol: 'ETH', decimals: 18 },
         apiEndpoints: {
           etherscan: 'https://api.etherscan.io/api',
-          gasStation: 'https://ethgasstation.info/api/ethgasAPI.json'
+          gasStation: 'https://ethgasstation.info/api/ethgasAPI.json',
         },
-        rateLimit: { maxRequests: 5, windowMs: 1000 } // 5 requests per second
+        rateLimit: { maxRequests: 5, windowMs: 1000 }, // 5 requests per second
       },
       polygon: {
         name: 'Polygon',
@@ -43,66 +43,66 @@ export class GasPriceAPIService extends BaseService {
         nativeCurrency: { symbol: 'MATIC', decimals: 18 },
         apiEndpoints: {
           polygonscan: 'https://api.polygonscan.com/api',
-          gasStation: 'https://gasstation-mainnet.matic.network/v2'
+          gasStation: 'https://gasstation-mainnet.matic.network/v2',
         },
-        rateLimit: { maxRequests: 5, windowMs: 1000 }
+        rateLimit: { maxRequests: 5, windowMs: 1000 },
       },
       bsc: {
         name: 'BSC',
         chainId: 56,
         nativeCurrency: { symbol: 'BNB', decimals: 18 },
         apiEndpoints: {
-          bscscan: 'https://api.bscscan.com/api'
+          bscscan: 'https://api.bscscan.com/api',
         },
-        rateLimit: { maxRequests: 5, windowMs: 1000 }
+        rateLimit: { maxRequests: 5, windowMs: 1000 },
       },
       arbitrum: {
         name: 'Arbitrum',
         chainId: 42161,
         nativeCurrency: { symbol: 'ETH', decimals: 18 },
         apiEndpoints: {
-          arbiscan: 'https://api.arbiscan.io/api'
+          arbiscan: 'https://api.arbiscan.io/api',
         },
-        rateLimit: { maxRequests: 5, windowMs: 1000 }
+        rateLimit: { maxRequests: 5, windowMs: 1000 },
       },
       optimism: {
         name: 'Optimism',
         chainId: 10,
         nativeCurrency: { symbol: 'ETH', decimals: 18 },
         apiEndpoints: {
-          optimistic: 'https://api-optimistic.etherscan.io/api'
+          optimistic: 'https://api-optimistic.etherscan.io/api',
         },
-        rateLimit: { maxRequests: 5, windowMs: 1000 }
-      }
+        rateLimit: { maxRequests: 5, windowMs: 1000 },
+      },
     };
 
     // Fallback gas prices for error cases
     this.fallbackGasPrices = {
-      ethereum: { 
-        slow: { gwei: 15, usd_cost: 0.50 }, 
-        standard: { gwei: 18, usd_cost: 0.60 }, 
-        fast: { gwei: 22, usd_cost: 0.73 } 
+      ethereum: {
+        slow: { gwei: 15, usd_cost: 0.5 },
+        standard: { gwei: 18, usd_cost: 0.6 },
+        fast: { gwei: 22, usd_cost: 0.73 },
       },
-      polygon: { 
-        slow: { gwei: 2, usd_cost: 0.01 }, 
-        standard: { gwei: 3, usd_cost: 0.015 }, 
-        fast: { gwei: 4, usd_cost: 0.02 } 
+      polygon: {
+        slow: { gwei: 2, usd_cost: 0.01 },
+        standard: { gwei: 3, usd_cost: 0.015 },
+        fast: { gwei: 4, usd_cost: 0.02 },
       },
-      bsc: { 
-        slow: { gwei: 5, usd_cost: 0.02 }, 
-        standard: { gwei: 6, usd_cost: 0.024 }, 
-        fast: { gwei: 8, usd_cost: 0.032 } 
+      bsc: {
+        slow: { gwei: 5, usd_cost: 0.02 },
+        standard: { gwei: 6, usd_cost: 0.024 },
+        fast: { gwei: 8, usd_cost: 0.032 },
       },
-      arbitrum: { 
-        slow: { gwei: 0.5, usd_cost: 0.005 }, 
-        standard: { gwei: 0.6, usd_cost: 0.006 }, 
-        fast: { gwei: 0.8, usd_cost: 0.008 } 
+      arbitrum: {
+        slow: { gwei: 0.5, usd_cost: 0.005 },
+        standard: { gwei: 0.6, usd_cost: 0.006 },
+        fast: { gwei: 0.8, usd_cost: 0.008 },
       },
-      optimism: { 
-        slow: { gwei: 0.1, usd_cost: 0.001 }, 
-        standard: { gwei: 0.15, usd_cost: 0.0015 }, 
-        fast: { gwei: 0.2, usd_cost: 0.002 } 
-      }
+      optimism: {
+        slow: { gwei: 0.1, usd_cost: 0.001 },
+        standard: { gwei: 0.15, usd_cost: 0.0015 },
+        fast: { gwei: 0.2, usd_cost: 0.002 },
+      },
     };
 
     // Validate required configuration
@@ -111,9 +111,9 @@ export class GasPriceAPIService extends BaseService {
     // Set up API credentials
     this.setupAPICredentials();
 
-    logger.info('GasPriceAPIService initialized', { 
+    logger.info('GasPriceAPIService initialized', {
       supportedNetworks: Object.keys(this.networks),
-      cacheTimeout: this.config.cacheTimeout 
+      cacheTimeout: this.config.cacheTimeout,
     });
   }
 
@@ -127,7 +127,9 @@ export class GasPriceAPIService extends BaseService {
       this.apiClient.setCredentials('etherscan', { apiKey: apiKeys.etherscan });
     }
     if (apiKeys.polygonscan) {
-      this.apiClient.setCredentials('polygonscan', { apiKey: apiKeys.polygonscan });
+      this.apiClient.setCredentials('polygonscan', {
+        apiKey: apiKeys.polygonscan,
+      });
     }
     if (apiKeys.bscscan) {
       this.apiClient.setCredentials('bscscan', { apiKey: apiKeys.bscscan });
@@ -136,7 +138,9 @@ export class GasPriceAPIService extends BaseService {
       this.apiClient.setCredentials('arbiscan', { apiKey: apiKeys.arbiscan });
     }
     if (apiKeys.optimistic) {
-      this.apiClient.setCredentials('optimistic', { apiKey: apiKeys.optimistic });
+      this.apiClient.setCredentials('optimistic', {
+        apiKey: apiKeys.optimistic,
+      });
     }
   }
 
@@ -173,17 +177,16 @@ export class GasPriceAPIService extends BaseService {
       // Cache the result
       this.setCachedData(cacheKey, gasData);
 
-      logger.info('Gas prices fetched successfully', { 
-        network, 
-        prices: gasData.gasPrices 
+      logger.info('Gas prices fetched successfully', {
+        network,
+        prices: gasData.gasPrices,
       });
 
       return gasData;
-
     } catch (error) {
-      logger.error('Failed to fetch gas prices', { 
-        network, 
-        error: error.message 
+      logger.error('Failed to fetch gas prices', {
+        network,
+        error: error.message,
       });
 
       // Return fallback data on error
@@ -200,24 +203,24 @@ export class GasPriceAPIService extends BaseService {
    */
   async getMultiNetworkGasPrices(networks = ['ethereum', 'polygon']) {
     const validNetworks = networks.filter(network => this.networks[network]);
-    
+
     if (validNetworks.length === 0) {
       throw new ServiceError('No valid networks specified');
     }
 
-    const gasPricePromises = validNetworks.map(async (network) => {
+    const gasPricePromises = validNetworks.map(async network => {
       try {
         const gasData = await this.getGasPrices(network);
         return { network, data: gasData, success: true };
       } catch (error) {
-        logger.warn('Failed to fetch gas prices for network', { 
-          network, 
-          error: error.message 
+        logger.warn('Failed to fetch gas prices for network', {
+          network,
+          error: error.message,
         });
-        return { 
-          network, 
-          data: this.getFallbackGasPrices(network), 
-          success: false 
+        return {
+          network,
+          data: this.getFallbackGasPrices(network),
+          success: false,
         };
       }
     });
@@ -237,7 +240,7 @@ export class GasPriceAPIService extends BaseService {
     return {
       networks: gasPrices,
       timestamp: Date.now(),
-      source: 'backend_api'
+      source: 'backend_api',
     };
   }
 
@@ -248,7 +251,11 @@ export class GasPriceAPIService extends BaseService {
    * @param {number} gasLimit - Gas limit for transaction
    * @returns {Object} Cost estimates in native currency and USD
    */
-  async getTransactionCostEstimate(network, transactionType = 'transfer', gasLimit = 21000) {
+  async getTransactionCostEstimate(
+    network,
+    transactionType = 'transfer',
+    gasLimit = 21000
+  ) {
     const gasData = await this.getGasPrices(network);
     const networkInfo = this.networks[network];
 
@@ -264,12 +271,12 @@ export class GasPriceAPIService extends BaseService {
       if (gasPrices[speed]) {
         const gasCostWei = gasPrices[speed].gwei * gasLimit * 1e9; // Convert gwei to wei
         const gasCostEth = gasCostWei / 1e18; // Convert wei to ETH/native currency
-        
+
         costs[speed] = {
           gasPrice: gasPrices[speed].gwei,
           gasCost: gasCostEth,
           gasCostUSD: gasPrices[speed].usd_cost || gasCostEth * 2000, // Fallback ETH price
-          currency: networkInfo.nativeCurrency.symbol
+          currency: networkInfo.nativeCurrency.symbol,
         };
       }
     });
@@ -279,7 +286,7 @@ export class GasPriceAPIService extends BaseService {
       transactionType,
       gasLimit,
       costs,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 
@@ -291,20 +298,20 @@ export class GasPriceAPIService extends BaseService {
    */
   async fetchGasPricesFromAPI(network, options = {}) {
     const networkConfig = this.networks[network];
-    
+
     switch (network) {
-    case 'ethereum':
-      return await this.fetchEthereumGasPrices(networkConfig, options);
-    case 'polygon':
-      return await this.fetchPolygonGasPrices(networkConfig, options);
-    case 'bsc':
-      return await this.fetchBSCGasPrices(networkConfig, options);
-    case 'arbitrum':
-      return await this.fetchArbitrumGasPrices(networkConfig, options);
-    case 'optimism':
-      return await this.fetchOptimismGasPrices(networkConfig, options);
-    default:
-      throw new ServiceError(`No API implementation for network: ${network}`);
+      case 'ethereum':
+        return await this.fetchEthereumGasPrices(networkConfig, options);
+      case 'polygon':
+        return await this.fetchPolygonGasPrices(networkConfig, options);
+      case 'bsc':
+        return await this.fetchBSCGasPrices(networkConfig, options);
+      case 'arbitrum':
+        return await this.fetchArbitrumGasPrices(networkConfig, options);
+      case 'optimism':
+        return await this.fetchOptimismGasPrices(networkConfig, options);
+      default:
+        throw new ServiceError(`No API implementation for network: ${network}`);
     }
   }
 
@@ -317,7 +324,7 @@ export class GasPriceAPIService extends BaseService {
 
     const response = await this.apiClient.get(url, {
       rateLimitKey: 'etherscan',
-      rateLimit: networkConfig.rateLimit
+      rateLimit: networkConfig.rateLimit,
     });
 
     if (response.status !== '1') {
@@ -328,12 +335,21 @@ export class GasPriceAPIService extends BaseService {
     return {
       network: 'ethereum',
       gasPrices: {
-        slow: { gwei: parseFloat(result.SafeGasPrice), usd_cost: this.calculateUSDCost(result.SafeGasPrice, 'ethereum') },
-        standard: { gwei: parseFloat(result.ProposeGasPrice), usd_cost: this.calculateUSDCost(result.ProposeGasPrice, 'ethereum') },
-        fast: { gwei: parseFloat(result.FastGasPrice), usd_cost: this.calculateUSDCost(result.FastGasPrice, 'ethereum') }
+        slow: {
+          gwei: parseFloat(result.SafeGasPrice),
+          usd_cost: this.calculateUSDCost(result.SafeGasPrice, 'ethereum'),
+        },
+        standard: {
+          gwei: parseFloat(result.ProposeGasPrice),
+          usd_cost: this.calculateUSDCost(result.ProposeGasPrice, 'ethereum'),
+        },
+        fast: {
+          gwei: parseFloat(result.FastGasPrice),
+          usd_cost: this.calculateUSDCost(result.FastGasPrice, 'ethereum'),
+        },
       },
       timestamp: Date.now(),
-      source: 'etherscan'
+      source: 'etherscan',
     };
   }
 
@@ -346,18 +362,36 @@ export class GasPriceAPIService extends BaseService {
       const gasStationUrl = networkConfig.apiEndpoints.gasStation;
       const response = await this.apiClient.get(gasStationUrl, {
         rateLimitKey: 'polygon_gas_station',
-        rateLimit: networkConfig.rateLimit
+        rateLimit: networkConfig.rateLimit,
       });
 
       return {
         network: 'polygon',
         gasPrices: {
-          slow: { gwei: response.safeLow?.maxFee || 2, usd_cost: this.calculateUSDCost(response.safeLow?.maxFee || 2, 'polygon') },
-          standard: { gwei: response.standard?.maxFee || 3, usd_cost: this.calculateUSDCost(response.standard?.maxFee || 3, 'polygon') },
-          fast: { gwei: response.fast?.maxFee || 4, usd_cost: this.calculateUSDCost(response.fast?.maxFee || 4, 'polygon') }
+          slow: {
+            gwei: response.safeLow?.maxFee || 2,
+            usd_cost: this.calculateUSDCost(
+              response.safeLow?.maxFee || 2,
+              'polygon'
+            ),
+          },
+          standard: {
+            gwei: response.standard?.maxFee || 3,
+            usd_cost: this.calculateUSDCost(
+              response.standard?.maxFee || 3,
+              'polygon'
+            ),
+          },
+          fast: {
+            gwei: response.fast?.maxFee || 4,
+            usd_cost: this.calculateUSDCost(
+              response.fast?.maxFee || 4,
+              'polygon'
+            ),
+          },
         },
         timestamp: Date.now(),
-        source: 'polygon_gas_station'
+        source: 'polygon_gas_station',
       };
     } catch (error) {
       // Fallback to Polygonscan if available
@@ -379,10 +413,10 @@ export class GasPriceAPIService extends BaseService {
         gasPrices: {
           slow: { gwei: 5, usd_cost: this.calculateUSDCost(5, 'bsc') },
           standard: { gwei: 6, usd_cost: this.calculateUSDCost(6, 'bsc') },
-          fast: { gwei: 8, usd_cost: this.calculateUSDCost(8, 'bsc') }
+          fast: { gwei: 8, usd_cost: this.calculateUSDCost(8, 'bsc') },
         },
         timestamp: Date.now(),
-        source: 'estimated'
+        source: 'estimated',
       };
     }
 
@@ -391,7 +425,7 @@ export class GasPriceAPIService extends BaseService {
 
     const response = await this.apiClient.get(url, {
       rateLimitKey: 'bscscan',
-      rateLimit: networkConfig.rateLimit
+      rateLimit: networkConfig.rateLimit,
     });
 
     if (response.status !== '1') {
@@ -402,12 +436,21 @@ export class GasPriceAPIService extends BaseService {
     return {
       network: 'bsc',
       gasPrices: {
-        slow: { gwei: parseFloat(result.SafeGasPrice), usd_cost: this.calculateUSDCost(result.SafeGasPrice, 'bsc') },
-        standard: { gwei: parseFloat(result.ProposeGasPrice), usd_cost: this.calculateUSDCost(result.ProposeGasPrice, 'bsc') },
-        fast: { gwei: parseFloat(result.FastGasPrice), usd_cost: this.calculateUSDCost(result.FastGasPrice, 'bsc') }
+        slow: {
+          gwei: parseFloat(result.SafeGasPrice),
+          usd_cost: this.calculateUSDCost(result.SafeGasPrice, 'bsc'),
+        },
+        standard: {
+          gwei: parseFloat(result.ProposeGasPrice),
+          usd_cost: this.calculateUSDCost(result.ProposeGasPrice, 'bsc'),
+        },
+        fast: {
+          gwei: parseFloat(result.FastGasPrice),
+          usd_cost: this.calculateUSDCost(result.FastGasPrice, 'bsc'),
+        },
       },
       timestamp: Date.now(),
-      source: 'bscscan'
+      source: 'bscscan',
     };
   }
 
@@ -420,11 +463,14 @@ export class GasPriceAPIService extends BaseService {
       network: 'arbitrum',
       gasPrices: {
         slow: { gwei: 0.5, usd_cost: this.calculateUSDCost(0.5, 'arbitrum') },
-        standard: { gwei: 0.6, usd_cost: this.calculateUSDCost(0.6, 'arbitrum') },
-        fast: { gwei: 0.8, usd_cost: this.calculateUSDCost(0.8, 'arbitrum') }
+        standard: {
+          gwei: 0.6,
+          usd_cost: this.calculateUSDCost(0.6, 'arbitrum'),
+        },
+        fast: { gwei: 0.8, usd_cost: this.calculateUSDCost(0.8, 'arbitrum') },
       },
       timestamp: Date.now(),
-      source: 'estimated'
+      source: 'estimated',
     };
   }
 
@@ -437,11 +483,14 @@ export class GasPriceAPIService extends BaseService {
       network: 'optimism',
       gasPrices: {
         slow: { gwei: 0.1, usd_cost: this.calculateUSDCost(0.1, 'optimism') },
-        standard: { gwei: 0.15, usd_cost: this.calculateUSDCost(0.15, 'optimism') },
-        fast: { gwei: 0.2, usd_cost: this.calculateUSDCost(0.2, 'optimism') }
+        standard: {
+          gwei: 0.15,
+          usd_cost: this.calculateUSDCost(0.15, 'optimism'),
+        },
+        fast: { gwei: 0.2, usd_cost: this.calculateUSDCost(0.2, 'optimism') },
       },
       timestamp: Date.now(),
-      source: 'estimated'
+      source: 'estimated',
     };
   }
 
@@ -459,10 +508,10 @@ export class GasPriceAPIService extends BaseService {
     // Simplified price estimates (in production, fetch from price API)
     const prices = {
       ethereum: 2000, // ETH price
-      polygon: 0.8,   // MATIC price
-      bsc: 300,       // BNB price
+      polygon: 0.8, // MATIC price
+      bsc: 300, // BNB price
       arbitrum: 2000, // ETH price
-      optimism: 2000  // ETH price
+      optimism: 2000, // ETH price
     };
 
     return gasCostEth * (prices[network] || 1);
@@ -476,14 +525,16 @@ export class GasPriceAPIService extends BaseService {
   getFallbackGasPrices(network) {
     const fallbackPrices = this.fallbackGasPrices[network];
     if (!fallbackPrices) {
-      throw new ServiceError(`No fallback data available for network: ${network}`);
+      throw new ServiceError(
+        `No fallback data available for network: ${network}`
+      );
     }
 
     return {
       network,
       gasPrices: fallbackPrices,
       timestamp: Date.now(),
-      source: 'fallback'
+      source: 'fallback',
     };
   }
 

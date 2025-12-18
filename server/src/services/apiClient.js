@@ -12,27 +12,27 @@ export class APIClient {
       retryAttempts: 3,
       retryDelay: 1000,
       userAgent: 'DeFi-Aggregator-Backend/1.0.0',
-      ...config
+      ...config,
     };
 
     // Secure credential storage
     this.credentials = new Map();
-    
+
     // Request tracking for rate limiting
     this.requestHistory = new Map(); // endpoint -> [timestamps]
-    
+
     // Metrics
     this.metrics = {
       totalRequests: 0,
       successfulRequests: 0,
       failedRequests: 0,
       averageResponseTime: 0,
-      totalResponseTime: 0
+      totalResponseTime: 0,
     };
 
-    logger.debug('API Client initialized', { 
+    logger.debug('API Client initialized', {
       timeout: this.config.timeout,
-      retryAttempts: this.config.retryAttempts 
+      retryAttempts: this.config.retryAttempts,
     });
   }
 
@@ -52,7 +52,7 @@ export class APIClient {
 
     // Store credentials securely (in production, consider encryption)
     this.credentials.set(provider, { ...credentials });
-    
+
     logger.debug('Credentials stored for provider', { provider });
   }
 
@@ -91,7 +91,7 @@ export class APIClient {
       body,
       timeout = this.config.timeout,
       retryAttempts = this.config.retryAttempts,
-      rateLimitKey = null
+      rateLimitKey = null,
     } = options;
 
     // Check rate limiting if key provided
@@ -104,10 +104,10 @@ export class APIClient {
       headers: {
         'User-Agent': this.config.userAgent,
         'Content-Type': 'application/json',
-        ...headers
+        ...headers,
       },
       body: body ? JSON.stringify(body) : undefined,
-      timeout
+      timeout,
     };
 
     let lastError;
@@ -115,21 +115,23 @@ export class APIClient {
 
     for (let attempt = 1; attempt <= retryAttempts; attempt++) {
       try {
-        logger.debug('Making API request', { 
-          url, 
-          method, 
-          attempt, 
-          maxAttempts: retryAttempts 
+        logger.debug('Making API request', {
+          url,
+          method,
+          attempt,
+          maxAttempts: retryAttempts,
         });
 
         const response = await fetch(url, requestOptions);
-        
+
         if (!response.ok) {
-          throw new ServiceError(`HTTP ${response.status}: ${response.statusText}`);
+          throw new ServiceError(
+            `HTTP ${response.status}: ${response.statusText}`
+          );
         }
 
         const data = await response.json();
-        
+
         // Update metrics
         const responseTime = Date.now() - startTime;
         this.updateMetrics(true, responseTime);
@@ -139,22 +141,21 @@ export class APIClient {
           this.trackRequest(rateLimitKey);
         }
 
-        logger.debug('API request successful', { 
-          url, 
+        logger.debug('API request successful', {
+          url,
           responseTime,
-          attempt 
+          attempt,
         });
 
         return data;
-
       } catch (error) {
         lastError = error;
-        
+
         logger.warn('API request failed', {
           url,
           attempt,
           maxAttempts: retryAttempts,
-          error: error.message
+          error: error.message,
         });
 
         // Don't retry on certain errors
@@ -176,7 +177,7 @@ export class APIClient {
     logger.error('API request failed after all attempts', {
       url,
       attempts: retryAttempts,
-      error: lastError.message
+      error: lastError.message,
     });
 
     throw lastError;
@@ -225,11 +226,11 @@ export class APIClient {
 
     // Check if we're within the limit
     if (requests.length >= rateLimit.maxRequests) {
-      logger.warn('Rate limit exceeded', { 
-        key, 
-        requests: requests.length, 
+      logger.warn('Rate limit exceeded', {
+        key,
+        requests: requests.length,
         limit: rateLimit.maxRequests,
-        windowMs: rateLimit.windowMs
+        windowMs: rateLimit.windowMs,
       });
       return false;
     }
@@ -271,7 +272,8 @@ export class APIClient {
   updateMetrics(success, responseTime) {
     this.metrics.totalRequests++;
     this.metrics.totalResponseTime += responseTime;
-    this.metrics.averageResponseTime = this.metrics.totalResponseTime / this.metrics.totalRequests;
+    this.metrics.averageResponseTime =
+      this.metrics.totalResponseTime / this.metrics.totalRequests;
 
     if (success) {
       this.metrics.successfulRequests++;
@@ -295,11 +297,12 @@ export class APIClient {
   getMetrics() {
     return {
       ...this.metrics,
-      successRate: this.metrics.totalRequests > 0 
-        ? (this.metrics.successfulRequests / this.metrics.totalRequests) * 100 
-        : 0,
+      successRate:
+        this.metrics.totalRequests > 0
+          ? (this.metrics.successfulRequests / this.metrics.totalRequests) * 100
+          : 0,
       activeRateLimitKeys: this.requestHistory.size,
-      storedCredentials: this.credentials.size
+      storedCredentials: this.credentials.size,
     };
   }
 

@@ -16,66 +16,66 @@ export class PriceFeedAPIService extends BaseService {
       rateLimitMax: 120, // 120 requests per minute
       retryAttempts: 3,
       retryDelay: 1000,
-      ...config
+      ...config,
     });
 
     // Initialize API client
     this.apiClient = new APIClient({
       timeout: 10000,
       retryAttempts: 2,
-      userAgent: 'DeFi-Backend-PriceFeed/1.0.0'
+      userAgent: 'DeFi-Backend-PriceFeed/1.0.0',
     });
 
     // Supported cryptocurrencies configuration
     this.supportedSymbols = {
-      'BTC': {
+      BTC: {
         name: 'Bitcoin',
         coinGeckoId: 'bitcoin',
         binanceSymbol: 'BTCUSDT',
-        decimals: 8
+        decimals: 8,
       },
-      'ETH': {
+      ETH: {
         name: 'Ethereum',
         coinGeckoId: 'ethereum',
         binanceSymbol: 'ETHUSDT',
-        decimals: 18
+        decimals: 18,
       },
-      'USDC': {
+      USDC: {
         name: 'USD Coin',
         coinGeckoId: 'usd-coin',
         binanceSymbol: 'USDCUSDT',
-        decimals: 6
+        decimals: 6,
       },
-      'USDT': {
+      USDT: {
         name: 'Tether',
         coinGeckoId: 'tether',
         binanceSymbol: 'USDTUSDT',
-        decimals: 6
+        decimals: 6,
       },
-      'SOL': {
+      SOL: {
         name: 'Solana',
         coinGeckoId: 'solana',
         binanceSymbol: 'SOLUSDT',
-        decimals: 9
+        decimals: 9,
       },
-      'MATIC': {
+      MATIC: {
         name: 'Polygon',
         coinGeckoId: 'matic-network',
         binanceSymbol: 'MATICUSDT',
-        decimals: 18
+        decimals: 18,
       },
-      'LINK': {
+      LINK: {
         name: 'Chainlink',
         coinGeckoId: 'chainlink',
         binanceSymbol: 'LINKUSDT',
-        decimals: 18
+        decimals: 18,
       },
-      'UNI': {
+      UNI: {
         name: 'Uniswap',
         coinGeckoId: 'uniswap',
         binanceSymbol: 'UNIUSDT',
-        decimals: 18
-      }
+        decimals: 18,
+      },
     };
 
     // API endpoints configuration
@@ -84,18 +84,18 @@ export class PriceFeedAPIService extends BaseService {
         baseURL: 'https://api.coingecko.com/api/v3',
         simplePrice: '/simple/price',
         coins: '/coins',
-        ping: '/ping'
+        ping: '/ping',
       },
       binance: {
         baseURL: 'https://api.binance.com/api/v3',
         ticker24hr: '/ticker/24hr',
         klines: '/klines',
-        websocket: 'wss://stream.binance.com:9443/ws'
+        websocket: 'wss://stream.binance.com:9443/ws',
       },
       coinMarketCap: {
         baseURL: 'https://pro-api.coinmarketcap.com/v1',
-        quotes: '/cryptocurrency/quotes/latest'
-      }
+        quotes: '/cryptocurrency/quotes/latest',
+      },
     };
 
     // WebSocket management
@@ -107,14 +107,14 @@ export class PriceFeedAPIService extends BaseService {
 
     // Fallback price data for error cases
     this.fallbackPrices = {
-      'BTC': { price: 42000, change_24h: 2.5, volume_24h: 15000000000 },
-      'ETH': { price: 2500, change_24h: 3.2, volume_24h: 8000000000 },
-      'USDC': { price: 1.00, change_24h: 0.01, volume_24h: 2000000000 },
-      'USDT': { price: 1.00, change_24h: -0.01, volume_24h: 25000000000 },
-      'SOL': { price: 100, change_24h: 5.1, volume_24h: 1500000000 },
-      'MATIC': { price: 0.8, change_24h: 1.8, volume_24h: 400000000 },
-      'LINK': { price: 15, change_24h: 2.1, volume_24h: 300000000 },
-      'UNI': { price: 8, change_24h: 1.5, volume_24h: 200000000 }
+      BTC: { price: 42000, change_24h: 2.5, volume_24h: 15000000000 },
+      ETH: { price: 2500, change_24h: 3.2, volume_24h: 8000000000 },
+      USDC: { price: 1.0, change_24h: 0.01, volume_24h: 2000000000 },
+      USDT: { price: 1.0, change_24h: -0.01, volume_24h: 25000000000 },
+      SOL: { price: 100, change_24h: 5.1, volume_24h: 1500000000 },
+      MATIC: { price: 0.8, change_24h: 1.8, volume_24h: 400000000 },
+      LINK: { price: 15, change_24h: 2.1, volume_24h: 300000000 },
+      UNI: { price: 8, change_24h: 1.5, volume_24h: 200000000 },
     };
 
     // Set up API credentials
@@ -122,7 +122,7 @@ export class PriceFeedAPIService extends BaseService {
 
     logger.info('PriceFeedAPIService initialized', {
       supportedSymbols: Object.keys(this.supportedSymbols),
-      cacheTimeout: this.config.cacheTimeout
+      cacheTimeout: this.config.cacheTimeout,
     });
   }
 
@@ -136,7 +136,9 @@ export class PriceFeedAPIService extends BaseService {
       this.apiClient.setCredentials('coinGecko', { apiKey: apiKeys.coinGecko });
     }
     if (apiKeys.coinMarketCap) {
-      this.apiClient.setCredentials('coinMarketCap', { apiKey: apiKeys.coinMarketCap });
+      this.apiClient.setCredentials('coinMarketCap', {
+        apiKey: apiKeys.coinMarketCap,
+      });
     }
   }
 
@@ -147,7 +149,11 @@ export class PriceFeedAPIService extends BaseService {
    * @param {boolean} includeMarketData - Include additional market data
    * @returns {Object} Price data with market information
    */
-  async getCryptocurrencyPrice(symbol, currency = 'USD', includeMarketData = true) {
+  async getCryptocurrencyPrice(
+    symbol,
+    currency = 'USD',
+    includeMarketData = true
+  ) {
     if (!this.supportedSymbols[symbol]) {
       throw new ServiceError(`Unsupported cryptocurrency symbol: ${symbol}`);
     }
@@ -162,13 +168,20 @@ export class PriceFeedAPIService extends BaseService {
 
     // Check rate limiting
     if (!this.checkRateLimit(`price_${symbol}`)) {
-      logger.warn('Rate limit exceeded for price request', { symbol, currency });
+      logger.warn('Rate limit exceeded for price request', {
+        symbol,
+        currency,
+      });
       return this.getFallbackPrice(symbol, currency);
     }
 
     try {
       const priceData = await this.executeWithRetry(async () => {
-        return await this.fetchPriceFromAPI(symbol, currency, includeMarketData);
+        return await this.fetchPriceFromAPI(
+          symbol,
+          currency,
+          includeMarketData
+        );
       });
 
       // Cache the result
@@ -177,16 +190,15 @@ export class PriceFeedAPIService extends BaseService {
       logger.info('Cryptocurrency price fetched successfully', {
         symbol,
         currency,
-        price: priceData.price
+        price: priceData.price,
       });
 
       return priceData;
-
     } catch (error) {
       logger.error('Failed to fetch cryptocurrency price', {
         symbol,
         currency,
-        error: error.message
+        error: error.message,
       });
 
       // Return fallback data on error
@@ -203,25 +215,27 @@ export class PriceFeedAPIService extends BaseService {
    * @returns {Object} Prices for each symbol
    */
   async getMultiplePrices(symbols, currency = 'USD') {
-    const validSymbols = symbols.filter(symbol => this.supportedSymbols[symbol]);
+    const validSymbols = symbols.filter(
+      symbol => this.supportedSymbols[symbol]
+    );
 
     if (validSymbols.length === 0) {
       throw new ServiceError('No valid cryptocurrency symbols specified');
     }
 
-    const pricePromises = validSymbols.map(async (symbol) => {
+    const pricePromises = validSymbols.map(async symbol => {
       try {
         const priceData = await this.getCryptocurrencyPrice(symbol, currency);
         return { symbol, data: priceData, success: true };
       } catch (error) {
         logger.warn('Failed to fetch price for symbol', {
           symbol,
-          error: error.message
+          error: error.message,
         });
         return {
           symbol,
           data: this.getFallbackPrice(symbol, currency),
-          success: false
+          success: false,
         };
       }
     });
@@ -241,7 +255,7 @@ export class PriceFeedAPIService extends BaseService {
     return {
       prices,
       timestamp: Date.now(),
-      source: 'backend_api'
+      source: 'backend_api',
     };
   }
 
@@ -277,21 +291,24 @@ export class PriceFeedAPIService extends BaseService {
         symbol,
         timeframe,
         interval,
-        dataPoints: historyData.data.length
+        dataPoints: historyData.data.length,
       });
 
       return historyData;
-
     } catch (error) {
       logger.error('Failed to fetch price history', {
         symbol,
         timeframe,
         interval,
-        error: error.message
+        error: error.message,
       });
 
       // Generate mock historical data as fallback
-      const fallbackData = this.generateMockHistoricalData(symbol, timeframe, interval);
+      const fallbackData = this.generateMockHistoricalData(
+        symbol,
+        timeframe,
+        interval
+      );
       this.setCachedData(cacheKey, fallbackData);
       return fallbackData;
     }
@@ -325,15 +342,14 @@ export class PriceFeedAPIService extends BaseService {
 
       logger.info('Market data fetched successfully', {
         symbol,
-        marketCap: marketData.market_cap
+        marketCap: marketData.market_cap,
       });
 
       return marketData;
-
     } catch (error) {
       logger.error('Failed to fetch market data', {
         symbol,
-        error: error.message
+        error: error.message,
       });
 
       // Return fallback market data
@@ -350,10 +366,14 @@ export class PriceFeedAPIService extends BaseService {
    * @returns {Function} Unsubscribe function
    */
   subscribeToRealTimePrices(symbols, callback) {
-    const validSymbols = symbols.filter(symbol => this.supportedSymbols[symbol]);
+    const validSymbols = symbols.filter(
+      symbol => this.supportedSymbols[symbol]
+    );
 
     if (validSymbols.length === 0) {
-      throw new ServiceError('No valid cryptocurrency symbols specified for subscription');
+      throw new ServiceError(
+        'No valid cryptocurrency symbols specified for subscription'
+      );
     }
 
     // Add callback to subscribers for each symbol
@@ -407,27 +427,34 @@ export class PriceFeedAPIService extends BaseService {
         this.notifyWebSocketSubscribers(symbol, {
           type: 'connection',
           status: 'connected',
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       });
 
-      ws.on('message', (data) => {
+      ws.on('message', data => {
         try {
           const tickerData = JSON.parse(data.toString());
           this.processWebSocketPriceData(symbol, tickerData);
         } catch (error) {
-          logger.error('Error parsing WebSocket data', { symbol, error: error.message });
+          logger.error('Error parsing WebSocket data', {
+            symbol,
+            error: error.message,
+          });
         }
       });
 
       ws.on('close', (code, reason) => {
-        logger.warn('WebSocket disconnected', { symbol, code, reason: reason.toString() });
+        logger.warn('WebSocket disconnected', {
+          symbol,
+          code,
+          reason: reason.toString(),
+        });
 
         // Notify subscribers of disconnection
         this.notifyWebSocketSubscribers(symbol, {
           type: 'connection',
           status: 'disconnected',
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
 
         // Attempt reconnection if not manually closed
@@ -436,14 +463,16 @@ export class PriceFeedAPIService extends BaseService {
         }
       });
 
-      ws.on('error', (error) => {
+      ws.on('error', error => {
         logger.error('WebSocket error', { symbol, error: error.message });
       });
 
       this.wsConnections.set(symbol, ws);
-
     } catch (error) {
-      logger.error('Failed to connect WebSocket', { symbol, error: error.message });
+      logger.error('Failed to connect WebSocket', {
+        symbol,
+        error: error.message,
+      });
       this.attemptWebSocketReconnect(symbol);
     }
   }
@@ -473,7 +502,7 @@ export class PriceFeedAPIService extends BaseService {
       this.notifyWebSocketSubscribers(symbol, {
         type: 'error',
         message: 'Max reconnection attempts reached',
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       return;
     }
@@ -483,7 +512,7 @@ export class PriceFeedAPIService extends BaseService {
     logger.info('Attempting WebSocket reconnection', {
       symbol,
       attempt: attempts + 1,
-      delay
+      delay,
     });
 
     setTimeout(() => {
@@ -506,7 +535,7 @@ export class PriceFeedAPIService extends BaseService {
         volume_24h: parseFloat(tickerData.v), // 24h volume
         high_24h: parseFloat(tickerData.h), // 24h high
         low_24h: parseFloat(tickerData.l), // 24h low
-        timestamp: tickerData.E || Date.now() // Event time
+        timestamp: tickerData.E || Date.now(), // Event time
       };
 
       // Validate price data
@@ -514,16 +543,18 @@ export class PriceFeedAPIService extends BaseService {
         this.notifyWebSocketSubscribers(symbol, {
           type: 'price_update',
           data: priceData,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       } else {
-        logger.warn('Invalid WebSocket price data received', { symbol, tickerData });
+        logger.warn('Invalid WebSocket price data received', {
+          symbol,
+          tickerData,
+        });
       }
-
     } catch (error) {
       logger.error('Error processing WebSocket price data', {
         symbol,
-        error: error.message
+        error: error.message,
       });
     }
   }
@@ -542,7 +573,7 @@ export class PriceFeedAPIService extends BaseService {
         } catch (error) {
           logger.error('Error in WebSocket subscriber callback', {
             symbol,
-            error: error.message
+            error: error.message,
           });
         }
       });
@@ -557,14 +588,13 @@ export class PriceFeedAPIService extends BaseService {
    * @returns {Object} Price data
    */
   async fetchPriceFromAPI(symbol, currency, includeMarketData) {
-
     try {
       // Try CoinGecko first
       return await this.fetchFromCoinGecko(symbol, currency, includeMarketData);
     } catch (error) {
       logger.warn('CoinGecko API failed, trying Binance', {
         symbol,
-        error: error.message
+        error: error.message,
       });
 
       try {
@@ -573,12 +603,16 @@ export class PriceFeedAPIService extends BaseService {
       } catch (binanceError) {
         logger.warn('Binance API also failed', {
           symbol,
-          error: binanceError.message
+          error: binanceError.message,
         });
 
         // Try CoinMarketCap if available
         if (this.apiClient.hasCredentials('coinMarketCap')) {
-          return await this.fetchFromCoinMarketCap(symbol, currency, includeMarketData);
+          return await this.fetchFromCoinMarketCap(
+            symbol,
+            currency,
+            includeMarketData
+          );
         }
 
         throw error; // Throw original CoinGecko error
@@ -597,17 +631,20 @@ export class PriceFeedAPIService extends BaseService {
     url += `?ids=${symbolConfig.coinGeckoId}&vs_currencies=${currencyLower}`;
 
     if (includeMarketData) {
-      url += '&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true';
+      url +=
+        '&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true';
     }
 
     const response = await this.apiClient.get(url, {
       rateLimitKey: 'coinGecko',
-      rateLimit: { maxRequests: 50, windowMs: 60000 }
+      rateLimit: { maxRequests: 50, windowMs: 60000 },
     });
 
     const coinData = response[symbolConfig.coinGeckoId];
     if (!coinData) {
-      throw new ServiceError(`No price data found for ${symbol} from CoinGecko`);
+      throw new ServiceError(
+        `No price data found for ${symbol} from CoinGecko`
+      );
     }
 
     return {
@@ -618,7 +655,7 @@ export class PriceFeedAPIService extends BaseService {
       volume_24h: coinData[`${currencyLower}_24h_vol`] || null,
       market_cap: coinData[`${currencyLower}_market_cap`] || null,
       timestamp: Date.now(),
-      source: 'coingecko'
+      source: 'coingecko',
     };
   }
 
@@ -633,12 +670,13 @@ export class PriceFeedAPIService extends BaseService {
 
     const response = await this.apiClient.get(url + params, {
       rateLimitKey: 'binance',
-      rateLimit: { maxRequests: 1200, windowMs: 60000 }
+      rateLimit: { maxRequests: 1200, windowMs: 60000 },
     });
 
     // Convert USDT price to requested currency (simplified)
     const usdtPrice = parseFloat(response.lastPrice);
-    const convertedPrice = currency.toUpperCase() === 'USD' ? usdtPrice : usdtPrice;
+    const convertedPrice =
+      currency.toUpperCase() === 'USD' ? usdtPrice : usdtPrice;
 
     return {
       symbol,
@@ -648,7 +686,7 @@ export class PriceFeedAPIService extends BaseService {
       volume_24h: parseFloat(response.volume),
       market_cap: null, // Not available from Binance ticker
       timestamp: Date.now(),
-      source: 'binance'
+      source: 'binance',
     };
   }
 
@@ -663,19 +701,23 @@ export class PriceFeedAPIService extends BaseService {
 
     const response = await this.apiClient.get(url + params, {
       headers: {
-        'X-CMC_PRO_API_KEY': credentials.apiKey
+        'X-CMC_PRO_API_KEY': credentials.apiKey,
       },
       rateLimitKey: 'coinMarketCap',
-      rateLimit: { maxRequests: 333, windowMs: 60000 }
+      rateLimit: { maxRequests: 333, windowMs: 60000 },
     });
 
     if (response.status.error_code !== 0) {
-      throw new ServiceError(`CoinMarketCap API error: ${response.status.error_message}`);
+      throw new ServiceError(
+        `CoinMarketCap API error: ${response.status.error_message}`
+      );
     }
 
     const coinData = response.data[symbol];
     if (!coinData) {
-      throw new ServiceError(`No price data found for ${symbol} from CoinMarketCap`);
+      throw new ServiceError(
+        `No price data found for ${symbol} from CoinMarketCap`
+      );
     }
 
     const quote = coinData.quote[currency.toUpperCase()];
@@ -688,7 +730,7 @@ export class PriceFeedAPIService extends BaseService {
       volume_24h: quote.volume_24h,
       market_cap: quote.market_cap,
       timestamp: Date.now(),
-      source: 'coinmarketcap'
+      source: 'coinmarketcap',
     };
   }
 
@@ -715,7 +757,7 @@ export class PriceFeedAPIService extends BaseService {
       total_supply: null, // Would need additional API call
       max_supply: null, // Would need additional API call
       timestamp: Date.now(),
-      source: priceData.source
+      source: priceData.source,
     };
   }
 
@@ -727,7 +769,8 @@ export class PriceFeedAPIService extends BaseService {
     const data = [];
 
     // Calculate number of data points based on timeframe and interval
-    const timeframeHours = timeframe === '24h' ? 24 : timeframe === '7d' ? 168 : 720;
+    const timeframeHours =
+      timeframe === '24h' ? 24 : timeframe === '7d' ? 168 : 720;
     const intervalHours = interval === '1h' ? 1 : interval === '4h' ? 4 : 24;
     const dataPoints = Math.floor(timeframeHours / intervalHours);
 
@@ -735,13 +778,15 @@ export class PriceFeedAPIService extends BaseService {
 
     for (let i = 0; i < dataPoints; i++) {
       const time = now - (dataPoints - i) * intervalHours * 60 * 60 * 1000;
-      const price = fallbackPrice + Math.sin(i * 0.1) * (fallbackPrice * 0.05) +
+      const price =
+        fallbackPrice +
+        Math.sin(i * 0.1) * (fallbackPrice * 0.05) +
         (Math.random() - 0.5) * (fallbackPrice * 0.02);
 
       data.push({
         timestamp: time,
         price: parseFloat(price.toFixed(2)),
-        volume: Math.random() * 1000000
+        volume: Math.random() * 1000000,
       });
     }
 
@@ -751,7 +796,7 @@ export class PriceFeedAPIService extends BaseService {
       interval,
       data,
       timestamp: Date.now(),
-      source: 'mock'
+      source: 'mock',
     };
   }
 
@@ -761,7 +806,9 @@ export class PriceFeedAPIService extends BaseService {
   getFallbackPrice(symbol, currency) {
     const fallback = this.fallbackPrices[symbol];
     if (!fallback) {
-      throw new ServiceError(`No fallback data available for symbol: ${symbol}`);
+      throw new ServiceError(
+        `No fallback data available for symbol: ${symbol}`
+      );
     }
 
     return {
@@ -772,7 +819,7 @@ export class PriceFeedAPIService extends BaseService {
       volume_24h: fallback.volume_24h,
       market_cap: null,
       timestamp: Date.now(),
-      source: 'fallback'
+      source: 'fallback',
     };
   }
 
@@ -782,7 +829,9 @@ export class PriceFeedAPIService extends BaseService {
   getFallbackMarketData(symbol) {
     const fallback = this.fallbackPrices[symbol];
     if (!fallback) {
-      throw new ServiceError(`No fallback market data available for symbol: ${symbol}`);
+      throw new ServiceError(
+        `No fallback market data available for symbol: ${symbol}`
+      );
     }
 
     return {
@@ -793,7 +842,7 @@ export class PriceFeedAPIService extends BaseService {
       total_supply: null,
       max_supply: null,
       timestamp: Date.now(),
-      source: 'fallback'
+      source: 'fallback',
     };
   }
 
@@ -802,8 +851,19 @@ export class PriceFeedAPIService extends BaseService {
    */
   validatePriceData(data) {
     if (!data || typeof data !== 'object') return false;
-    if (typeof data.price !== 'number' || Number.isNaN(data.price) || data.price <= 0) return false;
-    if (data.timestamp && (typeof data.timestamp !== 'number' || Number.isNaN(data.timestamp) || data.timestamp <= 0)) return false;
+    if (
+      typeof data.price !== 'number' ||
+      Number.isNaN(data.price) ||
+      data.price <= 0
+    )
+      return false;
+    if (
+      data.timestamp &&
+      (typeof data.timestamp !== 'number' ||
+        Number.isNaN(data.timestamp) ||
+        data.timestamp <= 0)
+    )
+      return false;
     return true;
   }
 

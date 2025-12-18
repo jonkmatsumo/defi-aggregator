@@ -10,7 +10,7 @@ export class ToolRegistry {
     // Retry configuration for transient tool failures
     this.retryConfig = {
       maxRetries: 2,
-      baseDelayMs: 200
+      baseDelayMs: 200,
     };
   }
 
@@ -29,7 +29,11 @@ export class ToolRegistry {
 
     // Required checks
     for (const reqKey of required) {
-      if (params[reqKey] === undefined || params[reqKey] === null || params[reqKey] === '') {
+      if (
+        params[reqKey] === undefined ||
+        params[reqKey] === null ||
+        params[reqKey] === ''
+      ) {
         errors.push(`Missing required parameter: ${reqKey}`);
       }
     }
@@ -42,42 +46,48 @@ export class ToolRegistry {
 
       // Type validation (lightweight)
       switch (definition.type) {
-      case 'string':
-        if (typeof value !== 'string') {
-          errors.push(`Parameter "${key}" must be a string`);
-        }
-        if (definition.pattern) {
-          const regex = new RegExp(definition.pattern);
-          if (!regex.test(value)) {
-            errors.push(`Parameter "${key}" does not match required pattern`);
+        case 'string':
+          if (typeof value !== 'string') {
+            errors.push(`Parameter "${key}" must be a string`);
           }
-        }
-        if (definition.enum && !definition.enum.includes(value)) {
-          errors.push(`Parameter "${key}" must be one of: ${definition.enum.join(', ')}`);
-        }
-        break;
-      case 'number':
-        if (typeof value !== 'number') {
-          errors.push(`Parameter "${key}" must be a number`);
-        }
-        break;
-      case 'boolean':
-        if (typeof value !== 'boolean') {
-          errors.push(`Parameter "${key}" must be a boolean`);
-        }
-        break;
-      case 'array':
-        if (!Array.isArray(value)) {
-          errors.push(`Parameter "${key}" must be an array`);
-        } else if (definition.items?.enum) {
-          const invalid = value.filter(v => !definition.items.enum.includes(v));
-          if (invalid.length > 0) {
-            errors.push(`Parameter "${key}" has invalid values: ${invalid.join(', ')}. Allowed: ${definition.items.enum.join(', ')}`);
+          if (definition.pattern) {
+            const regex = new RegExp(definition.pattern);
+            if (!regex.test(value)) {
+              errors.push(`Parameter "${key}" does not match required pattern`);
+            }
           }
-        }
-        break;
-      default:
-        break;
+          if (definition.enum && !definition.enum.includes(value)) {
+            errors.push(
+              `Parameter "${key}" must be one of: ${definition.enum.join(', ')}`
+            );
+          }
+          break;
+        case 'number':
+          if (typeof value !== 'number') {
+            errors.push(`Parameter "${key}" must be a number`);
+          }
+          break;
+        case 'boolean':
+          if (typeof value !== 'boolean') {
+            errors.push(`Parameter "${key}" must be a boolean`);
+          }
+          break;
+        case 'array':
+          if (!Array.isArray(value)) {
+            errors.push(`Parameter "${key}" must be an array`);
+          } else if (definition.items?.enum) {
+            const invalid = value.filter(
+              v => !definition.items.enum.includes(v)
+            );
+            if (invalid.length > 0) {
+              errors.push(
+                `Parameter "${key}" has invalid values: ${invalid.join(', ')}. Allowed: ${definition.items.enum.join(', ')}`
+              );
+            }
+          }
+          break;
+        default:
+          break;
       }
     }
 
@@ -90,38 +100,39 @@ export class ToolRegistry {
 
   getRecoverySuggestions(errorCode) {
     switch (errorCode) {
-    case 'INVALID_PARAMETERS':
-      return [
-        'Check required parameters and their formats.',
-        'Verify enum values (symbols, networks, protocols) are supported.',
-        'Ensure addresses are valid hex strings with 0x prefix.'
-      ];
-    case 'RATE_LIMIT':
-      return [
-        'Wait a few seconds and retry.',
-        'Reduce request frequency.',
-        'If the problem persists, try again later.'
-      ];
-    case 'NETWORK_ERROR':
-      return [
-        'Check network connectivity.',
-        'Retry after a short delay.',
-        'If the problem persists, try a different network.'
-      ];
-    case 'TOOL_ERROR':
-    default:
-      return [
-        'Retry the request shortly.',
-        'Try with fewer parameters or different inputs.',
-        'If the problem persists, contact support with the error code.'
-      ];
+      case 'INVALID_PARAMETERS':
+        return [
+          'Check required parameters and their formats.',
+          'Verify enum values (symbols, networks, protocols) are supported.',
+          'Ensure addresses are valid hex strings with 0x prefix.',
+        ];
+      case 'RATE_LIMIT':
+        return [
+          'Wait a few seconds and retry.',
+          'Reduce request frequency.',
+          'If the problem persists, try again later.',
+        ];
+      case 'NETWORK_ERROR':
+        return [
+          'Check network connectivity.',
+          'Retry after a short delay.',
+          'If the problem persists, try a different network.',
+        ];
+      case 'TOOL_ERROR':
+      default:
+        return [
+          'Retry the request shortly.',
+          'Try with fewer parameters or different inputs.',
+          'If the problem persists, contact support with the error code.',
+        ];
     }
   }
 
   initializeDefaultTools() {
     // Gas price tool with backend service integration
     this.registerTool('get_gas_prices', {
-      description: 'Get current gas prices and network fee estimates for blockchain transactions',
+      description:
+        'Get current gas prices and network fee estimates for blockchain transactions',
       parameters: {
         type: 'object',
         properties: {
@@ -130,138 +141,183 @@ export class ToolRegistry {
             enum: ['ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism'],
             default: 'ethereum',
             description: 'Blockchain network to check gas prices for',
-            examples: ['ethereum', 'polygon', 'arbitrum']
+            examples: ['ethereum', 'polygon', 'arbitrum'],
           },
           transactionType: {
             type: 'string',
             enum: ['transfer', 'swap', 'contract_interaction'],
             default: 'transfer',
             description: 'Type of transaction to estimate gas for',
-            examples: ['transfer', 'swap']
+            examples: ['transfer', 'swap'],
           },
           includeUSDCosts: {
             type: 'boolean',
             default: true,
             description: 'Include USD cost estimates for gas fees',
-            examples: [true, false]
-          }
+            examples: [true, false],
+          },
         },
-        required: ['network']
+        required: ['network'],
       },
-      execute: async ({ network = 'ethereum', transactionType = 'transfer', includeUSDCosts = true }) => {
+      execute: async ({
+        network = 'ethereum',
+        transactionType = 'transfer',
+        includeUSDCosts = true,
+      }) => {
         try {
-          this.validateParameters(this.tools.get('get_gas_prices')?.parameters, { network, transactionType, includeUSDCosts });
+          this.validateParameters(
+            this.tools.get('get_gas_prices')?.parameters,
+            { network, transactionType, includeUSDCosts }
+          );
           const gasPriceService = serviceContainer.get('GasPriceAPIService');
-          const result = await gasPriceService.getGasPrices(network, { transactionType, includeUSDCosts });
+          const result = await gasPriceService.getGasPrices(network, {
+            transactionType,
+            includeUSDCosts,
+          });
 
-          logger.info('Gas price tool executed successfully', { network, transactionType });
+          logger.info('Gas price tool executed successfully', {
+            network,
+            transactionType,
+          });
           return result;
         } catch (error) {
           logger.error('Gas price tool execution failed', {
             network,
             transactionType,
-            error: error.message
+            error: error.message,
           });
           throw error;
         }
-      }
+      },
     });
 
     // Cryptocurrency price tool with backend service integration
     this.registerTool('get_crypto_price', {
-      description: 'Get current cryptocurrency prices and market data for specific tokens',
+      description:
+        'Get current cryptocurrency prices and market data for specific tokens',
       parameters: {
         type: 'object',
         properties: {
           symbol: {
             type: 'string',
             description: 'Cryptocurrency symbol (e.g., BTC, ETH, USDC)',
-            examples: ['BTC', 'ETH', 'USDC', 'LINK', 'UNI']
+            examples: ['BTC', 'ETH', 'USDC', 'LINK', 'UNI'],
           },
           currency: {
             type: 'string',
             enum: ['USD', 'EUR', 'GBP'],
             default: 'USD',
             description: 'Fiat currency for price conversion',
-            examples: ['USD', 'EUR']
+            examples: ['USD', 'EUR'],
           },
           includeMarketData: {
             type: 'boolean',
             default: true,
-            description: 'Include additional market data like 24h change, volume, market cap',
-            examples: [true, false]
-          }
+            description:
+              'Include additional market data like 24h change, volume, market cap',
+            examples: [true, false],
+          },
         },
-        required: ['symbol']
+        required: ['symbol'],
       },
-      execute: async ({ symbol, currency = 'USD', includeMarketData = true }) => {
+      execute: async ({
+        symbol,
+        currency = 'USD',
+        includeMarketData = true,
+      }) => {
         try {
-          this.validateParameters(this.tools.get('get_crypto_price')?.parameters, { symbol, currency, includeMarketData });
+          this.validateParameters(
+            this.tools.get('get_crypto_price')?.parameters,
+            { symbol, currency, includeMarketData }
+          );
           const priceFeedService = serviceContainer.get('PriceFeedAPIService');
-          const result = await priceFeedService.getCryptocurrencyPrice(symbol, currency, includeMarketData);
+          const result = await priceFeedService.getCryptocurrencyPrice(
+            symbol,
+            currency,
+            includeMarketData
+          );
 
-          logger.info('Crypto price tool executed successfully', { symbol, currency });
+          logger.info('Crypto price tool executed successfully', {
+            symbol,
+            currency,
+          });
           return result;
         } catch (error) {
           logger.error('Crypto price tool execution failed', {
             symbol,
             currency,
-            error: error.message
+            error: error.message,
           });
           throw error;
         }
-      }
+      },
     });
 
     // DeFi lending rates tool with backend service integration
     this.registerTool('get_lending_rates', {
-      description: 'Get current lending and borrowing rates from major DeFi protocols like Aave and Compound',
+      description:
+        'Get current lending and borrowing rates from major DeFi protocols like Aave and Compound',
       parameters: {
         type: 'object',
         properties: {
           token: {
             type: 'string',
             description: 'Token symbol to get lending rates for',
-            examples: ['USDC', 'DAI', 'ETH', 'WBTC']
+            examples: ['USDC', 'DAI', 'ETH', 'WBTC'],
           },
           protocols: {
             type: 'array',
             items: { type: 'string' },
             default: ['aave', 'compound'],
             description: 'DeFi protocols to check rates for',
-            examples: [['aave', 'compound'], ['aave']]
+            examples: [['aave', 'compound'], ['aave']],
           },
           includeUtilization: {
             type: 'boolean',
             default: true,
             description: 'Include utilization rates and total liquidity data',
-            examples: [true, false]
-          }
+            examples: [true, false],
+          },
         },
-        required: ['token']
+        required: ['token'],
       },
-      execute: async ({ token, protocols = ['aave', 'compound'], includeUtilization = true }) => {
+      execute: async ({
+        token,
+        protocols = ['aave', 'compound'],
+        includeUtilization = true,
+      }) => {
         try {
-          this.validateParameters(this.tools.get('get_lending_rates')?.parameters, { token, protocols, includeUtilization });
+          this.validateParameters(
+            this.tools.get('get_lending_rates')?.parameters,
+            { token, protocols, includeUtilization }
+          );
           const lendingService = serviceContainer.get('LendingAPIService');
-          const result = await lendingService.getLendingRates(token, protocols, { includeUtilization });
+          const result = await lendingService.getLendingRates(
+            token,
+            protocols,
+            { includeUtilization }
+          );
 
-          logger.info('Lending rates tool executed successfully', { token, protocols });
+          logger.info('Lending rates tool executed successfully', {
+            token,
+            protocols,
+          });
           return result;
         } catch (error) {
           logger.error('Lending rates tool execution failed', {
             token,
             protocols,
-            error: error.message
+            error: error.message,
           });
           throw error;
         }
-      }
+      },
     });
 
     // Token balance tool with backend service integration
     this.registerTool('get_token_balance', {
-      description: 'Get token balances for a specific wallet address on blockchain networks',
+      description:
+        'Get token balances for a specific wallet address on blockchain networks',
       parameters: {
         type: 'object',
         properties: {
@@ -269,56 +325,75 @@ export class ToolRegistry {
             type: 'string',
             description: 'Wallet address to check balances for',
             pattern: '^0x[a-fA-F0-9]{40}$',
-            examples: ['0x1234567890abcdef1234567890abcdef12345678']
+            examples: ['0x1234567890abcdef1234567890abcdef12345678'],
           },
           network: {
             type: 'string',
             enum: ['ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism'],
             default: 'ethereum',
             description: 'Blockchain network to check balances on',
-            examples: ['ethereum', 'polygon']
+            examples: ['ethereum', 'polygon'],
           },
           tokenAddress: {
             type: 'string',
-            description: 'Specific token contract address (optional, for single token query)',
+            description:
+              'Specific token contract address (optional, for single token query)',
             pattern: '^0x[a-fA-F0-9]{40}$',
-            examples: ['0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48']
+            examples: ['0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'],
           },
           includeUSDValues: {
             type: 'boolean',
             default: true,
             description: 'Include USD value calculations for balances',
-            examples: [true, false]
-          }
+            examples: [true, false],
+          },
         },
-        required: ['address']
+        required: ['address'],
       },
-      execute: async ({ address, network = 'ethereum', tokenAddress, includeUSDValues = true }) => {
+      execute: async ({
+        address,
+        network = 'ethereum',
+        tokenAddress,
+        includeUSDValues = true,
+      }) => {
         try {
-          this.validateParameters(this.tools.get('get_token_balance')?.parameters, { address, network, tokenAddress, includeUSDValues });
-          const tokenBalanceService = serviceContainer.get('TokenBalanceAPIService');
+          this.validateParameters(
+            this.tools.get('get_token_balance')?.parameters,
+            { address, network, tokenAddress, includeUSDValues }
+          );
+          const tokenBalanceService = serviceContainer.get(
+            'TokenBalanceAPIService'
+          );
 
           let result;
           if (tokenAddress) {
-            result = await tokenBalanceService.getTokenBalance(address, tokenAddress, network);
+            result = await tokenBalanceService.getTokenBalance(
+              address,
+              tokenAddress,
+              network
+            );
           } else {
-            result = await tokenBalanceService.getAllTokenBalances(address, network, { includeUSDValues });
+            result = await tokenBalanceService.getAllTokenBalances(
+              address,
+              network,
+              { includeUSDValues }
+            );
           }
 
           logger.info('Token balance tool executed successfully', {
             address: address.slice(0, 10) + '...',
-            network
+            network,
           });
           return result;
         } catch (error) {
           logger.error('Token balance tool execution failed', {
             address: address?.slice(0, 10) + '...',
             network,
-            error: error.message
+            error: error.message,
           });
           throw error;
         }
-      }
+      },
     });
 
     logger.info('Default tools initialized', { toolCount: this.tools.size });
@@ -341,7 +416,7 @@ export class ToolRegistry {
       name,
       description: definition.description || '',
       parameters: definition.parameters || {},
-      execute: definition.execute
+      execute: definition.execute,
     });
 
     logger.info('Tool registered', { toolName: name });
@@ -362,24 +437,21 @@ export class ToolRegistry {
       const executionTime = Date.now() - startTime;
       logger.info('Tool executed successfully', {
         toolName: name,
-        executionTime
+        executionTime,
       });
-
-
 
       return {
         toolName: name,
         parameters,
         result,
         executionTime,
-        success: true
+        success: true,
       };
-
     } catch (error) {
       logger.error('Tool execution failed', {
         toolName: name,
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
 
       const errorCode = error.code || 'TOOL_ERROR';
@@ -392,7 +464,7 @@ export class ToolRegistry {
         success: false,
         error: error.message,
         errorCode,
-        recoverySuggestions: this.getRecoverySuggestions(errorCode)
+        recoverySuggestions: this.getRecoverySuggestions(errorCode),
       };
     }
   }
@@ -406,11 +478,19 @@ export class ToolRegistry {
         return await tool.execute(parameters);
       } catch (err) {
         lastError = err;
-        if (!this._isRetryableError(err) || attempt === this.retryConfig.maxRetries) {
+        if (
+          !this._isRetryableError(err) ||
+          attempt === this.retryConfig.maxRetries
+        ) {
           throw err;
         }
         const delay = this.retryConfig.baseDelayMs * Math.pow(2, attempt);
-        logger.warn('Retrying tool execution', { toolName, attempt: attempt + 1, delay, error: err.message });
+        logger.warn('Retrying tool execution', {
+          toolName,
+          attempt: attempt + 1,
+          delay,
+          error: err.message,
+        });
         await this._sleep(delay);
         attempt++;
       }
@@ -421,10 +501,17 @@ export class ToolRegistry {
 
   _isRetryableError(error) {
     const code = (error.code || '').toUpperCase();
-    if (code === 'NETWORK_ERROR' || code === 'RATE_LIMIT' || code === 'SERVICE_UNAVAILABLE') {
+    if (
+      code === 'NETWORK_ERROR' ||
+      code === 'RATE_LIMIT' ||
+      code === 'SERVICE_UNAVAILABLE'
+    ) {
       return true;
     }
-    if (typeof error.status === 'number' && (error.status === 429 || error.status >= 500)) {
+    if (
+      typeof error.status === 'number' &&
+      (error.status === 429 || error.status >= 500)
+    ) {
       return true;
     }
     return false;
@@ -440,7 +527,7 @@ export class ToolRegistry {
       definitions.push({
         name: tool.name,
         description: tool.description,
-        parameters: tool.parameters
+        parameters: tool.parameters,
       });
     }
     return definitions;

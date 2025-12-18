@@ -15,7 +15,7 @@ export class CachingService {
       globalMaxMemoryMB: 500,
       compressionEnabled: false,
       persistenceEnabled: false,
-      ...config
+      ...config,
     };
 
     // Multiple cache instances for different data types
@@ -28,7 +28,7 @@ export class CachingService {
       totalMisses: 0,
       totalSets: 0,
       totalEvictions: 0,
-      cacheCount: 0
+      cacheCount: 0,
     };
 
     // Predefined cache configurations for different data types
@@ -37,38 +37,38 @@ export class CachingService {
         maxSize: 100,
         defaultTTL: 300000, // 5 minutes
         strategy: 'time_based',
-        priority: 'high'
+        priority: 'high',
       },
       lending_rates: {
         maxSize: 200,
         defaultTTL: 300000, // 5 minutes
         strategy: 'time_based',
-        priority: 'high'
+        priority: 'high',
       },
       crypto_prices: {
         maxSize: 500,
         defaultTTL: 60000, // 1 minute
         strategy: 'frequency_based',
-        priority: 'high'
+        priority: 'high',
       },
       token_balances: {
         maxSize: 1000,
         defaultTTL: 30000, // 30 seconds
         strategy: 'user_based',
-        priority: 'medium'
+        priority: 'medium',
       },
       api_responses: {
         maxSize: 2000,
         defaultTTL: 600000, // 10 minutes
         strategy: 'lru',
-        priority: 'low'
-      }
+        priority: 'low',
+      },
     };
 
     logger.info('CachingService initialized', {
       defaultStrategy: this.config.defaultStrategy,
       maxCaches: this.config.maxCaches,
-      predefinedConfigs: Object.keys(this.predefinedConfigs).length
+      predefinedConfigs: Object.keys(this.predefinedConfigs).length,
     });
   }
 
@@ -84,7 +84,9 @@ export class CachingService {
     }
 
     if (this.caches.size >= this.config.maxCaches) {
-      throw new ServiceError(`Maximum number of caches (${this.config.maxCaches}) exceeded`);
+      throw new ServiceError(
+        `Maximum number of caches (${this.config.maxCaches}) exceeded`
+      );
     }
 
     // Use predefined config if available
@@ -96,14 +98,14 @@ export class CachingService {
       maxSize: finalConfig.maxSize || 1000,
       defaultTTL: finalConfig.defaultTTL || 300000,
       maxMemoryMB: finalConfig.maxMemoryMB || 50,
-      ...finalConfig
+      ...finalConfig,
     });
 
     this.caches.set(cacheName, cache);
     this.strategies.set(cacheName, {
       strategy: finalConfig.strategy || this.config.defaultStrategy,
       priority: finalConfig.priority || 'medium',
-      ...finalConfig
+      ...finalConfig,
     });
 
     this.globalMetrics.cacheCount++;
@@ -112,7 +114,7 @@ export class CachingService {
       cacheName,
       strategy: finalConfig.strategy,
       maxSize: finalConfig.maxSize,
-      defaultTTL: finalConfig.defaultTTL
+      defaultTTL: finalConfig.defaultTTL,
     });
 
     return cache;
@@ -156,10 +158,20 @@ export class CachingService {
     const strategy = this.strategies.get(cacheName);
 
     // Apply strategy-specific logic before setting
-    const { ttl, shouldCache } = this.applySetStrategy(cacheName, key, value, strategy, options);
+    const { ttl, shouldCache } = this.applySetStrategy(
+      cacheName,
+      key,
+      value,
+      strategy,
+      options
+    );
 
     if (!shouldCache) {
-      logger.debug('Caching skipped by strategy', { cacheName, key, strategy: strategy.strategy });
+      logger.debug('Caching skipped by strategy', {
+        cacheName,
+        key,
+        strategy: strategy.strategy,
+      });
       return;
     }
 
@@ -228,24 +240,24 @@ export class CachingService {
    */
   applyGetStrategy(cacheName, key, strategy, options) {
     switch (strategy.strategy) {
-    case 'frequency_based':
-      // Track access frequency for popular items
-      this.trackAccess(cacheName, key);
-      break;
+      case 'frequency_based':
+        // Track access frequency for popular items
+        this.trackAccess(cacheName, key);
+        break;
 
-    case 'time_based':
-      // Check if we should refresh based on time patterns
-      this.checkTimeBasedRefresh(cacheName, key, options);
-      break;
+      case 'time_based':
+        // Check if we should refresh based on time patterns
+        this.checkTimeBasedRefresh(cacheName, key, options);
+        break;
 
-    case 'user_based':
-      // Apply user-specific caching logic
-      this.applyUserBasedLogic(cacheName, key, options);
-      break;
+      case 'user_based':
+        // Apply user-specific caching logic
+        this.applyUserBasedLogic(cacheName, key, options);
+        break;
 
-    default:
-      // Default LRU strategy - no additional logic needed
-      break;
+      default:
+        // Default LRU strategy - no additional logic needed
+        break;
     }
   }
 
@@ -263,36 +275,46 @@ export class CachingService {
     let shouldCache = true;
 
     switch (strategy.strategy) {
-    case 'frequency_based':
-      // Adjust TTL based on access frequency
-      const accessCount = this.getAccessCount(cacheName, key);
-      if (accessCount > 10) {
-        ttl = ttl * 2; // Cache popular items longer
-      } else if (accessCount === 0) {
-        ttl = ttl * 0.5; // Cache new items for shorter time
-      }
-      break;
+      case 'frequency_based':
+        // Adjust TTL based on access frequency
+        const accessCount = this.getAccessCount(cacheName, key);
+        if (accessCount > 10) {
+          ttl = ttl * 2; // Cache popular items longer
+        } else if (accessCount === 0) {
+          ttl = ttl * 0.5; // Cache new items for shorter time
+        }
+        break;
 
-    case 'time_based':
-      // Adjust TTL based on time of day or data volatility
-      ttl = this.calculateTimeBasedTTL(cacheName, key, value, strategy);
-      break;
+      case 'time_based':
+        // Adjust TTL based on time of day or data volatility
+        ttl = this.calculateTimeBasedTTL(cacheName, key, value, strategy);
+        break;
 
-    case 'user_based':
-      // Apply user-specific caching rules
-      const userResult = this.applyUserCachingRules(cacheName, key, value, options);
-      ttl = userResult.ttl;
-      shouldCache = userResult.shouldCache;
-      break;
+      case 'user_based':
+        // Apply user-specific caching rules
+        const userResult = this.applyUserCachingRules(
+          cacheName,
+          key,
+          value,
+          options
+        );
+        ttl = userResult.ttl;
+        shouldCache = userResult.shouldCache;
+        break;
 
-    case 'conditional':
-      // Only cache if certain conditions are met
-      shouldCache = this.evaluateCachingConditions(cacheName, key, value, options);
-      break;
+      case 'conditional':
+        // Only cache if certain conditions are met
+        shouldCache = this.evaluateCachingConditions(
+          cacheName,
+          key,
+          value,
+          options
+        );
+        break;
 
-    default:
-      // Default strategy - use provided or default TTL
-      break;
+      default:
+        // Default strategy - use provided or default TTL
+        break;
     }
 
     return { ttl, shouldCache };
@@ -305,7 +327,10 @@ export class CachingService {
    */
   trackAccess(cacheName, key) {
     const accessKey = `${cacheName}:${key}:access`;
-    const accessCache = this.getCache('access_tracking', { maxSize: 10000, defaultTTL: 3600000 });
+    const accessCache = this.getCache('access_tracking', {
+      maxSize: 10000,
+      defaultTTL: 3600000,
+    });
 
     const currentCount = accessCache.get(accessKey) || 0;
     accessCache.set(accessKey, currentCount + 1);
@@ -341,7 +366,7 @@ export class CachingService {
     const hour = now.getHours();
 
     // Example: Refresh crypto prices more frequently during market hours
-    if (cacheName === 'crypto_prices' && (hour >= 9 && hour <= 16)) {
+    if (cacheName === 'crypto_prices' && hour >= 9 && hour <= 16) {
       // Market hours - might want to refresh more frequently
       logger.debug('Market hours detected for crypto prices', { hour });
     }
@@ -357,7 +382,11 @@ export class CachingService {
     // Implementation for user-specific caching
     // This could consider user preferences, subscription level, etc.
     if (options.userId) {
-      logger.debug('User-based caching applied', { cacheName, key, userId: options.userId });
+      logger.debug('User-based caching applied', {
+        cacheName,
+        key,
+        userId: options.userId,
+      });
     }
   }
 
@@ -383,7 +412,12 @@ export class CachingService {
       }
     } else if (cacheName === 'gas_prices') {
       // Shorter TTL during network congestion (simplified logic)
-      if (value && value.gasPrices && value.gasPrices.fast && value.gasPrices.fast.gwei > 50) {
+      if (
+        value &&
+        value.gasPrices &&
+        value.gasPrices.fast &&
+        value.gasPrices.fast.gwei > 50
+      ) {
         baseTTL = baseTTL * 0.3; // Much shorter during high gas periods
       }
     }
@@ -450,7 +484,10 @@ export class CachingService {
     const totalMemory = this.getTotalMemoryUsage();
     const totalSize = this.getTotalSize();
 
-    if (totalMemory > this.config.globalMaxMemoryMB || totalSize > this.config.globalMaxSize) {
+    if (
+      totalMemory > this.config.globalMaxMemoryMB ||
+      totalSize > this.config.globalMaxSize
+    ) {
       this.performGlobalEviction();
     }
   }
@@ -465,7 +502,7 @@ export class CachingService {
         name,
         cache,
         priority: this.strategies.get(name)?.priority || 'medium',
-        size: cache.cache.size
+        size: cache.cache.size,
       }))
       .sort((a, b) => {
         const priorityOrder = { low: 0, medium: 1, high: 2 };
@@ -484,12 +521,14 @@ export class CachingService {
 
         logger.debug('Global eviction performed', {
           cacheName: name,
-          evictedCount: evictCount
+          evictedCount: evictCount,
         });
 
         // Check if we've freed enough space
-        if (this.getTotalMemoryUsage() <= this.config.globalMaxMemoryMB &&
-          this.getTotalSize() <= this.config.globalMaxSize) {
+        if (
+          this.getTotalMemoryUsage() <= this.config.globalMaxMemoryMB &&
+          this.getTotalSize() <= this.config.globalMaxSize
+        ) {
           break;
         }
       }
@@ -533,15 +572,18 @@ export class CachingService {
       const stats = cache.getStats();
       cacheStats[name] = {
         ...stats,
-        strategy: this.strategies.get(name)?.strategy || 'unknown'
+        strategy: this.strategies.get(name)?.strategy || 'unknown',
       };
       totalMemory += stats.memoryUsageMB;
       totalEntries += stats.size;
     }
 
-    const globalHitRate = this.globalMetrics.totalHits + this.globalMetrics.totalMisses > 0
-      ? (this.globalMetrics.totalHits / (this.globalMetrics.totalHits + this.globalMetrics.totalMisses)) * 100
-      : 0;
+    const globalHitRate =
+      this.globalMetrics.totalHits + this.globalMetrics.totalMisses > 0
+        ? (this.globalMetrics.totalHits /
+            (this.globalMetrics.totalHits + this.globalMetrics.totalMisses)) *
+          100
+        : 0;
 
     return {
       global: {
@@ -549,9 +591,9 @@ export class CachingService {
         hitRate: globalHitRate,
         totalMemoryMB: totalMemory,
         totalEntries,
-        cacheCount: this.caches.size
+        cacheCount: this.caches.size,
       },
-      caches: cacheStats
+      caches: cacheStats,
     };
   }
 

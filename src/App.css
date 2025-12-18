@@ -7,9 +7,9 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: linear-gradient(135deg, #0f1419 0%, #1a1a2e 100%);
@@ -25,8 +25,12 @@ body {
 
 /* Spinner animation for connecting state */
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Scrollbar styling for dark theme */
@@ -83,11 +87,11 @@ body {
     grid-template-columns: 1fr;
     gap: clamp(12px, 2vw, 20px);
   }
-  
+
   .App > div:nth-child(2) {
     padding: clamp(12px, 2.5vw, 20px);
   }
-  
+
   .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(2) {
     order: -1;
   }
@@ -97,7 +101,7 @@ body {
   .App > div:nth-child(2) {
     padding: clamp(8px, 2vw, 16px);
   }
-  
+
   .App > div:nth-child(2) > div:nth-child(2) {
     gap: clamp(8px, 1.5vw, 16px);
   }
@@ -118,46 +122,90 @@ body {
 
 /* Perpetuals section specific responsive adjustments */
 @media (max-width: 1024px) {
-  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) {
+  .App
+    > div:nth-child(2)
+    > div:nth-child(2)
+    > div:nth-child(1)
+    > div:nth-child(3)
+    > div:nth-child(2) {
     grid-template-columns: 1fr;
   }
-  
+
   /* Make chart smaller on medium screens */
-  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) {
+  .App
+    > div:nth-child(2)
+    > div:nth-child(2)
+    > div:nth-child(1)
+    > div:nth-child(3)
+    > div:nth-child(1)
+    > div:nth-child(1) {
     height: clamp(250px, 40vh, 400px);
   }
 }
 
 @media (max-width: 768px) {
-  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) {
+  .App
+    > div:nth-child(2)
+    > div:nth-child(2)
+    > div:nth-child(1)
+    > div:nth-child(3)
+    > div:nth-child(2) {
     grid-template-columns: 1fr;
     gap: clamp(12px, 1.5vw, 20px);
   }
-  
-  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) {
+
+  .App
+    > div:nth-child(2)
+    > div:nth-child(2)
+    > div:nth-child(1)
+    > div:nth-child(3)
+    > div:nth-child(2) {
     order: -1;
   }
-  
+
   /* Make chart even smaller on mobile */
-  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) {
+  .App
+    > div:nth-child(2)
+    > div:nth-child(2)
+    > div:nth-child(1)
+    > div:nth-child(3)
+    > div:nth-child(1)
+    > div:nth-child(1) {
     height: clamp(200px, 35vh, 300px);
   }
-  
+
   /* Adjust market stats grid for mobile */
-  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) {
+  .App
+    > div:nth-child(2)
+    > div:nth-child(2)
+    > div:nth-child(1)
+    > div:nth-child(3)
+    > div:nth-child(1)
+    > div:nth-child(2) {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 480px) {
   /* Make chart smaller on very small screens */
-  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(1) {
+  .App
+    > div:nth-child(2)
+    > div:nth-child(2)
+    > div:nth-child(1)
+    > div:nth-child(3)
+    > div:nth-child(1)
+    > div:nth-child(1) {
     height: clamp(180px, 30vh, 250px);
   }
-  
+
   /* Stack market stats in single column on very small screens */
-  .App > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > div:nth-child(2) {
+  .App
+    > div:nth-child(2)
+    > div:nth-child(2)
+    > div:nth-child(1)
+    > div:nth-child(3)
+    > div:nth-child(1)
+    > div:nth-child(2) {
     grid-template-columns: 1fr;
   }
 }
-

@@ -15,7 +15,7 @@ describe('LRUCache Property Tests', () => {
       maxSize: 10, // Small size for testing eviction
       defaultTTL: 1000, // 1 second for testing
       cleanupInterval: 100, // Fast cleanup for testing
-      maxMemoryMB: 1 // Small memory limit for testing
+      maxMemoryMB: 1, // Small memory limit for testing
     });
   });
 
@@ -29,8 +29,16 @@ describe('LRUCache Property Tests', () => {
     test('should enforce LRU eviction when cache size exceeds maxSize', () => {
       fc.assert(
         fc.property(
-          fc.array(fc.string({ minLength: 1, maxLength: 5 }).filter(s => s.trim().length > 0), { minLength: 15, maxLength: 25 }), // More items than maxSize
-          fc.array(fc.string({ minLength: 1, maxLength: 20 }), { minLength: 15, maxLength: 25 }), // Values
+          fc.array(
+            fc
+              .string({ minLength: 1, maxLength: 5 })
+              .filter(s => s.trim().length > 0),
+            { minLength: 15, maxLength: 25 }
+          ), // More items than maxSize
+          fc.array(fc.string({ minLength: 1, maxLength: 20 }), {
+            minLength: 15,
+            maxLength: 25,
+          }), // Values
           (keys, values) => {
             // Ensure we have unique keys
             const uniqueKeys = keys.map((key, index) => `${key}_${index}`);
@@ -47,7 +55,10 @@ describe('LRUCache Property Tests', () => {
 
             if (itemsToAdd > maxSize) {
               // The most recently added items should still be in cache
-              const recentKeys = uniqueKeys.slice(itemsToAdd - maxSize, itemsToAdd);
+              const recentKeys = uniqueKeys.slice(
+                itemsToAdd - maxSize,
+                itemsToAdd
+              );
               let recentKeysInCache = 0;
               recentKeys.forEach(key => {
                 if (cache.has(key)) {
@@ -79,15 +90,27 @@ describe('LRUCache Property Tests', () => {
     test('should evict least recently used items when accessing other items', () => {
       fc.assert(
         fc.property(
-          fc.array(fc.string({ minLength: 1, maxLength: 5 }).filter(s => s.trim().length > 0), { minLength: 12, maxLength: 15 }), // Slightly more than maxSize
-          fc.array(fc.string({ minLength: 1, maxLength: 10 }), { minLength: 12, maxLength: 15 }), // Values
+          fc.array(
+            fc
+              .string({ minLength: 1, maxLength: 5 })
+              .filter(s => s.trim().length > 0),
+            { minLength: 12, maxLength: 15 }
+          ), // Slightly more than maxSize
+          fc.array(fc.string({ minLength: 1, maxLength: 10 }), {
+            minLength: 12,
+            maxLength: 15,
+          }), // Values
           fc.integer({ min: 0, max: 9 }), // Index of item to access repeatedly
           (keys, values, accessIndex) => {
             const uniqueKeys = keys.map((key, index) => `${key}_${index}`);
             const maxSize = cache.config.maxSize;
 
             // Fill cache to capacity
-            for (let i = 0; i < Math.min(maxSize, uniqueKeys.length, values.length); i++) {
+            for (
+              let i = 0;
+              i < Math.min(maxSize, uniqueKeys.length, values.length);
+              i++
+            ) {
               cache.set(uniqueKeys[i], values[i]);
             }
 
@@ -100,7 +123,13 @@ describe('LRUCache Property Tests', () => {
 
               // Add more items to trigger eviction
               const additionalItems = Math.min(5, uniqueKeys.length - maxSize);
-              for (let i = maxSize; i < maxSize + additionalItems && i < uniqueKeys.length && i < values.length; i++) {
+              for (
+                let i = maxSize;
+                i < maxSize + additionalItems &&
+                i < uniqueKeys.length &&
+                i < values.length;
+                i++
+              ) {
                 cache.set(uniqueKeys[i], values[i]);
               }
 
@@ -119,14 +148,26 @@ describe('LRUCache Property Tests', () => {
     test('should enforce TTL-based eviction', async () => {
       fc.assert(
         fc.asyncProperty(
-          fc.array(fc.string({ minLength: 1, maxLength: 5 }).filter(s => s.trim().length > 0), { minLength: 3, maxLength: 8 }),
-          fc.array(fc.string({ minLength: 1, maxLength: 10 }), { minLength: 3, maxLength: 8 }),
+          fc.array(
+            fc
+              .string({ minLength: 1, maxLength: 5 })
+              .filter(s => s.trim().length > 0),
+            { minLength: 3, maxLength: 8 }
+          ),
+          fc.array(fc.string({ minLength: 1, maxLength: 10 }), {
+            minLength: 3,
+            maxLength: 8,
+          }),
           async (keys, values) => {
             const uniqueKeys = keys.map((key, index) => `${key}_${index}`);
             const shortTTL = 50; // 50ms
 
             // Add items with short TTL
-            for (let i = 0; i < Math.min(uniqueKeys.length, values.length); i++) {
+            for (
+              let i = 0;
+              i < Math.min(uniqueKeys.length, values.length);
+              i++
+            ) {
               cache.set(uniqueKeys[i], values[i], shortTTL);
             }
 
@@ -150,12 +191,15 @@ describe('LRUCache Property Tests', () => {
     test('should enforce memory-based eviction', () => {
       fc.assert(
         fc.property(
-          fc.array(fc.string({ minLength: 100, maxLength: 200 }), { minLength: 10, maxLength: 20 }), // Large values
-          (largeValues) => {
+          fc.array(fc.string({ minLength: 100, maxLength: 200 }), {
+            minLength: 10,
+            maxLength: 20,
+          }), // Large values
+          largeValues => {
             const smallMemoryCache = new LRUCache({
               maxSize: 100, // High size limit
               maxMemoryMB: 0.001, // Very small memory limit (1KB)
-              defaultTTL: 10000
+              defaultTTL: 10000,
             });
 
             try {
@@ -166,10 +210,14 @@ describe('LRUCache Property Tests', () => {
 
               // Memory usage should be controlled
               const memoryUsage = smallMemoryCache.getMemoryUsage();
-              expect(memoryUsage).toBeLessThanOrEqual(smallMemoryCache.config.maxMemoryMB * 2); // Allow some tolerance
+              expect(memoryUsage).toBeLessThanOrEqual(
+                smallMemoryCache.config.maxMemoryMB * 2
+              ); // Allow some tolerance
 
               // Cache should have evicted items to stay within memory limits
-              expect(smallMemoryCache.cache.size).toBeLessThan(largeValues.length);
+              expect(smallMemoryCache.cache.size).toBeLessThan(
+                largeValues.length
+              );
             } finally {
               smallMemoryCache.destroy();
             }
@@ -182,11 +230,16 @@ describe('LRUCache Property Tests', () => {
     test('should maintain cache consistency during eviction', () => {
       fc.assert(
         fc.property(
-          fc.array(fc.tuple(
-            fc.string({ minLength: 1, maxLength: 5 }).filter(s => s.trim().length > 0),
-            fc.string({ minLength: 1, maxLength: 20 })
-          ), { minLength: 20, maxLength: 30 }),
-          (keyValuePairs) => {
+          fc.array(
+            fc.tuple(
+              fc
+                .string({ minLength: 1, maxLength: 5 })
+                .filter(s => s.trim().length > 0),
+              fc.string({ minLength: 1, maxLength: 20 })
+            ),
+            { minLength: 20, maxLength: 30 }
+          ),
+          keyValuePairs => {
             const maxSize = cache.config.maxSize;
 
             // Add items sequentially
@@ -219,12 +272,17 @@ describe('LRUCache Property Tests', () => {
     test('should handle concurrent operations without corruption', () => {
       fc.assert(
         fc.property(
-          fc.array(fc.tuple(
-            fc.string({ minLength: 1, maxLength: 5 }).filter(s => s.trim().length > 0),
-            fc.string({ minLength: 1, maxLength: 10 }),
-            fc.constantFrom('set', 'get', 'delete', 'has')
-          ), { minLength: 50, maxLength: 100 }),
-          (operations) => {
+          fc.array(
+            fc.tuple(
+              fc
+                .string({ minLength: 1, maxLength: 5 })
+                .filter(s => s.trim().length > 0),
+              fc.string({ minLength: 1, maxLength: 10 }),
+              fc.constantFrom('set', 'get', 'delete', 'has')
+            ),
+            { minLength: 50, maxLength: 100 }
+          ),
+          operations => {
             const maxSize = cache.config.maxSize;
             const existingKeys = new Set();
 
@@ -233,31 +291,34 @@ describe('LRUCache Property Tests', () => {
               const uniqueKey = `${key}_${index}`;
 
               switch (operation) {
-              case 'set':
-                cache.set(uniqueKey, value);
-                existingKeys.add(uniqueKey);
-                break;
-              case 'get':
-                if (existingKeys.size > 0) {
-                  const randomKey = Array.from(existingKeys)[index % existingKeys.size];
-                  cache.get(randomKey);
-                }
-                break;
-              case 'delete':
-                if (existingKeys.size > 0) {
-                  const randomKey = Array.from(existingKeys)[index % existingKeys.size];
-                  cache.delete(randomKey);
-                  existingKeys.delete(randomKey);
-                }
-                break;
-              case 'has':
-                if (existingKeys.size > 0) {
-                  const randomKey = Array.from(existingKeys)[index % existingKeys.size];
-                  cache.has(randomKey);
-                }
-                break;
-              default:
-                break;
+                case 'set':
+                  cache.set(uniqueKey, value);
+                  existingKeys.add(uniqueKey);
+                  break;
+                case 'get':
+                  if (existingKeys.size > 0) {
+                    const randomKey =
+                      Array.from(existingKeys)[index % existingKeys.size];
+                    cache.get(randomKey);
+                  }
+                  break;
+                case 'delete':
+                  if (existingKeys.size > 0) {
+                    const randomKey =
+                      Array.from(existingKeys)[index % existingKeys.size];
+                    cache.delete(randomKey);
+                    existingKeys.delete(randomKey);
+                  }
+                  break;
+                case 'has':
+                  if (existingKeys.size > 0) {
+                    const randomKey =
+                      Array.from(existingKeys)[index % existingKeys.size];
+                    cache.has(randomKey);
+                  }
+                  break;
+                default:
+                  break;
               }
 
               // Invariants should always hold
@@ -277,14 +338,26 @@ describe('LRUCache Property Tests', () => {
     test('should properly track access order for LRU eviction', () => {
       fc.assert(
         fc.property(
-          fc.array(fc.string({ minLength: 1, maxLength: 5 }).filter(s => s.trim().length > 0), { minLength: 12, maxLength: 15 }),
-          fc.array(fc.string({ minLength: 1, maxLength: 10 }), { minLength: 12, maxLength: 15 }),
+          fc.array(
+            fc
+              .string({ minLength: 1, maxLength: 5 })
+              .filter(s => s.trim().length > 0),
+            { minLength: 12, maxLength: 15 }
+          ),
+          fc.array(fc.string({ minLength: 1, maxLength: 10 }), {
+            minLength: 12,
+            maxLength: 15,
+          }),
           (keys, values) => {
             const uniqueKeys = keys.map((key, index) => `${key}_${index}`);
             const maxSize = cache.config.maxSize;
 
             // Fill cache to capacity
-            for (let i = 0; i < Math.min(maxSize, uniqueKeys.length, values.length); i++) {
+            for (
+              let i = 0;
+              i < Math.min(maxSize, uniqueKeys.length, values.length);
+              i++
+            ) {
               cache.set(uniqueKeys[i], values[i]);
             }
 
@@ -298,7 +371,13 @@ describe('LRUCache Property Tests', () => {
 
             // Add new items to trigger eviction
             const newItemsCount = Math.min(3, uniqueKeys.length - maxSize);
-            for (let i = 0; i < newItemsCount && (maxSize + i) < uniqueKeys.length && (maxSize + i) < values.length; i++) {
+            for (
+              let i = 0;
+              i < newItemsCount &&
+              maxSize + i < uniqueKeys.length &&
+              maxSize + i < values.length;
+              i++
+            ) {
               cache.set(uniqueKeys[maxSize + i], values[maxSize + i]);
             }
 
@@ -397,7 +476,7 @@ describe('LRUCache Property Tests', () => {
       const cleanupCache = new LRUCache({
         maxSize: 10,
         defaultTTL: 30,
-        cleanupInterval: 20
+        cleanupInterval: 20,
       });
 
       cleanupCache.set('key1', 'value1');

@@ -1,9 +1,16 @@
-import React from 'react';
-import { WagmiConfig, createConfig, http } from 'wagmi';
-import { mainnet, polygon, optimism, arbitrum, base, sepolia } from 'wagmi/chains';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
-import '@rainbow-me/rainbowkit/styles.css';
+import React from "react";
+import { WagmiConfig, createConfig, http } from "wagmi";
+import {
+  mainnet,
+  polygon,
+  optimism,
+  arbitrum,
+  base,
+  sepolia,
+} from "wagmi/chains";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import "@rainbow-me/rainbowkit/styles.css";
 
 // Create a query client
 const queryClient = new QueryClient();
@@ -41,4 +48,4 @@ const WalletProvider = ({ children }) => {
   );
 };
 
-export default WalletProvider; 
+export default WalletProvider;
