@@ -12,7 +12,11 @@
     "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --testPathIgnorePatterns=tests/integration --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage --watchAll=false",
     "lint": "eslint src/ tests/ --format=compact",
-    "lint:fix": "eslint src/ tests/ --fix"
+    "lint:fix": "eslint src/ tests/ --fix",
+    "format": "prettier --check \"src/**/*.js\" \"tests/**/*.js\"",
+    "format:fix": "prettier --write \"src/**/*.js\" \"tests/**/*.js\"",
+    "test:staged": "node --experimental-vm-modules node_modules/.bin/jest --bail --findRelatedTests --passWithNoTests --watchAll=false --detectOpenHandles --forceExit --maxWorkers=2",
+    "test:related": "node --experimental-vm-modules node_modules/.bin/jest --bail --findRelatedTests --passWithNoTests --watchAll=false --detectOpenHandles --forceExit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
@@ -33,6 +37,7 @@
     "eslint-plugin-promise": "^6.1.1",
     "fast-check": "^3.15.0",
     "jest": "^29.7.0",
+    "prettier": "^3.0.0",
     "supertest": "^6.3.3"
   },
   "engines": {

@@ -98,13 +98,13 @@ jest.unstable_mockModule('../../src/services/container.js', () => ({
                 decimals: 6
               }
             ],
-          totalUSD: '4000.50',
-          timestamp: Date.now()
-        })
-      };
-    }
-    throw new Error(`Service not found: ${serviceName}`);
-  })
+            totalUSD: '4000.50',
+            timestamp: Date.now()
+          })
+        };
+      }
+      throw new Error(`Service not found: ${serviceName}`);
+    })
   }
 }));
 

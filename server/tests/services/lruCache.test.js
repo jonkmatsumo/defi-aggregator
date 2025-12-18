@@ -54,7 +54,7 @@ describe('LRUCache Property Tests', () => {
                   recentKeysInCache++;
                 }
               });
-              
+
               // At least some of the recent keys should be in cache
               expect(recentKeysInCache).toBeGreaterThan(0);
 
@@ -66,7 +66,7 @@ describe('LRUCache Property Tests', () => {
                   oldestKeysEvicted++;
                 }
               });
-              
+
               // At least some of the oldest keys should be evicted
               expect(oldestKeysEvicted).toBeGreaterThan(0);
             }
@@ -206,7 +206,7 @@ describe('LRUCache Property Tests', () => {
 
             // Final consistency check
             expect(cache.cache.size).toBeLessThanOrEqual(maxSize);
-            
+
             // All items in cache should be valid
             const stats = cache.getStats();
             expect(stats.size).toBe(cache.cache.size);
@@ -233,29 +233,31 @@ describe('LRUCache Property Tests', () => {
               const uniqueKey = `${key}_${index}`;
 
               switch (operation) {
-                case 'set':
-                  cache.set(uniqueKey, value);
-                  existingKeys.add(uniqueKey);
-                  break;
-                case 'get':
-                  if (existingKeys.size > 0) {
-                    const randomKey = Array.from(existingKeys)[index % existingKeys.size];
-                    cache.get(randomKey);
-                  }
-                  break;
-                case 'delete':
-                  if (existingKeys.size > 0) {
-                    const randomKey = Array.from(existingKeys)[index % existingKeys.size];
-                    cache.delete(randomKey);
-                    existingKeys.delete(randomKey);
-                  }
-                  break;
-                case 'has':
-                  if (existingKeys.size > 0) {
-                    const randomKey = Array.from(existingKeys)[index % existingKeys.size];
-                    cache.has(randomKey);
-                  }
-                  break;
+              case 'set':
+                cache.set(uniqueKey, value);
+                existingKeys.add(uniqueKey);
+                break;
+              case 'get':
+                if (existingKeys.size > 0) {
+                  const randomKey = Array.from(existingKeys)[index % existingKeys.size];
+                  cache.get(randomKey);
+                }
+                break;
+              case 'delete':
+                if (existingKeys.size > 0) {
+                  const randomKey = Array.from(existingKeys)[index % existingKeys.size];
+                  cache.delete(randomKey);
+                  existingKeys.delete(randomKey);
+                }
+                break;
+              case 'has':
+                if (existingKeys.size > 0) {
+                  const randomKey = Array.from(existingKeys)[index % existingKeys.size];
+                  cache.has(randomKey);
+                }
+                break;
+              default:
+                break;
               }
 
               // Invariants should always hold
@@ -392,8 +394,8 @@ describe('LRUCache Property Tests', () => {
     });
 
     test('should cleanup expired entries', async () => {
-      const cleanupCache = new LRUCache({ 
-        maxSize: 10, 
+      const cleanupCache = new LRUCache({
+        maxSize: 10,
         defaultTTL: 30,
         cleanupInterval: 20
       });

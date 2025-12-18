@@ -25,7 +25,14 @@
     "test:watch": "jest --config jest.config.js --watch",
     "test:coverage": "jest --config jest.config.js --coverage --watchAll=false",
     "test:src": "react-scripts test --watchAll=false",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint src/ tst/ --ext .js,.jsx",
+    "lint:fix": "eslint src/ tst/ --ext .js,.jsx --fix",
+    "format": "prettier --check \"src/**/*.{js,jsx,json,css,md}\" \"tst/**/*.{js,jsx}\"",
+    "format:fix": "prettier --write \"src/**/*.{js,jsx,json,css,md}\" \"tst/**/*.{js,jsx}\"",
+    "prepare": "husky install",
+    "test:staged": "jest --config jest.config.js --bail --findRelatedTests --passWithNoTests --watchAll=false --maxWorkers=2",
+    "test:related": "jest --config jest.config.js --bail --findRelatedTests --passWithNoTests --watchAll=false"
   },
   "browserslist": {
     "production": [
@@ -45,6 +52,9 @@
     "@babel/preset-react": "^7.27.1",
     "@jest/test-sequencer": "^30.2.0",
     "babel-jest": "^30.0.5",
-    "fast-check": "^3.0.0"
+    "fast-check": "^3.0.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0"
   }
 }

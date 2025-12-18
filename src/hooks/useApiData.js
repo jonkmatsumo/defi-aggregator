@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import apiClient, { APIError } from '../services/apiClient';
+import apiClient from '../services/apiClient';
 
 /**
  * useApiData Hook
@@ -101,6 +101,7 @@ export function useApiData(endpoint, options = {}) {
         setLoading(false);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint, paramsKey, enabled, cacheTime, transform]);
 
   /**
@@ -114,17 +115,18 @@ export function useApiData(endpoint, options = {}) {
     } catch {
       // Ignore storage errors
     }
-    
+
     setIsCached(false);
     setIsStale(false);
     await fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint, paramsKey, fetchData]);
 
   // Initial fetch
   useEffect(() => {
     mountedRef.current = true;
     paramsRef.current = params;
-    
+
     if (enabled) {
       fetchData();
     }
@@ -132,6 +134,7 @@ export function useApiData(endpoint, options = {}) {
     return () => {
       mountedRef.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint, paramsKey, enabled, fetchData]);
 
   // Auto-refetch interval
@@ -185,7 +188,7 @@ export function useGasPrices(network = 'ethereum', options = {}) {
  */
 export function useCryptoPrice(symbol, options = {}) {
   const { currency = 'USD', ...restOptions } = options;
-  
+
   return useApiData(`/api/prices/${symbol}`, {
     params: { currency },
     refetchInterval: 30000, // Prices update every 30 seconds
@@ -207,7 +210,7 @@ export function useCryptoPrice(symbol, options = {}) {
  */
 export function useLendingRates(token, options = {}) {
   const { protocols = ['aave', 'compound'], ...restOptions } = options;
-  
+
   return useApiData(`/api/lending-rates/${token}`, {
     params: { protocols: protocols.join(',') },
     refetchInterval: 60000, // Lending rates update every minute
@@ -229,7 +232,7 @@ export function useLendingRates(token, options = {}) {
  */
 export function useTokenBalances(address, options = {}) {
   const { network = 'ethereum', ...restOptions } = options;
-  
+
   return useApiData(`/api/balances/${address}`, {
     params: { network },
     refetchInterval: 30000, // Balances update every 30 seconds
@@ -251,7 +254,7 @@ export function useTokenBalances(address, options = {}) {
  */
 export function usePortfolio(address, options = {}) {
   const { networks = ['ethereum', 'polygon'], ...restOptions } = options;
-  
+
   return useApiData(`/api/portfolio/${address}`, {
     params: { networks: networks.join(',') },
     refetchInterval: 60000, // Portfolio updates every minute

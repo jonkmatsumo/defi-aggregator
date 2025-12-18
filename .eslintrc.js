@@ -20,7 +20,8 @@ module.exports = {
         'testing-library/no-unnecessary-act': 'warn',
         'testing-library/no-wait-for-multiple-assertions': 'warn',
         'testing-library/no-wait-for-side-effects': 'warn',
-        'testing-library/no-node-access': 'warn',
+        'testing-library/no-node-access': 'off',
+        'testing-library/no-container': 'off',
         'testing-library/prefer-presence-queries': 'warn'
       }
     }

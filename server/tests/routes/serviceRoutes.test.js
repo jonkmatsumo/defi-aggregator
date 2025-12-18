@@ -1,5 +1,4 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, jest } from '@jest/globals';
-import fc from 'fast-check';
+import { describe, test, expect, beforeAll, jest } from '@jest/globals';
 import express from 'express';
 import request from 'supertest';
 
@@ -159,7 +158,7 @@ describe('Service Routes', () => {
        */
       test('Property 7: should accept all valid networks', async () => {
         const validNetworks = ['ethereum', 'polygon', 'bsc', 'arbitrum', 'optimism'];
-        
+
         for (const network of validNetworks) {
           const response = await request(app)
             .get(`/api/gas-prices/${network}`)
@@ -239,7 +238,7 @@ describe('Service Routes', () => {
        */
       test('Property 7: should accept all valid crypto symbols', async () => {
         const validSymbols = ['BTC', 'ETH', 'USDC', 'USDT', 'SOL', 'MATIC', 'LINK', 'UNI'];
-        
+
         for (const symbol of validSymbols) {
           const response = await request(app)
             .get(`/api/prices/${symbol}`)
@@ -327,7 +326,7 @@ describe('Service Routes', () => {
        */
       test('Property 7: should accept all valid lending tokens', async () => {
         const validTokens = ['ETH', 'DAI', 'USDC', 'USDT', 'WBTC'];
-        
+
         for (const token of validTokens) {
           const response = await request(app)
             .get(`/api/lending-rates/${token}`)
@@ -509,10 +508,10 @@ describe('Service Routes', () => {
           '/api/lending-rates/USDC',
           `/api/balances/${testAddress}`
         ];
-        
+
         for (const endpoint of endpoints) {
           const response = await request(app).get(endpoint);
-          
+
           if (response.status === 200) {
             expect(response.body.metadata).toBeDefined();
             expect(response.body.metadata.executionTime).toBeDefined();
@@ -530,7 +529,7 @@ describe('Service Routes', () => {
     describe('Property 20: Concurrent request handling', () => {
       test('should handle multiple concurrent requests', async () => {
         const validAddress = '0x1234567890123456789012345678901234567890';
-        
+
         const requests = [
           request(app).get('/api/gas-prices/ethereum'),
           request(app).get('/api/gas-prices/polygon'),
@@ -564,7 +563,7 @@ describe('Service Routes', () => {
 
         for (const endpoint of invalidRequests) {
           const response = await request(app).get(endpoint);
-          
+
           expect(response.status).toBeGreaterThanOrEqual(400);
           expect(response.body.success).toBe(false);
           expect(response.body.error).toBeDefined();

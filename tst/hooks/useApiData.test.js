@@ -1,4 +1,4 @@
-import { renderHook, waitFor, act } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import {
   useApiData,
   useGasPrices,
@@ -167,7 +167,7 @@ describe('useApiData', () => {
 
       const transform = jest.fn((data) => ({ ...data, doubled: data.value * 2 }));
 
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useApiData('/api/test', { transform })
       );
 
@@ -182,7 +182,7 @@ describe('useApiData', () => {
 
   describe('Initial Data', () => {
     it('should use initial data when disabled', () => {
-      const { result } = renderHook(() => 
+      const { result } = renderHook(() =>
         useApiData('/api/test', {
           initialData: { initial: true },
           enabled: false

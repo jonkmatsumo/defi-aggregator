@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import { AgentResponseFormatter, agentResponseFormatter } from '../../src/utils/agentResponseFormatter.js';
 
 describe('AgentResponseFormatter', () => {
@@ -20,7 +19,7 @@ describe('AgentResponseFormatter', () => {
         includeTimestamps: false,
         currency: 'EUR'
       });
-      
+
       expect(customFormatter.options.includeTimestamps).toBe(false);
       expect(customFormatter.options.currency).toBe('EUR');
     });

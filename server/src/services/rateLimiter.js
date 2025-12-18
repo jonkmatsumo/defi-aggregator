@@ -18,11 +18,11 @@ export class RateLimiter {
     // Rate limit tracking per key
     this.requestHistory = new Map(); // key -> [timestamps]
     this.rateLimitConfigs = new Map(); // key -> { maxRequests, windowMs, burstAllowance }
-    
+
     // Global coordination tracking
     this.globalRequestHistory = new Map(); // provider -> [timestamps]
     this.providerConfigs = new Map(); // provider -> { maxRequests, windowMs }
-    
+
     // Metrics
     this.metrics = {
       totalRequests: 0,
@@ -32,7 +32,7 @@ export class RateLimiter {
       coordinationBlocks: 0
     };
 
-    logger.debug('RateLimiter initialized', { 
+    logger.debug('RateLimiter initialized', {
       defaultWindow: this.config.defaultWindow,
       defaultMaxRequests: this.config.defaultMaxRequests,
       coordinationEnabled: this.config.coordinationEnabled
@@ -59,8 +59,8 @@ export class RateLimiter {
 
     this.rateLimitConfigs.set(key, rateLimitConfig);
 
-    logger.debug('Rate limit configured', { 
-      key, 
+    logger.debug('Rate limit configured', {
+      key,
       maxRequests: rateLimitConfig.maxRequests,
       windowMs: rateLimitConfig.windowMs,
       provider: rateLimitConfig.provider
@@ -85,8 +85,8 @@ export class RateLimiter {
 
     this.providerConfigs.set(provider, providerConfig);
 
-    logger.debug('Provider rate limit configured', { 
-      provider, 
+    logger.debug('Provider rate limit configured', {
+      provider,
       maxRequests: providerConfig.maxRequests,
       windowMs: providerConfig.windowMs
     });
@@ -98,7 +98,7 @@ export class RateLimiter {
    * @param {Object} options - Additional options
    * @returns {Object} Rate limit check result
    */
-  checkRateLimit(key, options = {}) {
+  checkRateLimit(key) {
     this.metrics.totalRequests++;
 
     const config = this.rateLimitConfigs.get(key);
@@ -131,8 +131,8 @@ export class RateLimiter {
     this.trackRequest(key, config.provider, now);
     this.metrics.allowedRequests++;
 
-    return { 
-      allowed: true, 
+    return {
+      allowed: true,
       reason: 'within_limits',
       remaining: this.getRemainingRequests(key, config, now),
       resetTime: windowStart + config.windowMs
@@ -167,12 +167,12 @@ export class RateLimiter {
       const burstLimit = Math.floor(config.maxRequests * (1 + config.burstAllowance));
       if (currentRequestCount <= burstLimit) {
         this.metrics.burstRequests++;
-        logger.debug('Burst request allowed', { 
-          key, 
+        logger.debug('Burst request allowed', {
+          key,
           currentRequests: requests.length,
           currentRequestCount,
           baseLimit: config.maxRequests,
-          burstLimit 
+          burstLimit
         });
         return { allowed: true, reason: 'burst_allowed' };
       }
@@ -183,8 +183,8 @@ export class RateLimiter {
     const resetTime = oldestRequest + config.windowMs;
     const burstLimit = Math.floor(config.maxRequests * (1 + config.burstAllowance));
 
-    logger.warn('Rate limit exceeded', { 
-      key, 
+    logger.warn('Rate limit exceeded', {
+      key,
       currentRequests: requests.length,
       currentRequestCount,
       limit: config.maxRequests,
@@ -192,8 +192,8 @@ export class RateLimiter {
       resetTime: new Date(resetTime).toISOString()
     });
 
-    return { 
-      allowed: false, 
+    return {
+      allowed: false,
       reason: 'rate_limit_exceeded',
       requests: requests.length,
       limit: config.maxRequests,
@@ -223,15 +223,15 @@ export class RateLimiter {
       const oldestRequest = Math.min(...requests);
       const resetTime = oldestRequest + providerConfig.windowMs;
 
-      logger.warn('Provider rate limit exceeded', { 
-        provider, 
-        requests: requests.length, 
+      logger.warn('Provider rate limit exceeded', {
+        provider,
+        requests: requests.length,
         limit: providerConfig.maxRequests,
         resetTime: new Date(resetTime).toISOString()
       });
 
-      return { 
-        allowed: false, 
+      return {
+        allowed: false,
         reason: 'provider_limit_exceeded',
         provider,
         requests: requests.length,
@@ -276,7 +276,7 @@ export class RateLimiter {
     const windowStart = now - config.windowMs;
     let requests = this.requestHistory.get(key) || [];
     requests = requests.filter(timestamp => timestamp > windowStart);
-    
+
     return Math.max(0, config.maxRequests - requests.length);
   }
 
@@ -311,7 +311,7 @@ export class RateLimiter {
    */
   async waitForRateLimit(key, options = {}) {
     const { maxWaitTime = 60000, checkInterval = 1000 } = options;
-    
+
     let waitTime = 0;
     while (waitTime < maxWaitTime) {
       const result = this.checkRateLimit(key);
@@ -326,10 +326,10 @@ export class RateLimiter {
         break;
       }
 
-      logger.debug('Waiting for rate limit reset', { 
-        key, 
-        waitDuration, 
-        timeUntilReset 
+      logger.debug('Waiting for rate limit reset', {
+        key,
+        waitDuration,
+        timeUntilReset
       });
 
       await this.sleep(waitDuration);
@@ -371,8 +371,8 @@ export class RateLimiter {
     }
 
     if (cleanedKeys > 0 || cleanedProviders > 0) {
-      logger.debug('Rate limiter cleanup completed', { 
-        cleanedKeys, 
+      logger.debug('Rate limiter cleanup completed', {
+        cleanedKeys,
         cleanedProviders,
         remainingKeys: this.requestHistory.size,
         remainingProviders: this.globalRequestHistory.size
@@ -387,8 +387,8 @@ export class RateLimiter {
   getMetrics() {
     return {
       ...this.metrics,
-      successRate: this.metrics.totalRequests > 0 
-        ? (this.metrics.allowedRequests / this.metrics.totalRequests) * 100 
+      successRate: this.metrics.totalRequests > 0
+        ? (this.metrics.allowedRequests / this.metrics.totalRequests) * 100
         : 0,
       activeKeys: this.requestHistory.size,
       activeProviders: this.globalRequestHistory.size,

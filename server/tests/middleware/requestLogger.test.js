@@ -44,10 +44,10 @@ jest.unstable_mockModule('../../src/utils/metrics.js', () => ({
 }));
 
 // Import after mocking
-const { requestLoggerMiddleware, errorLoggerMiddleware, logServiceCall, logExternalCall } = 
+const { requestLoggerMiddleware, errorLoggerMiddleware, logServiceCall, logExternalCall } =
   await import('../../src/middleware/requestLogger.js');
 const { metricsCollector } = await import('../../src/utils/metrics.js');
-const { generateRequestId, createRequestLogger } = await import('../../src/utils/logger.js');
+const { createRequestLogger } = await import('../../src/utils/logger.js');
 
 describe('Request Logger Middleware', () => {
   let app;
@@ -57,26 +57,26 @@ describe('Request Logger Middleware', () => {
     app = express();
     app.use(express.json());
     app.use(requestLoggerMiddleware());
-    
+
     // Test routes
     app.get('/api/test', (req, res) => {
       res.json({ success: true });
     });
-    
+
     app.get('/api/slow', (req, res) => {
       setTimeout(() => {
         res.json({ success: true });
       }, 50);
     });
-    
+
     app.post('/api/data', (req, res) => {
       res.status(201).json({ success: true, data: req.body });
     });
-    
+
     app.get('/health', (req, res) => {
       res.json({ status: 'healthy' });
     });
-    
+
     app.get('/api/error', (req, res) => {
       res.status(500).json({ error: 'Server error' });
     });
@@ -91,7 +91,7 @@ describe('Request Logger Middleware', () => {
 
     it('should attach request ID to request object', async () => {
       let requestId;
-      
+
       app.get('/api/check-id', (req, res) => {
         requestId = req.requestId;
         res.json({ success: true });
@@ -106,7 +106,7 @@ describe('Request Logger Middleware', () => {
   describe('Excluded Paths', () => {
     it('should skip logging for health endpoint', async () => {
       jest.clearAllMocks();
-      
+
       await request(app).get('/health');
 
       // Health endpoint should not trigger request logging
@@ -161,25 +161,25 @@ describe('Error Logger Middleware', () => {
     app = express();
     app.use(express.json());
     app.use(requestLoggerMiddleware());
-    
+
     // Route that throws error
     app.get('/api/throw', (req, res, next) => {
       const error = new Error('Test error');
       error.statusCode = 500;
       next(error);
     });
-    
+
     app.get('/api/client-error', (req, res, next) => {
       const error = new Error('Not found');
       error.statusCode = 404;
       next(error);
     });
-    
+
     // Error handling middleware
     app.use(errorLoggerMiddleware());
-    
+
     // Final error handler
-    app.use((err, req, res, next) => {
+    app.use((err, req, res, _next) => {
       res.status(err.statusCode || 500).json({ error: err.message });
     });
   });

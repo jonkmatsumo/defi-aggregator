@@ -7,7 +7,7 @@ const mockLogger = {
   error: jest.fn(),
   debug: jest.fn(),
   log: jest.fn(),
-  child: jest.fn(function() { return mockLogger; }),
+  child: jest.fn(function () { return mockLogger; }),
   add: jest.fn()
 };
 
@@ -17,18 +17,18 @@ const mockFormatInstance = { transform: jest.fn((info) => info) };
 
 const createMockFormat = () => {
   // This is the base format function - when called with a function, it returns a format instance factory
-  const format = jest.fn((fn) => {
+  const format = jest.fn(() => {
     // Return a function that creates format instances
     return jest.fn(() => mockFormatInstance);
   });
-  
+
   // Add static methods
-  format.combine = jest.fn((...args) => mockFormatInstance);
+  format.combine = jest.fn(() => mockFormatInstance);
   format.timestamp = jest.fn(() => mockFormatInstance);
   format.errors = jest.fn(() => mockFormatInstance);
   format.json = jest.fn(() => mockFormatInstance);
   format.printf = jest.fn(() => mockFormatInstance);
-  
+
   return format;
 };
 
@@ -289,9 +289,9 @@ describe('Logger Utilities', () => {
   describe('Logger Statistics', () => {
     it('should track log counts', () => {
       resetLoggerStats();
-      
+
       const stats = getLoggerStats();
-      
+
       expect(stats.counts).toBeDefined();
       expect(stats.uptime).toBeDefined();
       expect(stats.logLevel).toBeDefined();
@@ -299,9 +299,9 @@ describe('Logger Utilities', () => {
 
     it('should reset statistics', () => {
       resetLoggerStats();
-      
+
       const stats = getLoggerStats();
-      
+
       expect(stats.counts.error).toBe(0);
       expect(stats.counts.warn).toBe(0);
       expect(stats.counts.info).toBe(0);

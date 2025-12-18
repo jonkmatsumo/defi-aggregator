@@ -1,5 +1,5 @@
 import priceFeedService from '../../src/services/priceFeedService';
-import apiClient from '../../src/services/apiClient';
+
 
 // Mock the apiClient
 jest.mock('../../src/services/apiClient', () => ({
@@ -18,7 +18,7 @@ global.WebSocket = class MockWebSocket {
   static OPEN = 1;
   static CLOSING = 2;
   static CLOSED = 3;
-  
+
   constructor(url) {
     this.url = url;
     this.readyState = MockWebSocket.CONNECTING;
@@ -26,19 +26,19 @@ global.WebSocket = class MockWebSocket {
     this.onmessage = null;
     this.onclose = null;
     this.onerror = null;
-    
+
     // Simulate connection
     setTimeout(() => {
       this.readyState = MockWebSocket.OPEN;
       if (this.onopen) this.onopen();
     }, 10);
   }
-  
+
   close(code = 1000, reason = '') {
     this.readyState = MockWebSocket.CLOSED;
     if (this.onclose) this.onclose({ code, reason });
   }
-  
+
   send(data) {
     // Mock send method
   }
@@ -98,16 +98,16 @@ describe('PriceFeedService', () => {
     test('should reject invalid price data', () => {
       // Null data
       expect(priceFeedService.validatePriceData(null)).toBe(false);
-      
+
       // Empty object
       expect(priceFeedService.validatePriceData({})).toBe(false);
-      
+
       // Non-numeric price
       expect(priceFeedService.validatePriceData({ p: 'invalid' })).toBe(false);
-      
+
       // Zero price
       expect(priceFeedService.validatePriceData({ p: '0' })).toBe(false);
-      
+
       // Negative price
       expect(priceFeedService.validatePriceData({ p: '-100' })).toBe(false);
     });
@@ -117,10 +117,10 @@ describe('PriceFeedService', () => {
     test('should add data to buffer correctly', () => {
       const tokenPair = 'BTC/USDT';
       const priceData = { time: Date.now(), price: 42000, volume: 0.1, timestamp: Date.now() };
-      
+
       priceFeedService.addToBuffer(tokenPair, priceData);
       const buffer = priceFeedService.getBufferData(tokenPair);
-      
+
       expect(buffer).toHaveLength(1);
       expect(buffer[0]).toEqual(priceData);
     });
@@ -128,7 +128,7 @@ describe('PriceFeedService', () => {
     test('should maintain buffer size limit', () => {
       const tokenPair = 'BTC/USDT';
       const bufferSize = priceFeedService.bufferSize;
-      
+
       // Add more than buffer size
       for (let i = 0; i < bufferSize + 10; i++) {
         priceFeedService.addToBuffer(tokenPair, {
@@ -138,7 +138,7 @@ describe('PriceFeedService', () => {
           timestamp: Date.now() + i
         });
       }
-      
+
       const buffer = priceFeedService.getBufferData(tokenPair);
       expect(buffer).toHaveLength(bufferSize);
       expect(buffer[0].price).toBe(42000 + 10); // Should have removed oldest items
@@ -149,7 +149,7 @@ describe('PriceFeedService', () => {
     test('should generate mock historical data', () => {
       const tokenPair = 'BTC/USDT';
       const historicalData = priceFeedService.generateMockHistoricalData(tokenPair);
-      
+
       expect(historicalData).toHaveLength(priceFeedService.bufferSize);
       expect(historicalData[0]).toHaveProperty('time');
       expect(historicalData[0]).toHaveProperty('price');
@@ -160,10 +160,10 @@ describe('PriceFeedService', () => {
     test('should generate data with realistic price ranges', () => {
       const tokenPair = 'BTC/USDT';
       const historicalData = priceFeedService.generateMockHistoricalData(tokenPair);
-      
+
       const prices = historicalData.map(d => d.price);
       const basePrice = priceFeedService.getBasePrice(tokenPair);
-      
+
       // Prices should be within reasonable range of base price
       prices.forEach(price => {
         expect(price).toBeGreaterThan(basePrice * 0.95);
@@ -176,9 +176,9 @@ describe('PriceFeedService', () => {
     test('should subscribe to token pair', () => {
       const tokenPair = 'BTC/USDT';
       const callback = jest.fn();
-      
+
       const unsubscribe = priceFeedService.subscribe(tokenPair, callback);
-      
+
       expect(priceFeedService.subscribers.has(tokenPair)).toBe(true);
       expect(priceFeedService.subscribers.get(tokenPair).has(callback)).toBe(true);
       expect(typeof unsubscribe).toBe('function');
@@ -187,17 +187,17 @@ describe('PriceFeedService', () => {
     test('should unsubscribe from token pair', () => {
       const tokenPair = 'BTC/USDT';
       const callback = jest.fn();
-      
+
       const unsubscribe = priceFeedService.subscribe(tokenPair, callback);
       unsubscribe();
-      
+
       expect(priceFeedService.subscribers.get(tokenPair).has(callback)).toBe(false);
     });
 
     test('should throw error for unsupported token pair', () => {
       const unsupportedPair = 'UNKNOWN/PAIR';
       const callback = jest.fn();
-      
+
       expect(() => {
         priceFeedService.subscribe(unsupportedPair, callback);
       }).toThrow(`Unsupported token pair: ${unsupportedPair}`);
@@ -207,10 +207,10 @@ describe('PriceFeedService', () => {
       const tokenPair = 'BTC/USDT';
       const callback1 = jest.fn();
       const callback2 = jest.fn();
-      
+
       priceFeedService.subscribe(tokenPair, callback1);
       priceFeedService.subscribe(tokenPair, callback2);
-      
+
       const subscribers = priceFeedService.subscribers.get(tokenPair);
       expect(subscribers.size).toBe(2);
       expect(subscribers.has(callback1)).toBe(true);
@@ -221,14 +221,14 @@ describe('PriceFeedService', () => {
   describe('Connection Status', () => {
     test('should track connection status', () => {
       const tokenPair = 'BTC/USDT';
-      
+
       // Initially not connected
       expect(priceFeedService.getConnectionStatus(tokenPair)).toBe(false);
-      
+
       // After connection
       priceFeedService.isConnected = true;
       expect(priceFeedService.getConnectionStatus(tokenPair)).toBe(true);
-      
+
       // Reset
       priceFeedService.isConnected = false;
     });
@@ -237,12 +237,12 @@ describe('PriceFeedService', () => {
   describe('WebSocket Message Handling', () => {
     test('should handle subscription_confirmed message', () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-      
+
       priceFeedService.handleWebSocketMessage({
         type: 'subscription_confirmed',
         symbols: ['BTC', 'ETH']
       });
-      
+
       expect(consoleSpy).toHaveBeenCalledWith('Subscription confirmed:', ['BTC', 'ETH']);
       consoleSpy.mockRestore();
     });
@@ -250,18 +250,18 @@ describe('PriceFeedService', () => {
     test('should handle price_update message', () => {
       const tokenPair = 'BTC/USDT';
       const callback = jest.fn();
-      
+
       // Subscribe first
       priceFeedService.subscribers.set(tokenPair, new Set([callback]));
       priceFeedService.dataBuffer.set(tokenPair, []);
-      
+
       priceFeedService.handleWebSocketMessage({
         type: 'price_update',
         symbol: 'BTC',
         data: { price: 42000, volume_24h: 1000000, change_24h: 2.5 },
         timestamp: Date.now()
       });
-      
+
       // Should add to buffer and notify subscribers
       const buffer = priceFeedService.getBufferData(tokenPair);
       expect(buffer.length).toBeGreaterThan(0);
@@ -269,12 +269,12 @@ describe('PriceFeedService', () => {
 
     test('should handle error message', () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      
+
       priceFeedService.handleWebSocketMessage({
         type: 'error',
         message: 'Test error'
       });
-      
+
       expect(consoleSpy).toHaveBeenCalledWith('WebSocket error from backend:', 'Test error');
       consoleSpy.mockRestore();
     });
@@ -285,12 +285,12 @@ describe('PriceFeedService', () => {
       const tokenPair = 'BTC/USDT';
       const callback1 = jest.fn();
       const callback2 = jest.fn();
-      
+
       priceFeedService.subscribers.set(tokenPair, new Set([callback1, callback2]));
-      
+
       const testData = { type: 'test', data: 'test data' };
       priceFeedService.notifySubscribers(tokenPair, testData);
-      
+
       expect(callback1).toHaveBeenCalledWith(testData);
       expect(callback2).toHaveBeenCalledWith(testData);
     });
@@ -301,14 +301,14 @@ describe('PriceFeedService', () => {
         throw new Error('Callback error');
       });
       const normalCallback = jest.fn();
-      
+
       priceFeedService.subscribers.set(tokenPair, new Set([errorCallback, normalCallback]));
-      
+
       // Should not throw
       expect(() => {
         priceFeedService.notifySubscribers(tokenPair, { type: 'test' });
       }).not.toThrow();
-      
+
       // Normal callback should still be called
       expect(normalCallback).toHaveBeenCalled();
     });
@@ -318,21 +318,21 @@ describe('PriceFeedService', () => {
     test('should cleanup all connections and data', () => {
       const tokenPair = 'BTC/USDT';
       const callback = jest.fn();
-      
+
       // Set up some state
       priceFeedService.subscribe(tokenPair, callback);
       priceFeedService.addToBuffer(tokenPair, { time: Date.now(), price: 42000, volume: 0.1, timestamp: Date.now() });
       priceFeedService.isConnected = true;
       priceFeedService.reconnectAttempts = 2;
-      
+
       // Verify state exists
       expect(priceFeedService.subscribers.has(tokenPair)).toBe(true);
       expect(priceFeedService.dataBuffer.has(tokenPair)).toBe(true);
       expect(priceFeedService.reconnectAttempts).toBe(2);
-      
+
       // Cleanup
       priceFeedService.cleanup();
-      
+
       // Verify all state is cleared
       expect(priceFeedService.subscribers.size).toBe(0);
       expect(priceFeedService.dataBuffer.size).toBe(0);
@@ -346,7 +346,7 @@ describe('PriceFeedService', () => {
       const errorCallback = jest.fn().mockImplementation(() => {
         throw new Error('Callback error');
       });
-      
+
       // Should not throw when subscriber callback fails
       expect(() => {
         priceFeedService.subscribe(tokenPair, errorCallback);

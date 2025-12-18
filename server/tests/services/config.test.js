@@ -231,7 +231,7 @@ describe('ServiceConfig', () => {
     });
 
     test('should get and set nested values', () => {
-      const config = serviceConfig.load();
+      serviceConfig.load();
 
       serviceConfig.set('deep.nested.value', 'test-value');
       expect(serviceConfig.get('deep.nested.value')).toBe('test-value');
@@ -240,7 +240,7 @@ describe('ServiceConfig', () => {
     });
 
     test('should check if keys exist', () => {
-      const config = serviceConfig.load();
+      serviceConfig.load();
 
       expect(serviceConfig.has('defaultKey')).toBe(true);
       expect(serviceConfig.has('nested.key')).toBe(true);
@@ -248,7 +248,7 @@ describe('ServiceConfig', () => {
     });
 
     test('should merge additional configuration', () => {
-      const config = serviceConfig.load();
+      serviceConfig.load();
 
       serviceConfig.merge({
         newKey: 'newValue',
@@ -393,7 +393,7 @@ describe('Configuration Validation Accuracy', () => {
         expect(loadedValidConfig.enabled).toBe(validConfig.enabled);
 
         // Invalid configurations should fail validation
-        invalidConfigs.forEach((invalidConfig, index) => {
+        invalidConfigs.forEach((invalidConfig) => {
           const testConfig = new ServiceConfig();
           testConfig.setValidationSchema(schema);
 

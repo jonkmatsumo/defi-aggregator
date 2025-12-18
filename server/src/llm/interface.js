@@ -486,11 +486,11 @@ export class AnthropicLLM extends LLMInterface {
 
 export function createLLMInterface(config) {
   switch (config.provider) {
-    case 'openai':
-      return new OpenAILLM(config);
-    case 'anthropic':
-      return new AnthropicLLM(config);
-    default:
-      throw new LLMError(`Unsupported LLM provider: ${config.provider}`);
+  case 'openai':
+    return new OpenAILLM(config);
+  case 'anthropic':
+    return new AnthropicLLM(config);
+  default:
+    throw new LLMError(`Unsupported LLM provider: ${config.provider}`);
   }
 }

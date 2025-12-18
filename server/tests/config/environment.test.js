@@ -207,32 +207,32 @@ describe('Configuration Management', () => {
 
           // Apply invalid configuration based on type
           switch (invalidConfig.type) {
-            case 'invalid_port':
-              process.env.PORT = invalidConfig.PORT;
-              break;
-            case 'invalid_llm_provider':
-              process.env.LLM_PROVIDER = invalidConfig.LLM_PROVIDER;
-              break;
-            case 'missing_api_key':
-              if (invalidConfig.LLM_PROVIDER === 'openai') {
-                delete process.env.OPENAI_API_KEY;
-              } else {
-                delete process.env.ANTHROPIC_API_KEY;
-              }
-              process.env.LLM_PROVIDER = invalidConfig.LLM_PROVIDER;
-              break;
-            case 'invalid_log_level':
-              process.env.LOG_LEVEL = invalidConfig.LOG_LEVEL;
-              break;
-            case 'invalid_temperature':
-              process.env.LLM_TEMPERATURE = invalidConfig.LLM_TEMPERATURE;
-              break;
-            case 'invalid_websocket':
-              process.env.WS_MAX_CONNECTIONS = invalidConfig.WS_MAX_CONNECTIONS;
-              break;
-            default:
-              // No additional configuration needed
-              break;
+          case 'invalid_port':
+            process.env.PORT = invalidConfig.PORT;
+            break;
+          case 'invalid_llm_provider':
+            process.env.LLM_PROVIDER = invalidConfig.LLM_PROVIDER;
+            break;
+          case 'missing_api_key':
+            if (invalidConfig.LLM_PROVIDER === 'openai') {
+              delete process.env.OPENAI_API_KEY;
+            } else {
+              delete process.env.ANTHROPIC_API_KEY;
+            }
+            process.env.LLM_PROVIDER = invalidConfig.LLM_PROVIDER;
+            break;
+          case 'invalid_log_level':
+            process.env.LOG_LEVEL = invalidConfig.LOG_LEVEL;
+            break;
+          case 'invalid_temperature':
+            process.env.LLM_TEMPERATURE = invalidConfig.LLM_TEMPERATURE;
+            break;
+          case 'invalid_websocket':
+            process.env.WS_MAX_CONNECTIONS = invalidConfig.WS_MAX_CONNECTIONS;
+            break;
+          default:
+            // No additional configuration needed
+            break;
           }
 
           // Import validateConfig fresh to pick up new env vars

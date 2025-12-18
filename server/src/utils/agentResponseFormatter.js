@@ -1,4 +1,4 @@
-import { logger } from './logger.js';
+
 
 /**
  * AgentResponseFormatter
@@ -57,21 +57,21 @@ export class AgentResponseFormatter {
     const { toolName, result: data } = result;
 
     switch (toolName) {
-      case 'get_gas_prices':
-        return this.formatGasPrices(data);
-      case 'get_crypto_price':
-        return this.formatCryptoPrice(data);
-      case 'get_lending_rates':
-        return this.formatLendingRates(data);
-      case 'get_token_balance':
-        return this.formatTokenBalance(data);
-      default:
-        return {
-          type: 'generic',
-          toolName,
-          data,
-          timestamp: Date.now()
-        };
+    case 'get_gas_prices':
+      return this.formatGasPrices(data);
+    case 'get_crypto_price':
+      return this.formatCryptoPrice(data);
+    case 'get_lending_rates':
+      return this.formatLendingRates(data);
+    case 'get_token_balance':
+      return this.formatTokenBalance(data);
+    default:
+      return {
+        type: 'generic',
+        toolName,
+        data,
+        timestamp: Date.now()
+      };
     }
   }
 
@@ -151,8 +151,8 @@ export class AgentResponseFormatter {
         value: p.borrowAPY,
         formatted: this.formatPercentage(p.borrowAPY * 100)
       },
-      utilizationRate: p.utilizationRate 
-        ? this.formatPercentage(p.utilizationRate * 100) 
+      utilizationRate: p.utilizationRate
+        ? this.formatPercentage(p.utilizationRate * 100)
         : undefined,
       totalSupply: this.formatLargeNumber(p.totalSupply),
       totalBorrow: this.formatLargeNumber(p.totalBorrow)
@@ -413,7 +413,7 @@ export class AgentResponseFormatter {
    * @param {number} decimals - Token decimals
    * @returns {string} Formatted balance
    */
-  formatTokenAmount(balance, decimals = 18) {
+  formatTokenAmount(balance) {
     const value = parseFloat(balance);
     if (isNaN(value)) return 'N/A';
 
@@ -463,7 +463,7 @@ export class AgentResponseFormatter {
    */
   findBestSupplyRate(protocols) {
     if (!protocols || protocols.length === 0) return null;
-    return protocols.reduce((best, current) => 
+    return protocols.reduce((best, current) =>
       (!best || current.supplyAPY > best.supplyAPY) ? current : best
     , null);
   }
@@ -475,7 +475,7 @@ export class AgentResponseFormatter {
    */
   findBestBorrowRate(protocols) {
     if (!protocols || protocols.length === 0) return null;
-    return protocols.reduce((best, current) => 
+    return protocols.reduce((best, current) =>
       (!best || current.borrowAPY < best.borrowAPY) ? current : best
     , null);
   }

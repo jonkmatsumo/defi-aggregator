@@ -1,0 +1,80 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# Run lint-staged to handle linting and formatting
+npx lint-staged
+
+# Exit if lint-staged failed
+if [ $? -ne 0 ]; then
+  echo "❌ Pre-commit checks failed. Please fix the errors above."
+  exit 1
+fi
+
+# Get list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+# Check if there are any staged files
+if [ -z "$STAGED_FILES" ]; then
+  echo "✅ No files staged for commit."
+  exit 0
+fi
+
+# Determine if tests should run based on staged files
+CLIENT_TEST_NEEDED=false
+SERVER_TEST_NEEDED=false
+
+# Check for client test files or related source files
+if echo "$STAGED_FILES" | grep -E '^(src|tst)/.*\.(js|jsx)$' > /dev/null; then
+  CLIENT_TEST_NEEDED=true
+fi
+
+# Check for server test files or related source files
+if echo "$STAGED_FILES" | grep -E '^server/(src|tests)/.*\.js$' > /dev/null; then
+  SERVER_TEST_NEEDED=true
+fi
+
+# Run client tests if needed
+if [ "$CLIENT_TEST_NEEDED" = true ]; then
+  echo "🧪 Running client tests for changed files..."
+  START_TIME=$(date +%s)
+  
+  npm run test:staged
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ Client tests failed. Please fix the errors above."
+    exit 1
+  fi
+  
+  END_TIME=$(date +%s)
+  ELAPSED=$((END_TIME - START_TIME))
+  echo "✅ Client tests passed in ${ELAPSED}s"
+fi
+
+# Run server tests if needed
+if [ "$SERVER_TEST_NEEDED" = true ]; then
+  echo "🧪 Running server tests for changed files..."
+  START_TIME=$(date +%s)
+  
+  cd server && npm run test:staged
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ Server tests failed. Please fix the errors above."
+    exit 1
+  fi
+  
+  END_TIME=$(date +%s)
+  ELAPSED=$((END_TIME - START_TIME))
+  echo "✅ Server tests passed in ${ELAPSED}s"
+fi
+
+# Check for merge conflict markers
+if echo "$STAGED_FILES" | xargs grep -l '^<<<<<<< \|^======= \|^>>>>>>> ' 2>/dev/null; then
+  echo "❌ Merge conflict markers detected in staged files!"
+  echo "Please resolve all merge conflicts before committing."
+  exit 1
+fi
+
+echo "✅ Pre-commit checks passed!"
+

@@ -42,42 +42,42 @@ export class ToolRegistry {
 
       // Type validation (lightweight)
       switch (definition.type) {
-        case 'string':
-          if (typeof value !== 'string') {
-            errors.push(`Parameter "${key}" must be a string`);
+      case 'string':
+        if (typeof value !== 'string') {
+          errors.push(`Parameter "${key}" must be a string`);
+        }
+        if (definition.pattern) {
+          const regex = new RegExp(definition.pattern);
+          if (!regex.test(value)) {
+            errors.push(`Parameter "${key}" does not match required pattern`);
           }
-          if (definition.pattern) {
-            const regex = new RegExp(definition.pattern);
-            if (!regex.test(value)) {
-              errors.push(`Parameter "${key}" does not match required pattern`);
-            }
+        }
+        if (definition.enum && !definition.enum.includes(value)) {
+          errors.push(`Parameter "${key}" must be one of: ${definition.enum.join(', ')}`);
+        }
+        break;
+      case 'number':
+        if (typeof value !== 'number') {
+          errors.push(`Parameter "${key}" must be a number`);
+        }
+        break;
+      case 'boolean':
+        if (typeof value !== 'boolean') {
+          errors.push(`Parameter "${key}" must be a boolean`);
+        }
+        break;
+      case 'array':
+        if (!Array.isArray(value)) {
+          errors.push(`Parameter "${key}" must be an array`);
+        } else if (definition.items?.enum) {
+          const invalid = value.filter(v => !definition.items.enum.includes(v));
+          if (invalid.length > 0) {
+            errors.push(`Parameter "${key}" has invalid values: ${invalid.join(', ')}. Allowed: ${definition.items.enum.join(', ')}`);
           }
-          if (definition.enum && !definition.enum.includes(value)) {
-            errors.push(`Parameter "${key}" must be one of: ${definition.enum.join(', ')}`);
-          }
-          break;
-        case 'number':
-          if (typeof value !== 'number') {
-            errors.push(`Parameter "${key}" must be a number`);
-          }
-          break;
-        case 'boolean':
-          if (typeof value !== 'boolean') {
-            errors.push(`Parameter "${key}" must be a boolean`);
-          }
-          break;
-        case 'array':
-          if (!Array.isArray(value)) {
-            errors.push(`Parameter "${key}" must be an array`);
-          } else if (definition.items?.enum) {
-            const invalid = value.filter(v => !definition.items.enum.includes(v));
-            if (invalid.length > 0) {
-              errors.push(`Parameter "${key}" has invalid values: ${invalid.join(', ')}. Allowed: ${definition.items.enum.join(', ')}`);
-            }
-          }
-          break;
-        default:
-          break;
+        }
+        break;
+      default:
+        break;
       }
     }
 
@@ -90,31 +90,31 @@ export class ToolRegistry {
 
   getRecoverySuggestions(errorCode) {
     switch (errorCode) {
-      case 'INVALID_PARAMETERS':
-        return [
-          'Check required parameters and their formats.',
-          'Verify enum values (symbols, networks, protocols) are supported.',
-          'Ensure addresses are valid hex strings with 0x prefix.'
-        ];
-      case 'RATE_LIMIT':
-        return [
-          'Wait a few seconds and retry.',
-          'Reduce request frequency.',
-          'If the problem persists, try again later.'
-        ];
-      case 'NETWORK_ERROR':
-        return [
-          'Check network connectivity.',
-          'Retry after a short delay.',
-          'If the problem persists, try a different network.'
-        ];
-      case 'TOOL_ERROR':
-      default:
-        return [
-          'Retry the request shortly.',
-          'Try with fewer parameters or different inputs.',
-          'If the problem persists, contact support with the error code.'
-        ];
+    case 'INVALID_PARAMETERS':
+      return [
+        'Check required parameters and their formats.',
+        'Verify enum values (symbols, networks, protocols) are supported.',
+        'Ensure addresses are valid hex strings with 0x prefix.'
+      ];
+    case 'RATE_LIMIT':
+      return [
+        'Wait a few seconds and retry.',
+        'Reduce request frequency.',
+        'If the problem persists, try again later.'
+      ];
+    case 'NETWORK_ERROR':
+      return [
+        'Check network connectivity.',
+        'Retry after a short delay.',
+        'If the problem persists, try a different network.'
+      ];
+    case 'TOOL_ERROR':
+    default:
+      return [
+        'Retry the request shortly.',
+        'Try with fewer parameters or different inputs.',
+        'If the problem persists, contact support with the error code.'
+      ];
     }
   }
 
@@ -365,13 +365,7 @@ export class ToolRegistry {
         executionTime
       });
 
-      console.log('DEBUG_REGISTRY_RETURN:', JSON.stringify({
-        toolName: name,
-        parameters,
-        result,
-        executionTime,
-        success: true
-      }));
+
 
       return {
         toolName: name,

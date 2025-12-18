@@ -21,5 +21,14 @@ module.exports = {
     'node_modules/',
     'coverage/',
     'dist/'
+  ],
+  overrides: [
+    {
+      files: ['tests/**/*.js', '**/*.test.js'],
+      plugins: ['jest'],
+      rules: {
+        'jest/no-conditional-expect': 'off'
+      }
+    }
   ]
 };

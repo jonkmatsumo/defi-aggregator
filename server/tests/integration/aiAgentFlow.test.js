@@ -103,7 +103,7 @@ jest.unstable_mockModule('../../src/services/container.js', () => ({
 // Import modules after mocks
 const { ConversationManager } = await import('../../src/conversation/manager.js');
 const { ToolRegistry } = await import('../../src/tools/registry.js');
-const { AgentResponseFormatter } = await import('../../src/utils/agentResponseFormatter.js');
+
 
 describe('AI Agent Integration Tests', () => {
   let manager;

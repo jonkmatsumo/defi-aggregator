@@ -1,0 +1,68 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🚀 Running pre-push checks..."
+
+# Check for uncommitted changes (warning only, non-blocking)
+if ! git diff-index --quiet HEAD --; then
+  echo "⚠️  Warning: You have uncommitted changes."
+  echo "Consider committing or stashing them before pushing."
+  # Continue anyway - this is just a warning
+fi
+
+# Get current branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Check if branch is up to date with remote
+if git rev-parse --verify "origin/${CURRENT_BRANCH}" >/dev/null 2>&1; then
+  LOCAL=$(git rev-parse @)
+  REMOTE=$(git rev-parse "origin/${CURRENT_BRANCH}")
+  BASE=$(git merge-base @ "origin/${CURRENT_BRANCH}")
+
+  if [ "$LOCAL" != "$REMOTE" ] && [ "$LOCAL" = "$BASE" ]; then
+    echo "❌ Your branch is behind origin/${CURRENT_BRANCH}."
+    echo "Please pull the latest changes before pushing."
+    exit 1
+  fi
+fi
+
+# Run full test suite for client
+echo "🧪 Running full client test suite..."
+START_TIME=$(date +%s)
+
+npm test
+
+if [ $? -ne 0 ]; then
+  echo "❌ Client tests failed. Please fix the errors above."
+  exit 1
+fi
+
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
+echo "✅ Client tests passed in ${ELAPSED}s"
+
+# Run full test suite for server
+echo "🧪 Running full server test suite..."
+START_TIME=$(date +%s)
+
+cd server && npm test
+
+if [ $? -ne 0 ]; then
+  echo "❌ Server tests failed. Please fix the errors above."
+  exit 1
+fi
+
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
+echo "✅ Server tests passed in ${ELAPSED}s"
+
+# Run security audit (non-blocking, informational only)
+echo "🔒 Running security audit (informational)..."
+cd .. || exit 1
+
+npm audit --audit-level=moderate || echo "⚠️  Security audit found issues (non-blocking)"
+
+cd server && npm audit --audit-level=moderate || echo "⚠️  Server security audit found issues (non-blocking)"
+
+echo "✅ Pre-push checks passed!"
+

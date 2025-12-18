@@ -792,23 +792,23 @@ describe('Error Handling and Logging Tests', () => {
           // Create appropriate error type
           let testError;
           switch (errorType) {
-            case 'websocket':
-              testError = new WebSocketError(errorMessage, context.sessionId);
-              break;
-            case 'llm':
-              testError = new LLMError(errorMessage, 'openai');
-              break;
-            case 'tool':
-              testError = new ToolError(errorMessage, 'test_tool');
-              break;
-            case 'conversation':
-              testError = new ConversationError(errorMessage, context.sessionId);
-              break;
-            case 'configuration':
-              testError = new ConfigurationError(errorMessage);
-              break;
-            default:
-              testError = new ServerError(errorMessage, statusCode, 'TEST_ERROR', context);
+          case 'websocket':
+            testError = new WebSocketError(errorMessage, context.sessionId);
+            break;
+          case 'llm':
+            testError = new LLMError(errorMessage, 'openai');
+            break;
+          case 'tool':
+            testError = new ToolError(errorMessage, 'test_tool');
+            break;
+          case 'conversation':
+            testError = new ConversationError(errorMessage, context.sessionId);
+            break;
+          case 'configuration':
+            testError = new ConfigurationError(errorMessage);
+            break;
+          default:
+            testError = new ServerError(errorMessage, statusCode, 'TEST_ERROR', context);
           }
 
           // Test error classification
